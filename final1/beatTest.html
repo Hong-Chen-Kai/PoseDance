@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Beat Test - YouTube + apple.json</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #111827;
+        color: #f9fafb;
+        margin: 0;
+        padding: 16px;
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      #player {
+        width: 320px;
+        height: 180px;
+        background: #000;
+        flex-shrink: 0;
+      }
+
+      .panel {
+        flex: 1;
+        min-width: 240px;
+        background: #1f2937;
+        border-radius: 8px;
+        padding: 12px 16px;
+        box-sizing: border-box;
+      }
+
+      .panel h2 {
+        font-size: 1.1rem;
+        margin: 0 0 8px 0;
+      }
+
+      dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        row-gap: 4px;
+        column-gap: 8px;
+        margin: 0;
+      }
+
+      dt {
+        font-weight: 600;
+        color: #9ca3af;
+      }
+
+      dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        margin-right: 4px;
+      }
+
+      .tag.phase-ready {
+        background: #374151;
+        color: #e5e7eb;
+      }
+
+      .tag.phase-dance {
+        background: #065f46;
+        color: #d1fae5;
+      }
+
+      .tag.judge-on {
+        background: #b45309;
+        color: #fffbeb;
+      }
+
+      .small {
+        font-size: 0.85rem;
+        color: #9ca3af;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Beat Test - YouTube + apple.json</h1>
+      <p class="small">
+        這個頁面只用來測試節奏資料是否與 YouTube 播放時間對齊，尚未整合 Pose。
+      </p>
+
+      <div class="row" style="margin-top: 12px">
+        <div>
+          <div class="panel" style="margin-bottom: 12px">
+            <h2 style="margin-bottom: 4px">YouTube 影片網址</h2>
+            <p class="small" style="margin-top: 0; margin-bottom: 6px">
+              貼上 YouTube 網址或 videoId，按下「載入影片」。請使用與
+              apple.json 相同版本的音樂。
+            </p>
+            <div style="display: flex; gap: 8px">
+              <input
+                id="videoUrlInput"
+                type="text"
+                style="flex: 1; padding: 4px 8px; border-radius: 4px; border: 1px solid #4b5563; background: #111827; color: #f9fafb"
+                placeholder="例如：https://www.youtube.com/watch?v=Gb8AZbpnzy4"
+              />
+              <button
+                id="loadVideoButton"
+                style="padding: 4px 10px; border-radius: 4px; border: none; background: #2563eb; color: #f9fafb; cursor: pointer"
+              >
+                載入影片
+              </button>
+            </div>
+          </div>
+          <div id="player"></div>
+        </div>
+
+        <div class="panel">
+          <h2>播放與節奏狀態</h2>
+          <div style="margin-bottom: 8px">
+            <span id="phaseTag" class="tag phase-ready">準備中</span>
+            <span id="judgeTag" class="tag">非判定拍</span>
+          </div>
+          <dl>
+            <dt>目前時間</dt>
+            <dd id="currentTimeText">0.00 s</dd>
+
+            <dt>目前拍 index</dt>
+            <dd id="beatIndexText">-1</dd>
+
+            <dt>目前第幾拍</dt>
+            <dd id="beatNumberText">0</dd>
+
+            <dt>目前第幾個八</dt>
+            <dd id="barIndexText">0</dd>
+
+            <dt>beats 總數</dt>
+            <dd id="beatsCountText">0</dd>
+
+            <dt>countInBeats</dt>
+            <dd id="countInBeatsText">0</dd>
+
+            <dt>目前判定 poseId</dt>
+            <dd id="poseIdText">（無）</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 16px">
+        <h2>除錯資訊</h2>
+        <pre
+          id="debugText"
+          class="small"
+          style="white-space: pre-wrap; word-break: break-all; margin: 0"
+        ></pre>
+      </div>
+    </div>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- Main test script -->
+    <script type="module" src="./beatTest.js"></script>
+  </body>
+  </html>
+
