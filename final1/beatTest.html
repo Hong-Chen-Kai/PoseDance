@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
@@ -99,7 +99,7 @@
   </head>
   <body>
     <div class="container">
-      <h1>Beat Test - YouTube + apple.json</h1>
+      <h1>Beat Test</h1>
       <p class="small">
         這個頁面只用來測試節奏資料是否與 YouTube 播放時間對齊，尚未整合 Pose。
       </p>
@@ -109,19 +109,33 @@
           <div class="panel" style="margin-bottom: 12px">
             <h2 style="margin-bottom: 4px">YouTube 影片網址</h2>
             <p class="small" style="margin-top: 0; margin-bottom: 6px">
-              貼上 YouTube 網址或 videoId，按下「載入影片」。請使用與
-              apple.json 相同版本的音樂。
+              貼上 YouTube 網址或 videoId，按下「載入影片」。請使用與 apple.json
+              相同版本的音樂。
             </p>
             <div style="display: flex; gap: 8px">
               <input
                 id="videoUrlInput"
                 type="text"
-                style="flex: 1; padding: 4px 8px; border-radius: 4px; border: 1px solid #4b5563; background: #111827; color: #f9fafb"
+                style="
+                  flex: 1;
+                  padding: 4px 8px;
+                  border-radius: 4px;
+                  border: 1px solid #4b5563;
+                  background: #111827;
+                  color: #f9fafb;
+                "
                 placeholder="例如：https://www.youtube.com/watch?v=Gb8AZbpnzy4"
               />
               <button
                 id="loadVideoButton"
-                style="padding: 4px 10px; border-radius: 4px; border: none; background: #2563eb; color: #f9fafb; cursor: pointer"
+                style="
+                  padding: 4px 10px;
+                  border-radius: 4px;
+                  border: none;
+                  background: #2563eb;
+                  color: #f9fafb;
+                  cursor: pointer;
+                "
               >
                 載入影片
               </button>
@@ -176,5 +190,4 @@
     <!-- Main test script -->
     <script type="module" src="./beatTest.js"></script>
   </body>
-  </html>
-
+</html>
