@@ -58,7 +58,6 @@ function initDomRefs() {
   els.nextPoseHintImage = $("nextPoseHintImage");
   els.nextPoseHintLabel = $("nextPoseHintLabel");
 
-  els.poseStatusText = $("poseStatusText");
   els.poseInfoText = $("poseInfoText");
   els.startCameraButton = $("startCameraButton");
   els.inputVideo = $("input_video");
@@ -266,9 +265,7 @@ async function initPose() {
     try {
       els.startCameraButton.disabled = true;
       els.startCameraButton.textContent = "啟動中...";
-      if (els.poseStatusText) {
-        els.poseStatusText.textContent = "正在初始化 Pose 模型與攝影機...";
-      }
+      console.log("正在初始化 Pose 模型與攝影機...");
 
       const poseInstance = await PoseModel.init();
       if (!poseInstance) {
@@ -375,14 +372,9 @@ async function initPose() {
 
       state.poseReady = true;
       els.startCameraButton.textContent = "攝影機已啟動";
-      if (els.poseStatusText) {
-        els.poseStatusText.textContent = "系統就緒，請站在攝影機前，雙手入鏡。";
-      }
+      console.log("系統就緒，請站在攝影機前，雙手入鏡。");
     } catch (err) {
       console.error(err);
-      if (els.poseStatusText) {
-        els.poseStatusText.textContent = `錯誤：${err.message}`;
-      }
       els.startCameraButton.disabled = false;
       els.startCameraButton.textContent = "啟動攝影機";
     }
@@ -452,24 +444,17 @@ function updateUiLoop() {
       const diff = nextAction.beatIndex - beatIndex;
       const hintInfo = poseHintMap[nextAction.poseId];
 
-      if (diff === 4 && hintInfo) {
-        // 顯示提示
+      if (diff >= 1 && diff <= 4 && hintInfo) {
+        // 動作前 4 拍：持續顯示下一個動作的提示
         els.nextPoseHintImage.src = hintInfo.src;
         els.nextPoseHintImage.style.display = "block";
         els.nextPoseHintLabel.textContent = `下一個動作：${hintInfo.label}`;
-        // 除錯用，可之後移除
-        // console.log(
-        //   "[Hint] 下一動作:",
-        //   nextAction.poseId,
-        //   "將在 beatIndex",
-        //   nextAction.beatIndex,
-        //   "執行",
-        // );
-      } else {
-        // 尚未進入提示區間或沒有對應圖片：隱藏圖片，顯示預設文字
+      } else if (diff > 4) {
+        // 還沒接近下一個動作：隱藏提示
         els.nextPoseHintImage.style.display = "none";
         els.nextPoseHintLabel.textContent = "尚未有下一個動作提示";
       }
+      // diff 不會小於 1，因為 nextAction.beatIndex > beatIndex
     } else {
       // 沒有後續動作
       els.nextPoseHintImage.style.display = "none";
