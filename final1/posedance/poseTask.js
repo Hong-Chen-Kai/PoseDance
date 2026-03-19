@@ -502,7 +502,7 @@ export const PoseModel = {
     // 調試信息固定在左上角（不受 LeftHand Up 影響）
     const debugYOffset = padding;
 
-    const hideActionLabels = !!this.overlayState.hideActionLabels;
+    const hideActionLabels = true;
 
     // 右上角動作名稱可由外部狀態關閉（例如判定成功時）
     if (!hideActionLabels && this.overlayState.leftHandUp) {
