@@ -72,6 +72,27 @@ function buildHighlightConnections(action) {
   return result;
 }
 
+function findHintAction(actions, beatIndex, currentAction, leadBeats = 4) {
+  if (currentAction) return currentAction;
+  if (!Array.isArray(actions) || actions.length === 0) return null;
+  if (typeof beatIndex !== "number") return null;
+
+  let best = null;
+  let bestDelta = Number.POSITIVE_INFINITY;
+
+  for (const a of actions) {
+    if (!a || typeof a.beatIndex !== "number") continue;
+    const delta = a.beatIndex - beatIndex;
+    if (delta <= 0 || delta > leadBeats) continue;
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = a;
+    }
+  }
+
+  return best;
+}
+
 function initDomRefs() {
   els.successCountText = $("successCountText");
   els.judgeTag = $("judgeTag");
@@ -740,9 +761,11 @@ function updateUiLoop() {
     beatIndex >= 0 && beatIndex < state.countInBeats ? "ready" : "dance";
 
   const action = state.actions.find((a) => a.beatIndex === beatIndex);
-  const highlightConnections = buildHighlightConnections(action);
+  const hintAction = findHintAction(state.actions, beatIndex, action, 4);
+  const highlightConnections = buildHighlightConnections(hintAction);
   PoseModel.setOverlayState({
     highlightConnections,
+    hideActionLabels: false,
   });
 
   if (els.successCountText) {
@@ -783,15 +806,18 @@ function updateUiLoop() {
         state.lastJudgeResult = "success";
         els.judgeResultTag.textContent = "成功";
         els.judgeResultTag.className = "tag judge-success";
+        PoseModel.setOverlayState({ hideActionLabels: true });
       } else {
         state.lastJudgeResult = "fail";
         els.judgeResultTag.textContent = "失敗";
         els.judgeResultTag.className = "tag judge-fail";
+        PoseModel.setOverlayState({ hideActionLabels: false });
       }
     } else if (!action) {
       state.lastJudgeResult = "none";
       els.judgeResultTag.textContent = "尚未判定";
       els.judgeResultTag.className = "tag";
+      PoseModel.setOverlayState({ hideActionLabels: false });
     }
   }
 }

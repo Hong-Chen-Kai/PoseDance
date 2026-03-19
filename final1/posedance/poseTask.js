@@ -112,6 +112,7 @@ export const PoseModel = {
     rightArmUp90: false,
     rightHandTouchLeftShoulder: false,
     bothHandsUp: false,
+    hideActionLabels: false,
     highlightConnections: [],
     skeletonStyle: {
       baseColor: "rgba(230, 235, 240, 0.55)",
@@ -501,8 +502,10 @@ export const PoseModel = {
     // 調試信息固定在左上角（不受 LeftHand Up 影響）
     const debugYOffset = padding;
 
-    // 繪製 LeftHand Up 狀態（顯示在右邊，深綠色文字，無背景）
-    if (this.overlayState.leftHandUp) {
+    const hideActionLabels = !!this.overlayState.hideActionLabels;
+
+    // 右上角動作名稱可由外部狀態關閉（例如判定成功時）
+    if (!hideActionLabels && this.overlayState.leftHandUp) {
       ctx.font = `bold ${fontSize}px Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -518,7 +521,7 @@ export const PoseModel = {
     }
 
     // 繪製 LeftHand Up Right Stretch 狀態（顯示在右邊，藍色文字，無背景）
-    if (this.overlayState.leftHandUpRightStretch) {
+    if (!hideActionLabels && this.overlayState.leftHandUpRightStretch) {
       ctx.font = `bold ${fontSize}px Microsoft JhengHei, Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -537,7 +540,7 @@ export const PoseModel = {
     }
 
     // 繪製 LeftArmUp90 狀態（顯示在右邊，紫色文字，無背景）
-    if (this.overlayState.leftArmUp90) {
+    if (!hideActionLabels && this.overlayState.leftArmUp90) {
       ctx.font = `bold ${fontSize}px Microsoft JhengHei, Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -556,7 +559,7 @@ export const PoseModel = {
     }
 
     // 繪製 LeftHandTouchRightShoulder 狀態（顯示在右邊，橙色文字，無背景）
-    if (this.overlayState.leftHandTouchRightShoulder) {
+    if (!hideActionLabels && this.overlayState.leftHandTouchRightShoulder) {
       ctx.font = `bold ${fontSize}px Microsoft JhengHei, Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -576,7 +579,7 @@ export const PoseModel = {
     }
 
     // 繪製 RightHand Up 狀態（顯示在右邊，深綠色文字，無背景）
-    if (this.overlayState.rightHandUp) {
+    if (!hideActionLabels && this.overlayState.rightHandUp) {
       ctx.font = `bold ${fontSize}px Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -597,7 +600,7 @@ export const PoseModel = {
     }
 
     // 繪製 RightHand Up Left Stretch 狀態（顯示在右邊，天藍色文字，無背景）
-    if (this.overlayState.rightHandUpLeftStretch) {
+    if (!hideActionLabels && this.overlayState.rightHandUpLeftStretch) {
       ctx.font = `bold ${fontSize}px Microsoft JhengHei, Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -619,7 +622,7 @@ export const PoseModel = {
     }
 
     // 繪製 RightArmUp90 狀態（顯示在右邊，洋紅色文字，無背景）
-    if (this.overlayState.rightArmUp90) {
+    if (!hideActionLabels && this.overlayState.rightArmUp90) {
       ctx.font = `bold ${fontSize}px Microsoft JhengHei, Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -642,7 +645,7 @@ export const PoseModel = {
     }
 
     // 繪製 RightHandTouchLeftShoulder 狀態（顯示在右邊，珊瑚色文字，無背景）
-    if (this.overlayState.rightHandTouchLeftShoulder) {
+    if (!hideActionLabels && this.overlayState.rightHandTouchLeftShoulder) {
       ctx.font = `bold ${fontSize}px Microsoft JhengHei, Arial, sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
