@@ -2,6 +2,7 @@ const state = {
   beats: [],
   countInBeats: 0,
   actions: [],
+  bpm: null,
   videoId: null,
   player: null,
   ready: false,
@@ -19,6 +20,8 @@ function initDomRefs() {
   els.beatNumberText = $("beatNumberText");
   els.barIndexText = $("barIndexText");
   els.beatsCountText = $("beatsCountText");
+  els.bpmText = $("bpmText");
+  els.actionsCountText = $("actionsCountText");
   els.countInBeatsText = $("countInBeatsText");
   els.poseIdText = $("poseIdText");
   els.debugText = $("debugText");
@@ -61,6 +64,7 @@ async function loadAppleJson() {
   state.countInBeats =
     typeof data.countInBeats === "number" ? data.countInBeats : 16;
   state.actions = Array.isArray(data.actions) ? data.actions : [];
+  state.bpm = typeof data.bpm === "number" ? data.bpm : null;
   state.videoId =
     typeof data.videoId === "string" && data.videoId
       ? data.videoId
@@ -69,6 +73,13 @@ async function loadAppleJson() {
   if (els.beatsCountText) {
     els.beatsCountText.textContent = String(state.beats.length);
   }
+  if (els.bpmText) {
+    els.bpmText.textContent =
+      state.bpm !== null ? String(state.bpm) : "—";
+  }
+  if (els.actionsCountText) {
+    els.actionsCountText.textContent = String(state.actions.length);
+  }
   if (els.countInBeatsText) {
     els.countInBeatsText.textContent = String(state.countInBeats);
   }
@@ -76,6 +87,7 @@ async function loadAppleJson() {
     els.debugText.textContent =
       `apple.json 載入成功\n` +
       `videoId: ${state.videoId}\n` +
+      `bpm: ${state.bpm ?? "—"}\n` +
       `beats.length: ${state.beats.length}\n` +
       `actions.length: ${state.actions.length}`;
   }
@@ -92,12 +104,17 @@ window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
     videoId: state.videoId || "dQw4w9WgXcQ",
     playerVars: {
       playsinline: 1,
+      enablejsapi: 1,
+      origin: typeof window !== "undefined" ? window.location.origin : undefined,
     },
     events: {
       onReady: () => {
         state.ready = true;
+        if (state.videoId && typeof state.player.loadVideoById === "function") {
+          state.player.loadVideoById(state.videoId);
+        }
         if (els.debugText) {
-          els.debugText.textContent += `\nYouTube Player ready.`;
+          els.debugText.textContent += `\nYouTube Player ready，videoId=${state.videoId}`;
         }
       },
     },
@@ -140,6 +157,7 @@ function updateUiLoop() {
     beatIndex >= 0 && beatIndex < state.countInBeats ? "ready" : "dance";
 
   const action = state.actions.find((a) => a.beatIndex === beatIndex);
+  const inDancePhase = phase === "dance";
 
   if (els.currentTimeText) {
     els.currentTimeText.textContent = `${currentTime.toFixed(2)} s`;
@@ -156,7 +174,8 @@ function updateUiLoop() {
       : "0";
   }
   if (els.poseIdText) {
-    els.poseIdText.textContent = action ? action.poseId : "（無）";
+    els.poseIdText.textContent =
+      action && inDancePhase ? action.poseId : "（無）";
   }
 
   if (els.phaseTag) {
@@ -193,7 +212,11 @@ async function main() {
         return;
       }
       state.videoId = id;
-      if (state.player && typeof state.player.loadVideoById === "function") {
+      if (
+        state.ready &&
+        state.player &&
+        typeof state.player.loadVideoById === "function"
+      ) {
         state.player.loadVideoById(id);
       }
       if (els.debugText) {
@@ -203,6 +226,15 @@ async function main() {
   }
   try {
     await loadAppleJson();
+    // API 可能比 apple.json 先就緒：補載正確 videoId
+    if (
+      state.ready &&
+      state.player &&
+      state.videoId &&
+      typeof state.player.loadVideoById === "function"
+    ) {
+      state.player.loadVideoById(state.videoId);
+    }
   } catch (err) {
     if (els.debugText) {
       els.debugText.textContent = String(err);
