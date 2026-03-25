@@ -31,6 +31,8 @@ function $(id) {
   return document.getElementById(id);
 }
 
+const RECORD_SAMPLE_MIN_DT = 1 / 30; // 30fps 上限
+
 const ACTIVE_JOINT_TO_CONNECTIONS = {
   left_arm: [
     [POSE_LANDMARKS.LEFT_SHOULDER, POSE_LANDMARKS.LEFT_ELBOW],
@@ -102,6 +104,7 @@ function initDomRefs() {
 
   els.poseInfoText = $("poseInfoText");
   els.startCameraButton = $("startCameraButton");
+  els.recordButton = $("recordButton");
   els.inputVideo = $("input_video");
   els.demoVideo = $("demo_video");
 
@@ -113,6 +116,49 @@ function initDomRefs() {
   if (els.poseInfoText) {
     els.poseInfoText.style.display = "none";
   }
+
+  if (els.recordButton) {
+    els.recordButton.disabled = true;
+    els.recordButton.textContent = "開始錄製";
+  }
+}
+
+function toLmArray(landmarks) {
+  if (!Array.isArray(landmarks) || landmarks.length === 0) return [];
+  return landmarks.map((lm) => {
+    if (!lm) return [null, null, null, null];
+    const x = typeof lm.x === "number" ? lm.x : null;
+    const y = typeof lm.y === "number" ? lm.y : null;
+    const z = typeof lm.z === "number" ? lm.z : null;
+    const v = typeof lm.visibility === "number" ? lm.visibility : null;
+    return [x, y, z, v];
+  });
+}
+
+function createDownload(filename, obj) {
+  const text = JSON.stringify(obj);
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // 讓瀏覽器有時間開始下載再釋放
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+function formatTsForFilename(d = new Date()) {
+  const pad2 = (n) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}` +
+    `${pad2(d.getMonth() + 1)}` +
+    `${pad2(d.getDate())}_` +
+    `${pad2(d.getHours())}` +
+    `${pad2(d.getMinutes())}` +
+    `${pad2(d.getSeconds())}`
+  );
 }
 
 function extractVideoId(input) {
@@ -588,10 +634,63 @@ function createPoseDetectors() {
 async function initPose() {
   if (!els.inputVideo || !els.startCameraButton) return;
 
+  // --- 錄製狀態（同頁錄）
+  let isRecording = false;
+  let recordStartedAtIso = null;
+  let lastRecordedT = Number.NEGATIVE_INFINITY;
+  /** @type {{t:number, lm:number[][]}[]} */
+  let samples = [];
+
+  const setRecordUi = () => {
+    if (!els.recordButton) return;
+    els.recordButton.disabled = !state.cameraRunning;
+    els.recordButton.textContent = isRecording ? "停止並下載" : "開始錄製";
+    els.recordButton.classList.toggle("btn-record--active", isRecording);
+  };
+
+  const startRecording = () => {
+    isRecording = true;
+    recordStartedAtIso = new Date().toISOString();
+    lastRecordedT = Number.NEGATIVE_INFINITY;
+    samples = [];
+    console.log("[Recorder] 開始錄製（30fps 上限，t=YouTube 秒數）");
+    setRecordUi();
+  };
+
+  const stopAndDownloadRecording = () => {
+    isRecording = false;
+    setRecordUi();
+
+    const videoId = state.videoId || "unknown";
+    const payload = {
+      version: 1,
+      videoId,
+      recordedAt: recordStartedAtIso || new Date().toISOString(),
+      sampleCount: samples.length,
+      samples,
+    };
+    const filename = `pose_trace_${videoId}_${formatTsForFilename()}.json`;
+    console.log("[Recorder] 停止錄製，下載:", { filename, sampleCount: samples.length });
+    createDownload(filename, payload);
+  };
+
+  if (els.recordButton) {
+    els.recordButton.addEventListener("click", () => {
+      if (!state.cameraRunning) return;
+      if (!isRecording) startRecording();
+      else stopAndDownloadRecording();
+    });
+  }
+
   const stopCamera = () => {
     state.poseLoopActive = false;
     state.poseReady = false;
     state.cameraRunning = false;
+
+    if (isRecording) {
+      // 關攝影機時先停止錄製（避免拿到不完整資料）
+      stopAndDownloadRecording();
+    }
 
     if (state.cameraStream) {
       state.cameraStream.getTracks().forEach((t) => t.stop());
@@ -614,6 +713,7 @@ async function initPose() {
 
     els.startCameraButton.textContent = "啟動攝影機";
     els.startCameraButton.disabled = false;
+    setRecordUi();
     console.log("攝影機已關閉");
   };
 
@@ -677,6 +777,26 @@ async function initPose() {
           bothHandsUp: detectedBoth,
         });
 
+        // --- Recorder: 只記錄 landmarks（t=YouTube 秒數；30fps 上限）
+        if (isRecording) {
+          if (!state.ready || !state.player || typeof state.player.getCurrentTime !== "function") {
+            return;
+          }
+          let t = 0;
+          try {
+            t = state.player.getCurrentTime();
+          } catch {
+            return;
+          }
+          if (typeof t !== "number" || !Number.isFinite(t) || t < 0) return;
+          // 防止暫停時重複寫入
+          if (t <= lastRecordedT) return;
+          if (t - lastRecordedT < RECORD_SAMPLE_MIN_DT && samples.length > 0) return;
+
+          samples.push({ t, lm: toLmArray(result.landmarks) });
+          lastRecordedT = t;
+        }
+
         // UI 已移除 detectedPoseText；需要的話可自行加回 DOM
       });
 
@@ -727,6 +847,7 @@ async function initPose() {
       state.cameraRunning = true;
       els.startCameraButton.textContent = "關閉攝影機";
       els.startCameraButton.disabled = false;
+      setRecordUi();
       console.log("系統就緒，請站在攝影機前，雙手入鏡。");
     } catch (err) {
       console.error(err);
@@ -741,6 +862,7 @@ async function initPose() {
       }
       els.startCameraButton.disabled = false;
       els.startCameraButton.textContent = "啟動攝影機";
+      setRecordUi();
     }
   });
 }
