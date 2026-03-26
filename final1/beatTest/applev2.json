@@ -90,21 +90,6 @@
   ],
   "actions": [
     {
-      "beatIndex": 16,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
-    },
-    {
-      "beatIndex": 17,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 18,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
       "beatIndex": 19,
       "poseId": "leftHandUp",
       "activeJoints": ["left_arm"]
