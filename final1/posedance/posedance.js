@@ -52,7 +52,7 @@ const RECORD_SAMPLE_MIN_DT = 1 / 30; // 30fps 上限
 const JUDGE_WINDOW_SEC = 0.12; // 僅在拍點前後窗口內進行判定
 const APPLE_JSON_PATH_CANDIDATES = {
   easy: ["../beatTest/apple.json"],
-  hard: ["../beatTest/apple.v2.json", "../beatTest/applev2.json"],
+  hard: ["../beatTest/applev2.json", "../beatTest/apple.v2.json"],
 };
 const DEMO_TRACE_PATH = "./demo/pose_trace.json";
 const DEMO_SOURCE_ASPECT = 16 / 9;
@@ -1310,8 +1310,8 @@ function updateUiLoop() {
 
   // 判定成功/失敗（只在有 action 且 phase 為 dance 時）
   if (els.judgeResultTag) {
-    // hard 模式每拍都可能是判定拍，需在「換拍」時重置單拍判定狀態
-    if (beatIndex !== state.lastJudgedBeatIndex) {
+    // 僅 hard 使用「換拍重置」；easy 維持舊行為
+    if (hardMode && beatIndex !== state.lastJudgedBeatIndex) {
       state.lastJudgedBeatIndex = beatIndex;
       state.lastJudgeResult = "none";
       if (judgeAction && phase === "dance" && inJudgeWindow) {
