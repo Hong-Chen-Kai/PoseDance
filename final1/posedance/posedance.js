@@ -8,6 +8,7 @@ const state = {
   videoId: null,
   player: null,
   ready: false,
+  ytInitStarted: false,
 
   // Pose 相關
   poseReady: false,
@@ -363,7 +364,13 @@ function loadVideoByIdIfReady() {
 }
 
 // YouTube IFrame API callback
-window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
+function initYouTubePlayerIfPossible() {
+  if (state.ytInitStarted) return;
+  if (state.player) return;
+  const YTGlobal = typeof window !== "undefined" ? window.YT : null;
+  if (!YTGlobal || typeof YTGlobal.Player !== "function") return;
+
+  state.ytInitStarted = true;
   state.player = new YT.Player("player", {
     height: "180",
     width: "320",
@@ -389,6 +396,11 @@ window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
       },
     },
   });
+}
+
+// YouTube IFrame API 會在 global 呼叫這個函式
+window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
+  initYouTubePlayerIfPossible();
 };
 
 function findBeatIndex(currentTime, beats) {
@@ -954,6 +966,10 @@ async function main() {
   initDomRefs();
   setupYtFloatingWindow();
 
+  // 有些情況下 iframe_api 比 module 還早載入完成，導致 callback 來不及掛上。
+  // 若此時已經有 YT.Player，就主動初始化一次。
+  initYouTubePlayerIfPossible();
+
   if (els.loadVideoButton) {
     els.loadVideoButton.addEventListener("click", () => {
       console.log("[YouTube] 載入影片按鈕被點擊");
@@ -976,6 +992,7 @@ async function main() {
   try {
     await loadAppleJson();
     // API 可能比 apple.json 先就緒：載入完節奏後補載正確 YouTube 影片
+    initYouTubePlayerIfPossible();
     loadVideoByIdIfReady();
   } catch (err) {
     console.error("[apple.json] 載入失敗:", err);
