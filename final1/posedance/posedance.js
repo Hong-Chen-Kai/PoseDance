@@ -108,7 +108,11 @@ const ACTIVE_JOINT_TO_CONNECTIONS = {
 };
 
 function buildHighlightConnections(action) {
-  if (!action || !Array.isArray(action.activeJoints) || action.activeJoints.length === 0) {
+  if (
+    !action ||
+    !Array.isArray(action.activeJoints) ||
+    action.activeJoints.length === 0
+  ) {
     return [];
   }
 
@@ -282,7 +286,9 @@ function findNearestDemoSample(samples, t) {
   const left = samples[Math.max(0, lo - 1)];
   if (!left) return right || null;
   if (!right) return left || null;
-  return Math.abs((left.t ?? 0) - t) <= Math.abs((right.t ?? 0) - t) ? left : right;
+  return Math.abs((left.t ?? 0) - t) <= Math.abs((right.t ?? 0) - t)
+    ? left
+    : right;
 }
 
 function computeContainRect(width, height, sourceAspect) {
@@ -317,7 +323,8 @@ function drawDemoSkeletonAtTime(currentTime) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
-  const tEnd = state.beats.length > 0 ? state.beats[state.beats.length - 1] : Infinity;
+  const tEnd =
+    state.beats.length > 0 ? state.beats[state.beats.length - 1] : Infinity;
   if (!state.demoTrace || currentTime > tEnd) {
     ctx.restore();
     return;
@@ -349,7 +356,11 @@ function drawDemoSkeletonAtTime(currentTime) {
     ) {
       continue;
     }
-    if ((typeof av === "number" && av <= 0.5) || (typeof bv === "number" && bv <= 0.5)) continue;
+    if (
+      (typeof av === "number" && av <= 0.5) ||
+      (typeof bv === "number" && bv <= 0.5)
+    )
+      continue;
     ctx.beginPath();
     ctx.moveTo(rect.ox + ax * rect.dw, rect.oy + ay * rect.dh);
     ctx.lineTo(rect.ox + bx * rect.dw, rect.oy + by * rect.dh);
@@ -529,7 +540,8 @@ function setupYtFloatingWindow() {
 
 async function loadAppleJson() {
   const mode = state.mode === "hard" ? "hard" : "easy";
-  const candidates = APPLE_JSON_PATH_CANDIDATES[mode] || APPLE_JSON_PATH_CANDIDATES.easy;
+  const candidates =
+    APPLE_JSON_PATH_CANDIDATES[mode] || APPLE_JSON_PATH_CANDIDATES.easy;
   let data = null;
   let loadedPath = null;
   let lastStatus = "unknown";
@@ -544,7 +556,9 @@ async function loadAppleJson() {
     break;
   }
   if (!data || !loadedPath) {
-    throw new Error(`載入 hard/easy JSON 失敗，mode=${mode}，lastStatus=${lastStatus}`);
+    throw new Error(
+      `載入 hard/easy JSON 失敗，mode=${mode}，lastStatus=${lastStatus}`,
+    );
   }
   state.beats = Array.isArray(data.beats) ? data.beats : [];
   state.countInBeats =
@@ -554,16 +568,13 @@ async function loadAppleJson() {
     typeof data.videoId === "string" && data.videoId
       ? data.videoId
       : "dQw4w9WgXcQ";
-  console.log(
-    "[beat json] 載入成功",
-    {
-      mode,
-      path: loadedPath,
-      videoId: state.videoId,
-      beatsLength: state.beats.length,
-      actionsLength: state.actions.length,
-    },
-  );
+  console.log("[beat json] 載入成功", {
+    mode,
+    path: loadedPath,
+    videoId: state.videoId,
+    beatsLength: state.beats.length,
+    actionsLength: state.actions.length,
+  });
   if (els.videoUrlInput && state.videoId) {
     els.videoUrlInput.value = state.videoId;
   }
@@ -606,7 +617,8 @@ function loadVideoByIdIfReady() {
 }
 
 function getPlayerTimeSafe() {
-  if (!state.player || typeof state.player.getCurrentTime !== "function") return null;
+  if (!state.player || typeof state.player.getCurrentTime !== "function")
+    return null;
   try {
     const t = state.player.getCurrentTime();
     return typeof t === "number" && Number.isFinite(t) ? t : null;
@@ -651,7 +663,9 @@ function initYouTubePlayerIfPossible() {
           const t = getPlayerTimeSafe();
           if (t !== null) {
             rec.armStartPlayerTimeSec = t;
-            console.log(`[Recorder] 倒數開始：${rec.delaySec}s（from t=${t.toFixed(3)}）`);
+            console.log(
+              `[Recorder] 倒數開始：${rec.delaySec}s（from t=${t.toFixed(3)}）`,
+            );
           }
         } else {
           // 暫停/seek/buffering 期間重置倒數，等待下一次 PLAYING
@@ -684,7 +698,8 @@ function findBeatIndex(currentTime, beats) {
 }
 
 function isInJudgeWindow(currentTime, beatIndex, beats) {
-  if (beatIndex < 0 || !Array.isArray(beats) || beatIndex >= beats.length) return false;
+  if (beatIndex < 0 || !Array.isArray(beats) || beatIndex >= beats.length)
+    return false;
   const beatTime = beats[beatIndex];
   if (typeof beatTime !== "number" || !Number.isFinite(beatTime)) return false;
   return Math.abs(currentTime - beatTime) <= JUDGE_WINDOW_SEC;
@@ -789,7 +804,9 @@ const landmarkFilterBank = Array.from({ length: 33 }, () => ({
 function filterLandmarksOneEuro(landmarks, meta) {
   if (!landmarks || landmarks.length === 0) return landmarks;
   const timeSec =
-    meta && typeof meta.timestampUs === "number" ? meta.timestampUs / 1e6 : null;
+    meta && typeof meta.timestampUs === "number"
+      ? meta.timestampUs / 1e6
+      : null;
 
   return landmarks.map((lm, i) => {
     if (!lm) return lm;
@@ -970,7 +987,9 @@ async function initPose() {
       const t = getPlayerTimeSafe();
       if (t !== null) rec.armStartPlayerTimeSec = t;
     }
-    console.log(`[Recorder] 已待命，YouTube PLAYING 後延遲 ${rec.delaySec}s 才開始寫入`);
+    console.log(
+      `[Recorder] 已待命，YouTube PLAYING 後延遲 ${rec.delaySec}s 才開始寫入`,
+    );
     setRecordUi();
   };
 
@@ -989,7 +1008,10 @@ async function initPose() {
       samples: rec.samples,
     };
     const filename = `pose_trace_${videoId}_${formatTsForFilename()}.json`;
-    console.log("[Recorder] 停止錄製，下載:", { filename, sampleCount: rec.samples.length });
+    console.log("[Recorder] 停止錄製，下載:", {
+      filename,
+      sampleCount: rec.samples.length,
+    });
     createDownload(filename, payload);
   };
 
@@ -1123,12 +1145,18 @@ async function initPose() {
             rec.active = true;
             rec.lastRecordedT = Number.NEGATIVE_INFINITY;
             setRecordUi();
-            console.log(`[Recorder] 正式開始錄製（延遲 ${rec.delaySec}s 完成）`);
+            console.log(
+              `[Recorder] 正式開始錄製（延遲 ${rec.delaySec}s 完成）`,
+            );
           }
 
           // 防止暫停時重複寫入
           if (t <= rec.lastRecordedT) return;
-          if (t - rec.lastRecordedT < RECORD_SAMPLE_MIN_DT && rec.samples.length > 0) return;
+          if (
+            t - rec.lastRecordedT < RECORD_SAMPLE_MIN_DT &&
+            rec.samples.length > 0
+          )
+            return;
 
           rec.samples.push({ t, lm: toLmArray(result.landmarks) });
           rec.lastRecordedT = t;
@@ -1231,7 +1259,9 @@ function updateUiLoop() {
     beatIndex >= 0 && beatIndex < state.countInBeats ? "ready" : "dance";
 
   const action = state.actions.find((a) => a.beatIndex === beatIndex);
-  const inJudgeWindow = action ? isInJudgeWindow(currentTime, beatIndex, state.beats) : false;
+  const inJudgeWindow = action
+    ? isInJudgeWindow(currentTime, beatIndex, state.beats)
+    : false;
   const hintAction = findHintAction(state.actions, beatIndex, action, 4);
   const highlightConnections = buildHighlightConnections(hintAction);
   PoseModel.setOverlayState({

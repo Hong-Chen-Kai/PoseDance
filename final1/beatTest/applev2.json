@@ -95,27 +95,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 20,
+      "beatIndex": 21,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 21,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 22,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 23,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 24,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -125,27 +110,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 26,
+      "beatIndex": 27,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 27,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 28,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 29,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 30,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -155,27 +125,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 32,
+      "beatIndex": 33,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 33,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 34,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 35,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 36,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -185,27 +140,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 38,
+      "beatIndex": 39,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 39,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 40,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 41,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 42,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -215,27 +155,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 44,
+      "beatIndex": 45,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 45,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 46,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 47,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 48,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -245,27 +170,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 50,
+      "beatIndex": 51,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 51,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 52,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 53,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 54,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -275,27 +185,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 56,
+      "beatIndex": 57,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 57,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 58,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 59,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 60,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -305,27 +200,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 62,
+      "beatIndex": 63,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 63,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 64,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 65,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 66,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -335,27 +215,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 68,
+      "beatIndex": 69,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 69,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 70,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 71,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 72,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -365,27 +230,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 74,
+      "beatIndex": 75,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 75,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 76,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 77,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 78,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -395,27 +245,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 80,
+      "beatIndex": 81,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 81,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 82,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 83,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 84,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -425,27 +260,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 86,
+      "beatIndex": 87,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 87,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 88,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 89,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 90,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -455,27 +275,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 92,
+      "beatIndex": 93,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 93,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 94,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 95,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 96,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -485,27 +290,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 98,
+      "beatIndex": 99,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 99,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 100,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 101,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 102,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -515,27 +305,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 104,
+      "beatIndex": 105,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 105,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 106,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 107,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 108,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -545,27 +320,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 110,
+      "beatIndex": 111,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 111,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 112,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 113,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 114,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -575,27 +335,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 116,
+      "beatIndex": 117,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 117,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 118,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 119,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 120,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -605,27 +350,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 122,
+      "beatIndex": 123,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 123,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 124,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 125,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 126,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -635,27 +365,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 128,
+      "beatIndex": 129,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 129,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 130,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 131,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 132,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -665,27 +380,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 134,
+      "beatIndex": 135,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 135,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 136,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 137,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 138,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -695,27 +395,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 140,
+      "beatIndex": 141,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 141,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 142,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 143,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 144,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -725,27 +410,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 146,
+      "beatIndex": 147,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 147,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 148,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 149,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 150,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -755,27 +425,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 152,
+      "beatIndex": 153,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 153,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 154,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 155,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 156,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -785,27 +440,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 158,
+      "beatIndex": 159,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 159,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 160,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 161,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 162,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -815,27 +455,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 164,
+      "beatIndex": 165,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 165,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 166,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 167,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 168,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -845,27 +470,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 170,
+      "beatIndex": 171,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 171,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 172,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 173,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 174,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -875,27 +485,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 176,
+      "beatIndex": 177,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 177,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 178,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 179,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 180,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -905,27 +500,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 182,
+      "beatIndex": 183,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 183,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 184,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 185,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 186,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -935,27 +515,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 188,
+      "beatIndex": 189,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 189,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 190,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 191,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 192,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -965,27 +530,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 194,
+      "beatIndex": 195,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 195,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 196,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 197,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 198,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -995,27 +545,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 200,
+      "beatIndex": 201,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 201,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 202,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 203,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 204,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1025,27 +560,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 206,
+      "beatIndex": 207,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 207,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 208,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 209,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 210,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1055,27 +575,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 212,
+      "beatIndex": 213,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 213,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 214,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 215,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 216,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1085,27 +590,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 218,
+      "beatIndex": 219,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 219,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 220,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 221,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 222,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1115,27 +605,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 224,
+      "beatIndex": 225,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 225,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 226,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 227,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 228,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1145,27 +620,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 230,
+      "beatIndex": 231,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 231,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 232,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 233,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 234,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1175,27 +635,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 236,
+      "beatIndex": 237,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 237,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 238,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 239,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 240,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1205,27 +650,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 242,
+      "beatIndex": 243,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 243,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 244,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 245,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 246,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1235,27 +665,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 248,
+      "beatIndex": 249,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 249,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 250,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 251,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 252,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1265,27 +680,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 254,
+      "beatIndex": 255,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 255,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 256,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 257,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 258,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1295,27 +695,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 260,
+      "beatIndex": 261,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 261,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 262,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 263,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 264,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1325,27 +710,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 266,
+      "beatIndex": 267,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 267,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 268,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 269,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 270,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1355,27 +725,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 272,
+      "beatIndex": 273,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 273,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 274,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 275,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 276,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1385,27 +740,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 278,
+      "beatIndex": 279,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 279,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 280,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 281,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 282,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1415,27 +755,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 284,
+      "beatIndex": 285,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 285,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 286,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 287,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 288,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1445,27 +770,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 290,
+      "beatIndex": 291,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 291,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 292,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 293,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 294,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1475,27 +785,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 296,
+      "beatIndex": 297,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 297,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 298,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 299,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 300,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1505,27 +800,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 302,
+      "beatIndex": 303,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 303,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 304,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 305,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 306,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1535,27 +815,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 308,
+      "beatIndex": 309,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 309,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 310,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 311,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 312,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1565,27 +830,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 314,
+      "beatIndex": 315,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 315,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 316,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 317,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 318,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1595,27 +845,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 320,
+      "beatIndex": 321,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 321,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 322,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 323,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 324,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1625,27 +860,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 326,
+      "beatIndex": 327,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 327,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 328,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 329,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 330,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1655,27 +875,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 332,
+      "beatIndex": 333,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 333,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 334,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 335,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 336,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1685,27 +890,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 338,
+      "beatIndex": 339,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 339,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 340,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 341,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 342,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1715,27 +905,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 344,
+      "beatIndex": 345,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 345,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 346,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 347,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 348,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1745,27 +920,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 350,
+      "beatIndex": 351,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 351,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 352,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 353,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 354,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1775,27 +935,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 356,
+      "beatIndex": 357,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 357,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 358,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 359,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 360,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1805,27 +950,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 362,
+      "beatIndex": 363,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 363,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 364,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 365,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 366,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1835,27 +965,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 368,
+      "beatIndex": 369,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 369,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 370,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 371,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 372,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1865,27 +980,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 374,
+      "beatIndex": 375,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 375,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 376,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 377,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 378,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1895,27 +995,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 380,
+      "beatIndex": 381,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 381,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 382,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 383,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 384,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1925,27 +1010,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 386,
+      "beatIndex": 387,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 387,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 388,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 389,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 390,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1955,27 +1025,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 392,
+      "beatIndex": 393,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 393,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 394,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 395,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 396,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -1985,27 +1040,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 398,
+      "beatIndex": 399,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 399,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 400,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 401,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 402,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -2015,27 +1055,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 404,
+      "beatIndex": 405,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 405,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 406,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 407,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 408,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
@@ -2045,27 +1070,12 @@
       "activeJoints": ["left_arm"]
     },
     {
-      "beatIndex": 410,
+      "beatIndex": 411,
       "poseId": "rightHandUp",
       "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 411,
-      "poseId": "bothHandsUp",
-      "activeJoints": ["left_arm", "right_arm"]
-    },
-    {
-      "beatIndex": 412,
-      "poseId": "leftHandUp",
-      "activeJoints": ["left_arm"]
     },
     {
       "beatIndex": 413,
-      "poseId": "rightHandUp",
-      "activeJoints": ["right_arm"]
-    },
-    {
-      "beatIndex": 414,
       "poseId": "bothHandsUp",
       "activeJoints": ["left_arm", "right_arm"]
     },
