@@ -27,6 +27,7 @@ const state = {
   // 判定相關
   successCount: 0,
   lastJudgeResult: "none", // none | success | fail
+  lastJudgedBeatIndex: -1,
 
   // 錄製相關
   recorder: {
@@ -559,6 +560,7 @@ async function loadAppleJson() {
 function resetJudgeUiState() {
   state.successCount = 0;
   state.lastJudgeResult = "none";
+  state.lastJudgedBeatIndex = -1;
   if (els.successCountText) {
     els.successCountText.textContent = "0";
   }
@@ -1235,6 +1237,16 @@ function updateUiLoop() {
 
   // 判定成功/失敗（只在有 action 且 phase 為 dance 時）
   if (els.judgeResultTag) {
+    // hard 模式每拍都可能是判定拍，需在「換拍」時重置單拍判定狀態
+    if (beatIndex !== state.lastJudgedBeatIndex) {
+      state.lastJudgedBeatIndex = beatIndex;
+      state.lastJudgeResult = "none";
+      if (action && phase === "dance") {
+        els.judgeResultTag.textContent = "尚未判定";
+        els.judgeResultTag.className = "tag";
+      }
+    }
+
     if (action && phase === "dance") {
       let detectedPose = "none";
       if (state.currentPoseFlags.bothHandsUp) {
