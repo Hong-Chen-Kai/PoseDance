@@ -9,6 +9,7 @@ const state = {
   player: null,
   ready: false,
   ytInitStarted: false,
+  lastLoadedVideoId: null,
   demoTrace: null,
 
   // Pose 相關
@@ -199,14 +200,36 @@ function formatTsForFilename(d = new Date()) {
 }
 
 async function loadDemoTraceJson() {
-  try {
-    const res = await fetch(DEMO_TRACE_PATH, { cache: "no-store" });
-    if (!res.ok) {
-      console.warn("[DemoTrace] 載入失敗:", res.status, DEMO_TRACE_PATH);
-      state.demoTrace = null;
-      return;
+  const candidates = [
+    DEMO_TRACE_PATH,
+    state.videoId ? `./demo/pose_trace_${state.videoId}.json` : null,
+  ].filter(Boolean);
+
+  let loaded = null;
+  for (const path of candidates) {
+    try {
+      const res = await fetch(path, { cache: "no-store" });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!data || !Array.isArray(data.samples)) continue;
+      loaded = { path, data };
+      break;
+    } catch {
+      // try next candidate
     }
-    const data = await res.json();
+  }
+
+  if (!loaded) {
+    console.warn(
+      "[DemoTrace] 載入失敗。請將錄製檔命名為 ./demo/pose_trace.json 或 ./demo/pose_trace_<videoId>.json",
+      { tried: candidates, videoId: state.videoId },
+    );
+    state.demoTrace = null;
+    return;
+  }
+
+  try {
+    const { path, data } = loaded;
     if (!data || !Array.isArray(data.samples)) {
       console.warn("[DemoTrace] JSON 格式無效，缺少 samples");
       state.demoTrace = null;
@@ -214,6 +237,7 @@ async function loadDemoTraceJson() {
     }
     state.demoTrace = data;
     console.log("[DemoTrace] 載入成功", {
+      path,
       videoId: data.videoId,
       sampleCount: data.samples.length,
       firstT: data.samples[0]?.t,
@@ -521,8 +545,12 @@ function loadVideoByIdIfReady() {
   ) {
     return false;
   }
+  if (state.lastLoadedVideoId === state.videoId) {
+    return true;
+  }
   console.log("[YouTube] loadVideoById:", state.videoId);
   state.player.loadVideoById(state.videoId);
+  state.lastLoadedVideoId = state.videoId;
   return true;
 }
 
