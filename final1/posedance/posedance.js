@@ -5,6 +5,7 @@ const state = {
   beats: [],
   countInBeats: 16,
   actions: [],
+  mode: "easy",
   videoId: null,
   player: null,
   ready: false,
@@ -47,6 +48,10 @@ function $(id) {
 }
 
 const RECORD_SAMPLE_MIN_DT = 1 / 30; // 30fps 上限
+const APPLE_JSON_PATHS = {
+  easy: "../beatTest/apple.json",
+  hard: "../beatTest/apple.v2.json",
+};
 const DEMO_TRACE_PATH = "./demo/pose_trace.json";
 const DEMO_SOURCE_ASPECT = 16 / 9;
 
@@ -149,6 +154,7 @@ function initDomRefs() {
   els.successCountText = $("successCountText");
   els.judgeTag = $("judgeTag");
   els.judgeResultTag = $("judgeResultTag");
+  els.modeSelect = $("modeSelect");
   els.videoUrlInput = $("videoUrlInput");
   els.loadVideoButton = $("loadVideoButton");
 
@@ -520,10 +526,11 @@ function setupYtFloatingWindow() {
 }
 
 async function loadAppleJson() {
-  // 從 beatTest 資料夾共用 apple.json
-  const res = await fetch("../beatTest/apple.json");
+  const mode = state.mode === "hard" ? "hard" : "easy";
+  const path = APPLE_JSON_PATHS[mode];
+  const res = await fetch(path, { cache: "no-store" });
   if (!res.ok) {
-    throw new Error(`載入 apple.json 失敗: ${res.status}`);
+    throw new Error(`載入 ${path} 失敗: ${res.status}`);
   }
   const data = await res.json();
   state.beats = Array.isArray(data.beats) ? data.beats : [];
@@ -535,8 +542,10 @@ async function loadAppleJson() {
       ? data.videoId
       : "dQw4w9WgXcQ";
   console.log(
-    "[apple.json] 載入成功",
+    "[beat json] 載入成功",
     {
+      mode,
+      path,
       videoId: state.videoId,
       beatsLength: state.beats.length,
       actionsLength: state.actions.length,
@@ -544,6 +553,22 @@ async function loadAppleJson() {
   );
   if (els.videoUrlInput && state.videoId) {
     els.videoUrlInput.value = state.videoId;
+  }
+}
+
+function resetJudgeUiState() {
+  state.successCount = 0;
+  state.lastJudgeResult = "none";
+  if (els.successCountText) {
+    els.successCountText.textContent = "0";
+  }
+  if (els.judgeTag) {
+    els.judgeTag.textContent = "非判定拍";
+    els.judgeTag.className = "tag";
+  }
+  if (els.judgeResultTag) {
+    els.judgeResultTag.textContent = "尚未判定";
+    els.judgeResultTag.className = "tag";
   }
 }
 
@@ -1249,6 +1274,9 @@ function updateUiLoop() {
 async function main() {
   initDomRefs();
   setupYtFloatingWindow();
+  if (els.modeSelect) {
+    state.mode = els.modeSelect.value === "hard" ? "hard" : "easy";
+  }
 
   // 有些情況下 iframe_api 比 module 還早載入完成，導致 callback 來不及掛上。
   // 若此時已經有 YT.Player，就主動初始化一次。
@@ -1269,6 +1297,21 @@ async function main() {
           "[YouTube] player 尚未就緒，已更新 state.videoId，將在 onReady 時載入。狀態:",
           { ready: state.ready, hasPlayer: !!state.player },
         );
+      }
+    });
+  }
+
+  if (els.modeSelect) {
+    els.modeSelect.addEventListener("change", async () => {
+      state.mode = els.modeSelect.value === "hard" ? "hard" : "easy";
+      resetJudgeUiState();
+      try {
+        await loadAppleJson();
+        await loadDemoTraceJson();
+        state.lastLoadedVideoId = null;
+        loadVideoByIdIfReady();
+      } catch (err) {
+        console.error("[beat json] 切換模式載入失敗:", err);
       }
     });
   }

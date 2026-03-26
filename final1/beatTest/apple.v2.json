@@ -1,0 +1,3358 @@
+{
+  "videoId": "Gb8AZbpnzy4",
+  "bpm": 125,
+  "countInBeats": 16,
+  "beats": [
+    9.737143,
+    10.217233625,
+    10.69732425,
+    11.177414875,
+    11.6575055,
+    12.137596125,
+    12.61768675,
+    13.097777375,
+    13.577868,
+    14.05773625,
+    14.5376045,
+    15.01747275,
+    15.497340999999999,
+    15.97720925,
+    16.4570775,
+    16.93694575,
+    17.416814,
+    17.895190624999998,
+    18.37356725,
+    18.851943875,
+    19.3303205,
+    19.808697125,
+    20.287073749999998,
+    20.765450375,
+    21.243827,
+    21.723768125,
+    22.20370925,
+    22.683650375,
+    23.1635915,
+    23.643532625,
+    24.12347375,
+    24.603414875,
+    25.083356,
+    25.564081625,
+    26.044807249999998,
+    26.525532875,
+    27.0062585,
+    27.486984125,
+    27.96770975,
+    28.448435375,
+    28.929161,
+    29.409161,
+    29.889161,
+    30.369161,
+    30.849161,
+    31.329161,
+    31.809160999999996,
+    32.289161,
+    32.769161,
+    33.249161,
+    33.729161,
+    34.209160999999995,
+    34.689161,
+    35.169161,
+    35.649161,
+    36.129160999999996,
+    36.609161,
+    37.089161,
+    37.569161,
+    38.049161,
+    38.529161,
+    39.009161,
+    39.489160999999996,
+    39.969161,
+    40.449161,
+    40.931020374999996,
+    41.41287975,
+    41.894739125,
+    42.3765985,
+    42.858457875,
+    43.34031725,
+    43.822176625000004,
+    44.304036,
+    44.781451000000004,
+    45.258866000000005,
+    45.736281000000005,
+    46.213696,
+    46.691111,
+    47.168526,
+    47.645941,
+    48.123356,
+    48.603990875,
+    49.08462575,
+    49.565260625,
+    50.0458955,
+    50.526530375,
+    51.00716525,
+    51.487800125,
+    51.968435,
+    52.4470745,
+    52.925714,
+    53.4043535,
+    53.882993,
+    54.3616325,
+    54.840272,
+    55.3189115,
+    55.797551,
+    56.284903375,
+    56.77225575,
+    57.259608125,
+    57.7469605,
+    58.234312875,
+    58.72166525,
+    59.209017625,
+    59.69637,
+    60.168292,
+    60.640214,
+    61.112136,
+    61.584058,
+    62.055980000000005,
+    62.527902000000005,
+    62.999824000000004,
+    63.471746,
+    63.952108875,
+    64.43247175,
+    64.912834625,
+    65.3931975,
+    65.873560375,
+    66.35392325000001,
+    66.834286125,
+    67.314649,
+    67.798382875,
+    68.28211675,
+    68.765850625,
+    69.2495845,
+    69.73331837500001,
+    70.21705225000001,
+    70.70078612500001,
+    71.18452,
+    71.667853875,
+    72.15118775,
+    72.634521625,
+    73.1178555,
+    73.601189375,
+    74.08452325,
+    74.567857125,
+    75.051191,
+    75.525211625,
+    75.99923225,
+    76.473252875,
+    76.9472735,
+    77.421294125,
+    77.89531475,
+    78.369335375,
+    78.843356,
+    79.323718875,
+    79.80408175,
+    80.284444625,
+    80.7648075,
+    81.245170375,
+    81.72553325000001,
+    82.20589612500001,
+    82.686259,
+    83.16662175,
+    83.6469845,
+    84.12734725,
+    84.60771,
+    85.08807275000001,
+    85.5684355,
+    86.04879825,
+    86.529161,
+    87.008072625,
+    87.48698425,
+    87.965895875,
+    88.4448075,
+    88.923719125,
+    89.40263075,
+    89.88154237500001,
+    90.360454,
+    90.83791425000001,
+    91.3153745,
+    91.79283475,
+    92.270295,
+    92.74775525000001,
+    93.2252155,
+    93.70267575,
+    94.180136,
+    94.663401375,
+    95.14666675000001,
+    95.62993212500001,
+    96.11319750000001,
+    96.596462875,
+    97.07972825,
+    97.562993625,
+    98.046259,
+    98.5251705,
+    99.00408200000001,
+    99.4829935,
+    99.961905,
+    100.4408165,
+    100.91972799999999,
+    101.3986395,
+    101.877551,
+    102.356598625,
+    102.83564625,
+    103.31469387499999,
+    103.7937415,
+    104.272789125,
+    104.75183675,
+    105.23088437499999,
+    105.709932,
+    106.19015875,
+    106.6703855,
+    107.15061225,
+    107.630839,
+    108.11106575,
+    108.5912925,
+    109.07151925,
+    109.551746,
+    110.03210887499999,
+    110.51247175,
+    110.992834625,
+    111.4731975,
+    111.953560375,
+    112.43392324999999,
+    112.914286125,
+    113.394649,
+    113.8735605,
+    114.352472,
+    114.8313835,
+    115.310295,
+    115.7892065,
+    116.268118,
+    116.74702950000001,
+    117.225941,
+    117.708208625,
+    118.19047625,
+    118.67274387500001,
+    119.1550115,
+    119.63727912499999,
+    120.11954675,
+    120.601814375,
+    121.084082,
+    121.56508112499999,
+    122.04608024999999,
+    122.527079375,
+    123.0080785,
+    123.489077625,
+    123.97007675,
+    124.451075875,
+    124.932075,
+    125.411962875,
+    125.89185075,
+    126.37173862499999,
+    126.8516265,
+    127.331514375,
+    127.81140224999999,
+    128.291290125,
+    128.771178,
+    129.250925875,
+    129.73067375,
+    130.21042162499998,
+    130.6901695,
+    131.169917375,
+    131.64966525,
+    132.12941312499999,
+    132.609161,
+    133.09104775,
+    133.5729345,
+    134.05482125,
+    134.536708,
+    135.01859475,
+    135.5004815,
+    135.98236825,
+    136.464255,
+    136.940191375,
+    137.41612775000002,
+    137.89206412500002,
+    138.3680005,
+    138.843936875,
+    139.31987325,
+    139.795809625,
+    140.271746,
+    140.75378325,
+    141.2358205,
+    141.71785775,
+    142.199895,
+    142.68193225,
+    143.1639695,
+    143.64600675,
+    144.128044,
+    144.60886125,
+    145.0896785,
+    145.57049575,
+    146.051313,
+    146.53213025,
+    147.0129475,
+    147.49376475,
+    147.974582,
+    148.455399375,
+    148.93621675,
+    149.417034125,
+    149.8978515,
+    150.37866887500002,
+    150.85948625,
+    151.340303625,
+    151.821121,
+    152.30035162500002,
+    152.77958225,
+    153.258812875,
+    153.7380435,
+    154.21727412500002,
+    154.69650475,
+    155.175735375,
+    155.654966,
+    156.132426375,
+    156.60988675,
+    157.087347125,
+    157.5648075,
+    158.042267875,
+    158.51972825000001,
+    158.997188625,
+    159.474649,
+    159.95210925,
+    160.4295695,
+    160.90702975,
+    161.38449,
+    161.86195025,
+    162.33941049999999,
+    162.81687075,
+    163.294331,
+    163.776145125,
+    164.25795925,
+    164.739773375,
+    165.2215875,
+    165.703401625,
+    166.18521575,
+    166.667029875,
+    167.148844,
+    167.62657637499998,
+    168.10430875,
+    168.582041125,
+    169.0597735,
+    169.537505875,
+    170.01523824999998,
+    170.492970625,
+    170.970703,
+    171.45514749999998,
+    171.939592,
+    172.4240365,
+    172.908481,
+    173.3929255,
+    173.87736999999998,
+    174.3618145,
+    174.846259,
+    175.3251705,
+    175.804082,
+    176.2829935,
+    176.761905,
+    177.2408165,
+    177.719728,
+    178.19863949999998,
+    178.677551,
+    179.157913875,
+    179.63827675,
+    180.118639625,
+    180.59900249999998,
+    181.079365375,
+    181.55972825,
+    182.040091125,
+    182.520454,
+    182.9993655,
+    183.478277,
+    183.9571885,
+    184.4361,
+    184.9150115,
+    185.393923,
+    185.87283449999998,
+    186.351746,
+    186.82707475,
+    187.3024035,
+    187.77773224999999,
+    188.253061,
+    188.72838975000002,
+    189.2037185,
+    189.67904725,
+    190.154376,
+    190.6362355,
+    191.118095,
+    191.59995450000002,
+    192.081814,
+    192.5636735,
+    193.045533,
+    193.52739250000002,
+    194.009252,
+    194.491701,
+    194.97415,
+    195.456599,
+    195.939048,
+    196.421497,
+    196.903946,
+    197.386395,
+    197.868844,
+    198.34920675,
+    198.8295695,
+    199.30993225,
+    199.79029500000001,
+    200.27065775,
+    200.7510205,
+    201.23138325,
+    201.711746,
+    202.193560125,
+    202.67537425,
+    203.157188375,
+    203.6390025,
+    204.120816625,
+    204.60263075,
+    205.084444875,
+    205.566259,
+    206.03210925,
+    206.4979595,
+    206.96380975,
+    207.42966,
+    207.89551025,
+    208.3613605,
+    208.82721075
+  ],
+  "actions": [
+    {
+      "beatIndex": 16,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 17,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 18,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 19,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 20,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 21,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 22,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 23,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 24,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 25,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 26,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 27,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 28,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 29,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 30,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 31,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 32,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 33,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 34,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 35,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 36,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 37,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 38,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 39,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 40,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 41,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 42,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 43,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 44,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 45,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 46,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 47,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 48,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 49,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 50,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 51,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 52,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 53,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 54,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 55,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 56,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 57,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 58,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 59,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 60,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 61,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 62,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 63,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 64,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 65,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 66,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 67,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 68,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 69,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 70,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 71,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 72,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 73,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 74,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 75,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 76,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 77,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 78,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 79,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 80,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 81,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 82,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 83,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 84,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 85,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 86,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 87,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 88,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 89,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 90,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 91,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 92,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 93,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 94,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 95,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 96,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 97,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 98,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 99,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 100,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 101,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 102,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 103,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 104,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 105,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 106,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 107,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 108,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 109,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 110,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 111,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 112,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 113,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 114,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 115,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 116,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 117,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 118,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 119,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 120,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 121,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 122,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 123,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 124,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 125,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 126,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 127,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 128,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 129,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 130,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 131,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 132,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 133,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 134,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 135,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 136,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 137,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 138,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 139,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 140,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 141,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 142,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 143,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 144,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 145,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 146,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 147,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 148,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 149,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 150,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 151,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 152,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 153,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 154,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 155,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 156,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 157,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 158,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 159,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 160,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 161,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 162,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 163,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 164,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 165,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 166,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 167,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 168,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 169,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 170,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 171,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 172,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 173,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 174,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 175,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 176,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 177,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 178,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 179,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 180,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 181,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 182,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 183,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 184,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 185,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 186,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 187,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 188,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 189,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 190,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 191,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 192,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 193,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 194,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 195,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 196,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 197,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 198,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 199,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 200,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 201,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 202,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 203,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 204,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 205,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 206,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 207,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 208,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 209,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 210,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 211,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 212,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 213,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 214,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 215,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 216,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 217,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 218,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 219,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 220,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 221,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 222,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 223,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 224,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 225,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 226,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 227,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 228,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 229,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 230,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 231,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 232,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 233,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 234,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 235,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 236,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 237,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 238,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 239,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 240,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 241,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 242,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 243,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 244,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 245,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 246,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 247,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 248,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 249,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 250,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 251,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 252,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 253,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 254,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 255,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 256,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 257,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 258,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 259,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 260,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 261,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 262,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 263,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 264,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 265,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 266,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 267,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 268,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 269,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 270,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 271,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 272,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 273,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 274,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 275,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 276,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 277,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 278,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 279,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 280,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 281,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 282,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 283,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 284,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 285,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 286,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 287,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 288,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 289,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 290,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 291,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 292,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 293,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 294,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 295,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 296,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 297,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 298,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 299,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 300,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 301,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 302,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 303,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 304,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 305,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 306,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 307,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 308,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 309,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 310,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 311,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 312,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 313,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 314,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 315,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 316,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 317,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 318,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 319,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 320,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 321,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 322,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 323,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 324,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 325,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 326,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 327,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 328,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 329,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 330,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 331,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 332,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 333,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 334,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 335,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 336,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 337,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 338,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 339,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 340,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 341,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 342,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 343,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 344,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 345,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 346,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 347,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 348,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 349,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 350,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 351,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 352,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 353,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 354,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 355,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 356,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 357,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 358,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 359,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 360,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 361,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 362,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 363,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 364,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 365,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 366,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 367,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 368,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 369,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 370,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 371,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 372,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 373,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 374,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 375,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 376,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 377,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 378,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 379,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 380,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 381,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 382,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 383,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 384,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 385,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 386,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 387,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 388,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 389,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 390,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 391,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 392,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 393,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 394,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 395,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 396,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 397,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 398,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 399,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 400,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 401,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 402,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 403,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 404,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 405,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 406,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 407,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 408,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 409,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 410,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 411,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 412,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    },
+    {
+      "beatIndex": 413,
+      "poseId": "rightHandUp",
+      "activeJoints": [
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 414,
+      "poseId": "bothHandsUp",
+      "activeJoints": [
+        "left_arm",
+        "right_arm"
+      ]
+    },
+    {
+      "beatIndex": 415,
+      "poseId": "leftHandUp",
+      "activeJoints": [
+        "left_arm"
+      ]
+    }
+  ]
+}

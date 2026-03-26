@@ -3,9 +3,11 @@ const state = {
   countInBeats: 0,
   actions: [],
   bpm: null,
+  mode: "easy",
   videoId: null,
   player: null,
   ready: false,
+  lastLoadedVideoId: null,
 };
 
 const els = {};
@@ -29,7 +31,13 @@ function initDomRefs() {
   els.judgeTag = $("judgeTag");
   els.videoUrlInput = $("videoUrlInput");
   els.loadVideoButton = $("loadVideoButton");
+  els.modeSelect = $("modeSelect");
 }
+
+const APPLE_JSON_PATHS = {
+  easy: "./apple.json",
+  hard: "./apple.v2.json",
+};
 
 function extractVideoId(input) {
   if (!input) return null;
@@ -55,9 +63,11 @@ function extractVideoId(input) {
 }
 
 async function loadAppleJson() {
-  const res = await fetch("./apple.json");
+  const mode = state.mode === "hard" ? "hard" : "easy";
+  const path = APPLE_JSON_PATHS[mode];
+  const res = await fetch(path, { cache: "no-store" });
   if (!res.ok) {
-    throw new Error(`載入 apple.json 失敗: ${res.status}`);
+    throw new Error(`載入 ${path} 失敗: ${res.status}`);
   }
   const data = await res.json();
   state.beats = Array.isArray(data.beats) ? data.beats : [];
@@ -85,7 +95,8 @@ async function loadAppleJson() {
   }
   if (els.debugText) {
     els.debugText.textContent =
-      `apple.json 載入成功\n` +
+      `${path} 載入成功\n` +
+      `mode: ${mode}\n` +
       `videoId: ${state.videoId}\n` +
       `bpm: ${state.bpm ?? "—"}\n` +
       `beats.length: ${state.beats.length}\n` +
@@ -94,6 +105,20 @@ async function loadAppleJson() {
   if (els.videoUrlInput && state.videoId) {
     els.videoUrlInput.value = state.videoId;
   }
+}
+
+function loadVideoByIdIfReady() {
+  if (
+    !state.ready ||
+    !state.player ||
+    !state.videoId ||
+    typeof state.player.loadVideoById !== "function"
+  ) {
+    return;
+  }
+  if (state.lastLoadedVideoId === state.videoId) return;
+  state.player.loadVideoById(state.videoId);
+  state.lastLoadedVideoId = state.videoId;
 }
 
 // YouTube IFrame API 會在 global 呼叫這個函式
@@ -110,9 +135,7 @@ window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
     events: {
       onReady: () => {
         state.ready = true;
-        if (state.videoId && typeof state.player.loadVideoById === "function") {
-          state.player.loadVideoById(state.videoId);
-        }
+        loadVideoByIdIfReady();
         if (els.debugText) {
           els.debugText.textContent += `\nYouTube Player ready，videoId=${state.videoId}`;
         }
@@ -201,6 +224,9 @@ function updateUiLoop() {
 
 async function main() {
   initDomRefs();
+  if (els.modeSelect) {
+    state.mode = els.modeSelect.value === "hard" ? "hard" : "easy";
+  }
   if (els.loadVideoButton) {
     els.loadVideoButton.addEventListener("click", () => {
       const raw = els.videoUrlInput ? els.videoUrlInput.value : "";
@@ -212,29 +238,32 @@ async function main() {
         return;
       }
       state.videoId = id;
-      if (
-        state.ready &&
-        state.player &&
-        typeof state.player.loadVideoById === "function"
-      ) {
-        state.player.loadVideoById(id);
-      }
+      state.lastLoadedVideoId = null;
+      loadVideoByIdIfReady();
       if (els.debugText) {
         els.debugText.textContent += `\n已載入影片 videoId=${id}`;
+      }
+    });
+  }
+
+  if (els.modeSelect) {
+    els.modeSelect.addEventListener("change", async () => {
+      state.mode = els.modeSelect.value === "hard" ? "hard" : "easy";
+      try {
+        await loadAppleJson();
+        state.lastLoadedVideoId = null;
+        loadVideoByIdIfReady();
+      } catch (err) {
+        if (els.debugText) {
+          els.debugText.textContent = String(err);
+        }
       }
     });
   }
   try {
     await loadAppleJson();
     // API 可能比 apple.json 先就緒：補載正確 videoId
-    if (
-      state.ready &&
-      state.player &&
-      state.videoId &&
-      typeof state.player.loadVideoById === "function"
-    ) {
-      state.player.loadVideoById(state.videoId);
-    }
+    loadVideoByIdIfReady();
   } catch (err) {
     if (els.debugText) {
       els.debugText.textContent = String(err);
