@@ -54,7 +54,10 @@ const APPLE_JSON_PATH_CANDIDATES = {
   easy: ["../beatTest/apple.json"],
   hard: ["../beatTest/applev2.json", "../beatTest/apple.v2.json"],
 };
-const DEMO_TRACE_PATH = "./demo/pose_trace.json";
+const DEMO_TRACE_PATHS_BY_MODE = {
+  easy: ["./demo/pose_trace_easy.json"],
+  hard: ["./demo/pose_trace_hard.json"],
+};
 const DEMO_SOURCE_ASPECT = 16 / 9;
 
 const DEMO_POSE_CONNECTIONS = [
@@ -224,10 +227,8 @@ function formatTsForFilename(d = new Date()) {
 }
 
 async function loadDemoTraceJson() {
-  const candidates = [
-    DEMO_TRACE_PATH,
-    state.videoId ? `./demo/pose_trace_${state.videoId}.json` : null,
-  ].filter(Boolean);
+  const mode = state.mode === "hard" ? "hard" : "easy";
+  const candidates = [...(DEMO_TRACE_PATHS_BY_MODE[mode] || DEMO_TRACE_PATHS_BY_MODE.easy)];
 
   let loaded = null;
   for (const path of candidates) {
@@ -245,8 +246,8 @@ async function loadDemoTraceJson() {
 
   if (!loaded) {
     console.warn(
-      "[DemoTrace] 載入失敗。請將錄製檔命名為 ./demo/pose_trace.json 或 ./demo/pose_trace_<videoId>.json",
-      { tried: candidates, videoId: state.videoId },
+      "[DemoTrace] 載入失敗。請確認模式對應檔存在。",
+      { mode, tried: candidates, videoId: state.videoId },
     );
     state.demoTrace = null;
     return;
@@ -261,6 +262,7 @@ async function loadDemoTraceJson() {
     }
     state.demoTrace = data;
     console.log("[DemoTrace] 載入成功", {
+      mode,
       path,
       videoId: data.videoId,
       sampleCount: data.samples.length,
