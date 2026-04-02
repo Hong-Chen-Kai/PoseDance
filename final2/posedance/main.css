@@ -24,12 +24,12 @@ h1 {
 }
 
 .topbar {
-  padding: 12px 16px;
+  padding: 8px 12px;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .topbar__title {
@@ -48,13 +48,76 @@ h1 {
 .topbar__controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
-.topbar__youtube {
-  flex: 0 1 520px;
-  min-width: 240px;
+.topbar__controls-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 32px;
+}
+
+.topbar__controls-group--left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.topbar__controls-group--right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.topbar__mode-select {
+  height: 32px;
+  padding: 0 8px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #ffffff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+
+.topbar__url-input {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 420px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #ffffff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+
+.topbar__file-input {
+  flex: 0 1 220px;
+  min-width: 140px;
+  max-width: 280px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: #475569;
+}
+
+.topbar__file-input::file-selector-button {
+  height: 28px;
+  padding: 0 10px;
+  margin-right: 8px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
 }
 
 .small {
@@ -137,6 +200,26 @@ h1 {
   color: #450a0a;
 }
 
+/* 頂欄按鈕：需高於 .btn 選擇性，避免被 padding 覆寫 */
+.btn.btn-load {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  line-height: 1;
+  white-space: nowrap;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.btn.btn-camera,
+.btn.btn-record {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -181,8 +264,7 @@ dl {
   display: grid;
   grid-template-columns: auto 1fr;
   row-gap: 4px;
-  -moz-column-gap: 8px;
-       column-gap: 8px;
+  column-gap: 8px;
   margin: 0;
 }
 
@@ -213,8 +295,7 @@ dd {
   width: 100%;
   height: 100%;
   /* 與 PoseModel 一致：避免因裁切/縮放造成骨架看起來歪 */
-  -o-object-fit: contain;
-     object-fit: contain;
+  object-fit: contain;
   transform: scaleX(-1);
   display: block;
 }
@@ -222,8 +303,7 @@ dd {
 .stage-video {
   width: 100%;
   height: calc(100vh - 132px);
-  -o-object-fit: contain;
-     object-fit: contain;
+  object-fit: contain;
   display: block;
   background: #ffffff;
 }
@@ -272,9 +352,7 @@ dd {
   padding: 0 10px;
   background: rgba(255, 255, 255, 0.9);
   cursor: grab;
-  -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+  user-select: none;
 }
 
 .yt-wrapper__player {
@@ -305,4 +383,6 @@ dd {
     border-right: none;
     border-bottom: 1px solid rgba(15, 23, 42, 0.08);
   }
-}/*# sourceMappingURL=main.css.map */
+}
+
+/*# sourceMappingURL=main.css.map */
