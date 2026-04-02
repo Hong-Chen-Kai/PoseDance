@@ -327,8 +327,21 @@ async function loadDemoTraceFromFile(file) {
   }
 }
 
-function findNearestDemoSample(samples, t) {
+/** 依時間 t 落在哪兩筆 sample 之間，回傳線性插值係數 alpha∈[0,1]（假設 samples 依 t 遞增） */
+function getDemoTimeBracket(samples, t) {
   if (!Array.isArray(samples) || samples.length === 0) return null;
+  if (samples.length === 1) {
+    return { left: samples[0], right: samples[0], alpha: 0 };
+  }
+  const firstT = samples[0]?.t ?? 0;
+  const lastT = samples[samples.length - 1]?.t ?? 0;
+  if (t <= firstT) {
+    return { left: samples[0], right: samples[0], alpha: 0 };
+  }
+  if (t >= lastT) {
+    const last = samples[samples.length - 1];
+    return { left: last, right: last, alpha: 0 };
+  }
   let lo = 0;
   let hi = samples.length - 1;
   while (lo < hi) {
@@ -337,12 +350,58 @@ function findNearestDemoSample(samples, t) {
     else hi = mid;
   }
   const right = samples[lo];
-  const left = samples[Math.max(0, lo - 1)];
-  if (!left) return right || null;
-  if (!right) return left || null;
-  return Math.abs((left.t ?? 0) - t) <= Math.abs((right.t ?? 0) - t)
-    ? left
-    : right;
+  const left = samples[lo - 1];
+  const tl = left?.t ?? 0;
+  const tr = right?.t ?? tl;
+  if (tr === tl) return { left, right, alpha: 0 };
+  const alpha = (t - tl) / (tr - tl);
+  return { left, right, alpha };
+}
+
+function interpolateLandmarks(lmA, lmB, alpha) {
+  if (!lmA || !Array.isArray(lmA)) return lmB;
+  if (!lmB || !Array.isArray(lmB)) return lmA;
+  const out = [];
+  for (let i = 0; i < 33; i += 1) {
+    const a = lmA[i];
+    const b = lmB[i];
+    if (!a && !b) {
+      out.push(null);
+      continue;
+    }
+    if (!a) {
+      out.push(b);
+      continue;
+    }
+    if (!b) {
+      out.push(a);
+      continue;
+    }
+    const [ax, ay, az, av] = a;
+    const [bx, by, bz, bv] = b;
+    out.push([
+      ax + (bx - ax) * alpha,
+      ay + (by - ay) * alpha,
+      typeof az === "number" && typeof bz === "number"
+        ? az + (bz - az) * alpha
+        : (az ?? bz),
+      typeof av === "number" && typeof bv === "number"
+        ? av + (bv - av) * alpha
+        : (av ?? bv),
+    ]);
+  }
+  return out;
+}
+
+/** 示範時間 t 對應的骨架（相鄰兩幀線性插值，拉桿／播放都會連續變形） */
+function getDemoLandmarksAtTime(samples, t) {
+  const br = getDemoTimeBracket(samples, t);
+  if (!br) return null;
+  const { left, right, alpha } = br;
+  if (!left || !Array.isArray(left.lm)) return null;
+  if (left === right || alpha <= 0) return left.lm;
+  if (!right || !Array.isArray(right.lm)) return left.lm;
+  return interpolateLandmarks(left.lm, right.lm, alpha);
 }
 
 function computeContainRect(width, height, sourceAspect) {
@@ -385,8 +444,8 @@ function drawDemoSkeletonAtTime(currentTime) {
     return;
   }
 
-  const sample = findNearestDemoSample(state.demoTrace.samples, currentTime);
-  if (!sample || !Array.isArray(sample.lm) || sample.lm.length === 0) {
+  const lm = getDemoLandmarksAtTime(state.demoTrace.samples, currentTime);
+  if (!lm || lm.length === 0) {
     ctx.restore();
     return;
   }
@@ -398,8 +457,8 @@ function drawDemoSkeletonAtTime(currentTime) {
   ctx.lineJoin = "round";
 
   for (const [a, b] of DEMO_POSE_CONNECTIONS) {
-    const pa = sample.lm[a];
-    const pb = sample.lm[b];
+    const pa = lm[a];
+    const pb = lm[b];
     if (!pa || !pb) continue;
     const [ax, ay, , av] = pa;
     const [bx, by, , bv] = pb;
@@ -423,7 +482,7 @@ function drawDemoSkeletonAtTime(currentTime) {
   }
 
   ctx.fillStyle = "rgba(239, 68, 68, 0.9)";
-  for (const point of sample.lm) {
+  for (const point of lm) {
     if (!point) continue;
     const [x, y, , v] = point;
     if (typeof x !== "number" || typeof y !== "number") continue;
@@ -1369,8 +1428,8 @@ function updateUiLoop() {
     return;
   }
 
-  const demoSample = findNearestDemoSample(state.demoTrace.samples, currentTime);
-  if (!demoSample || !Array.isArray(demoSample.lm) || demoSample.lm.length !== 33) {
+  const demoLm = getDemoLandmarksAtTime(state.demoTrace.samples, currentTime);
+  if (!demoLm || demoLm.length !== 33) {
     setSimilarityUi({
       scoreText: "—",
       trackingText: "示範資料不足",
@@ -1379,7 +1438,7 @@ function updateUiLoop() {
     return;
   }
 
-  const r = computeSimilarity(state.latestUserLandmarks, demoSample.lm);
+  const r = computeSimilarity(state.latestUserLandmarks, demoLm);
   if (!r.ok) {
     setSimilarityUi({
       scoreText: "—",
