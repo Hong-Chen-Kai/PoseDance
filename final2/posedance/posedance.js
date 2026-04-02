@@ -46,6 +46,11 @@ const state = {
     trackingOk: false,
     validPoints: 0,
   },
+
+  /** iframe postMessage（infoDelivery）較能跟上拖曳拉桿；getCurrentTime() 常拖到放開才更新 */
+  ytInfoCurrentTime: null,
+  ytInfoTimeAtMs: null,
+  ytMessageBridgeInstalled: false,
 };
 
 const els = {};
@@ -788,6 +793,8 @@ function loadVideoByIdIfReady() {
   console.log("[YouTube] loadVideoById:", state.videoId);
   state.player.loadVideoById(state.videoId);
   state.lastLoadedVideoId = state.videoId;
+  setTimeout(() => sendYouTubeListeningHandshake(), 400);
+  setTimeout(() => sendYouTubeListeningHandshake(), 1500);
   return true;
 }
 
@@ -799,6 +806,70 @@ function getPlayerTimeSafe() {
     return typeof t === "number" && Number.isFinite(t) ? t : null;
   } catch {
     return null;
+  }
+}
+
+function parseYouTubeEmbedMessage(data) {
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+  if (data && typeof data === "object") return data;
+  return null;
+}
+
+/** 示範時間軸：合併 API 與 iframe infoDelivery（拖曳進度條時較連續） */
+function getDemoTimelineTime() {
+  const apiT = getPlayerTimeSafe();
+  const now = performance.now();
+  const msgAge =
+    state.ytInfoTimeAtMs != null ? now - state.ytInfoTimeAtMs : Infinity;
+  const msgT = state.ytInfoCurrentTime;
+  const msgFresh = msgT != null && Number.isFinite(msgT) && msgAge < 900;
+  if (msgFresh) {
+    return msgT;
+  }
+  if (apiT != null) return apiT;
+  return typeof msgT === "number" && Number.isFinite(msgT) ? msgT : 0;
+}
+
+function installYouTubeEmbedMessageBridge() {
+  if (typeof window === "undefined" || state.ytMessageBridgeInstalled) return;
+  state.ytMessageBridgeInstalled = true;
+
+  window.addEventListener("message", (event) => {
+    if (
+      !/^https:\/\/(www\.youtube\.com|www\.youtube-nocookie\.com)(:\d+)?$/i.test(
+        event.origin,
+      )
+    ) {
+      return;
+    }
+    const payload = parseYouTubeEmbedMessage(event.data);
+    if (!payload || payload.event !== "infoDelivery" || !payload.info) return;
+    const ct = payload.info.currentTime;
+    if (typeof ct !== "number" || !Number.isFinite(ct)) return;
+    state.ytInfoCurrentTime = ct;
+    state.ytInfoTimeAtMs = performance.now();
+  });
+}
+
+function sendYouTubeListeningHandshake() {
+  if (!state.player || typeof state.player.getIframe !== "function") return;
+  try {
+    const iframe = state.player.getIframe();
+    if (!iframe?.contentWindow) return;
+    const msg = JSON.stringify({
+      event: "listening",
+      id: 1,
+      channel: "widget",
+    });
+    iframe.contentWindow.postMessage(msg, "*");
+  } catch (err) {
+    console.warn("[YouTube] listening 握手失敗（示範時間可能僅在放開拉桿時更新）:", err);
   }
 }
 
@@ -826,6 +897,8 @@ function initYouTubePlayerIfPossible() {
         state.ready = true;
         // apple.json 可能比 API 晚載入：這裡再補一次（若已有 videoId）
         loadVideoByIdIfReady();
+        sendYouTubeListeningHandshake();
+        setTimeout(() => sendYouTubeListeningHandshake(), 500);
       },
       onStateChange: (event) => {
         console.log("[YouTube] state change:", event.data);
@@ -1402,14 +1475,8 @@ function updateUiLoop() {
     return;
   }
 
-  let currentTime = 0;
-  try {
-    currentTime = state.player.getCurrentTime();
-  } catch {
-    return;
-  }
-
-  drawDemoSkeletonAtTime(currentTime);
+  const timelineT = getDemoTimelineTime();
+  drawDemoSkeletonAtTime(timelineT);
 
   if (!state.demoTrace || !Array.isArray(state.demoTrace.samples)) {
     setSimilarityUi({
@@ -1428,7 +1495,7 @@ function updateUiLoop() {
     return;
   }
 
-  const demoLm = getDemoLandmarksAtTime(state.demoTrace.samples, currentTime);
+  const demoLm = getDemoLandmarksAtTime(state.demoTrace.samples, timelineT);
   if (!demoLm || demoLm.length !== 33) {
     setSimilarityUi({
       scoreText: "—",
@@ -1456,6 +1523,7 @@ function updateUiLoop() {
 
 async function main() {
   initDomRefs();
+  installYouTubeEmbedMessageBridge();
   setupYtFloatingWindow();
   if (els.modeSelect) {
     state.mode = els.modeSelect.value === "hard" ? "hard" : "easy";
