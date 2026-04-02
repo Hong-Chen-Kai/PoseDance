@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pose Dance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar__title">
+          <h1>Pose Dance</h1>
+        </div>
+
+        <div class="topbar__status">
+          <span class="small">相似度：<span id="similarityText">—</span></span>
+          <span class="small">追蹤：<span id="trackingText">—</span></span>
+          <span class="small">示範：<span id="demoNameText">（未載入）</span></span>
+        </div>
+
+        <div class="topbar__controls">
+          <div class="input-row topbar__youtube">
+            <select id="modeSelect" aria-label="難度模式">
+              <option value="easy" selected>Easy</option>
+              <option value="hard">Hard</option>
+            </select>
+            <input
+              id="demoFileInput"
+              type="file"
+              accept="application/json,.json"
+              title="載入示範骨架 JSON（pose_trace_*.json）"
+            />
+            <input
+              id="videoUrlInput"
+              type="text"
+              placeholder="貼上 YouTube 網址或 videoId（需與示範 JSON 同一首歌）"
+            />
+            <button id="loadVideoButton">載入影片</button>
+          </div>
+
+          <button id="startCameraButton" class="btn btn-camera">
+            啟動攝影機
+          </button>
+
+          <button id="recordButton" class="btn btn-record" disabled>
+            開始錄製
+          </button>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="main__stage main__stage--demo" aria-label="示範骨架回放">
+          <canvas id="demo_canvas"></canvas>
+        </section>
+
+        <section class="main__stage main__stage--user" aria-label="使用者骨架">
+          <div class="camera-wrapper camera-wrapper--full">
+            <video id="input_video" playsinline></video>
+            <canvas id="output_canvas"></canvas>
+          </div>
+          <div class="hud small" id="poseInfoText">尚未開始偵測</div>
+        </section>
+      </main>
+
+      <!-- 右下角：可拖曳/縮放的 YouTube 小視窗（用來控制音樂/音量） -->
+      <div id="ytPlayerWrapper" class="yt-wrapper" aria-label="YouTube 播放器">
+        <div class="yt-wrapper__drag-handle" id="ytDragHandle">
+          <span class="small">YouTube</span>
+        </div>
+        <div id="player" class="yt-wrapper__player"></div>
+        <div class="yt-wrapper__resize-handle" id="ytResizeHandle"></div>
+      </div>
+    </div>
+
+    <!-- Import map：讓瀏覽器能解析 @mediapipe/tasks-vision（GitHub Pages 無打包，需從 CDN 載入） -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@mediapipe/tasks-vision": "https://esm.sh/@mediapipe/tasks-vision"
+        }
+      }
+    </script>
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- Main script -->
+    <script type="module" src="./posedance.js"></script>
+  </body>
+</html>
