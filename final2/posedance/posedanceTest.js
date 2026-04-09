@@ -49,6 +49,10 @@ const state = {
 
   demo: { easy: null, hard: null },
 
+  ui: {
+    hintMode: "easy",
+  },
+
   // Pose
   poseReady: false,
   cameraRunning: false,
@@ -75,6 +79,16 @@ const state = {
     easy: [],
     hard: [],
   },
+
+  orange: {
+    active: false,
+    goodSec: 0,
+    window: [],
+    lastT: null,
+    threshold: 90,
+    requireSec: 3,
+    instantMajorityRatio: 0.7,
+  },
 };
 
 const els = {};
@@ -88,6 +102,7 @@ function initDomRefs() {
   els.overallEasyText = $("overallEasyText");
   els.overallHardText = $("overallHardText");
   els.videoUrlInput = $("videoUrlInput");
+  els.hintModeSelect = $("hintModeSelect");
   els.loadVideoButton = $("loadVideoButton");
   els.startCameraButton = $("startCameraButton");
   els.poseInfoText = $("poseInfoText");
@@ -502,6 +517,62 @@ function center2(a, b) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+const PARTS = Object.freeze({
+  leftArm: "leftArm",
+  rightArm: "rightArm",
+  leftLeg: "leftLeg",
+  rightLeg: "rightLeg",
+  torso: "torso",
+});
+
+const PART_POINT_SETS = Object.freeze({
+  [PARTS.leftArm]: [
+    POSE_LANDMARKS.LEFT_SHOULDER,
+    POSE_LANDMARKS.LEFT_ELBOW,
+    POSE_LANDMARKS.LEFT_WRIST,
+    POSE_LANDMARKS.LEFT_THUMB,
+    POSE_LANDMARKS.LEFT_INDEX,
+    POSE_LANDMARKS.LEFT_PINKY,
+  ],
+  [PARTS.rightArm]: [
+    POSE_LANDMARKS.RIGHT_SHOULDER,
+    POSE_LANDMARKS.RIGHT_ELBOW,
+    POSE_LANDMARKS.RIGHT_WRIST,
+    POSE_LANDMARKS.RIGHT_THUMB,
+    POSE_LANDMARKS.RIGHT_INDEX,
+    POSE_LANDMARKS.RIGHT_PINKY,
+  ],
+  [PARTS.leftLeg]: [
+    POSE_LANDMARKS.LEFT_HIP,
+    POSE_LANDMARKS.LEFT_KNEE,
+    POSE_LANDMARKS.LEFT_ANKLE,
+    POSE_LANDMARKS.LEFT_HEEL,
+    POSE_LANDMARKS.LEFT_FOOT_INDEX,
+  ],
+  [PARTS.rightLeg]: [
+    POSE_LANDMARKS.RIGHT_HIP,
+    POSE_LANDMARKS.RIGHT_KNEE,
+    POSE_LANDMARKS.RIGHT_ANKLE,
+    POSE_LANDMARKS.RIGHT_HEEL,
+    POSE_LANDMARKS.RIGHT_FOOT_INDEX,
+  ],
+  [PARTS.torso]: [
+    POSE_LANDMARKS.LEFT_SHOULDER,
+    POSE_LANDMARKS.RIGHT_SHOULDER,
+    POSE_LANDMARKS.LEFT_HIP,
+    POSE_LANDMARKS.RIGHT_HIP,
+  ],
+});
+
+function partOfConnection(a, b) {
+  const inSet = (set) => set.includes(a) && set.includes(b);
+  if (inSet(PART_POINT_SETS[PARTS.leftArm])) return PARTS.leftArm;
+  if (inSet(PART_POINT_SETS[PARTS.rightArm])) return PARTS.rightArm;
+  if (inSet(PART_POINT_SETS[PARTS.leftLeg])) return PARTS.leftLeg;
+  if (inSet(PART_POINT_SETS[PARTS.rightLeg])) return PARTS.rightLeg;
+  return PARTS.torso;
+}
+
 function normalizePose2D(getPoint, visTh) {
   const lHip = getPoint(POSE_LANDMARKS.LEFT_HIP);
   const rHip = getPoint(POSE_LANDMARKS.RIGHT_HIP);
@@ -581,6 +652,65 @@ function computeDemoEnergyForTrace(trace) {
     }
 
     s.E_ref = Number.isFinite(E) ? E : 0;
+    prevNorm = norm;
+    prevT = t;
+  }
+}
+
+function computeDemoPartEnergyForTrace(trace) {
+  const cfg = state.similarity;
+  const visTh = cfg.visibilityThreshold;
+  const samples = trace?.samples;
+  if (!Array.isArray(samples) || samples.length === 0) return;
+
+  let prevNorm = null;
+  let prevT = null;
+  for (let i = 0; i < samples.length; i += 1) {
+    const s = samples[i];
+    if (!s || !Array.isArray(s.lm) || s.lm.length !== 33) continue;
+    const t = typeof s.t === "number" && Number.isFinite(s.t) ? s.t : null;
+    const norm = normalizePose2D((k) => getArrXYV(s.lm?.[k]), visTh);
+    if (!norm || t === null) {
+      s.E_part = {
+        [PARTS.leftArm]: 0,
+        [PARTS.rightArm]: 0,
+        [PARTS.leftLeg]: 0,
+        [PARTS.rightLeg]: 0,
+        [PARTS.torso]: 0,
+      };
+      prevNorm = null;
+      prevT = null;
+      continue;
+    }
+
+    const out = {
+      [PARTS.leftArm]: 0,
+      [PARTS.rightArm]: 0,
+      [PARTS.leftLeg]: 0,
+      [PARTS.rightLeg]: 0,
+      [PARTS.torso]: 0,
+    };
+
+    if (prevNorm && typeof prevT === "number") {
+      const dt = Math.max(1e-3, t - prevT);
+      for (const [part, idxs] of Object.entries(PART_POINT_SETS)) {
+        const dists = [];
+        for (const j of idxs) {
+          const a = prevNorm.pts[j];
+          const b = norm.pts[j];
+          if (!a || !b) continue;
+          const d = dist2(a, b);
+          if (!Number.isFinite(d)) continue;
+          dists.push(d / dt);
+        }
+        if (dists.length) {
+          dists.sort((x, y) => x - y);
+          out[part] = dists[Math.floor(dists.length / 2)];
+        }
+      }
+    }
+
+    s.E_part = out;
     prevNorm = norm;
     prevT = t;
   }
@@ -712,6 +842,120 @@ function pushOverall(buffer, nowT, score, w) {
   }
   if (!(sumW > 0)) return null;
   return sum / sumW;
+}
+
+function computeActiveParts(trace, t) {
+  const cfg = state.similarity;
+  const samples = trace?.samples;
+  if (!Array.isArray(samples) || samples.length === 0) return new Set();
+  const range = getCandidateRange(samples, t, cfg.windowSec);
+  if (!range) return new Set();
+
+  const sum = {
+    [PARTS.leftArm]: 0,
+    [PARTS.rightArm]: 0,
+    [PARTS.leftLeg]: 0,
+    [PARTS.rightLeg]: 0,
+    [PARTS.torso]: 0,
+  };
+  let sumW = 0;
+
+  for (let i = range.i0; i < range.i1; i += 1) {
+    const s = samples[i];
+    if (!s || !s.E_part) continue;
+    const dt = Math.abs((typeof s.t === "number" ? s.t : t) - t);
+    const w = gaussian(dt, cfg.sigmaTimeSec);
+    sumW += w;
+    sum[PARTS.leftArm] += w * (s.E_part[PARTS.leftArm] || 0);
+    sum[PARTS.rightArm] += w * (s.E_part[PARTS.rightArm] || 0);
+    sum[PARTS.leftLeg] += w * (s.E_part[PARTS.leftLeg] || 0);
+    sum[PARTS.rightLeg] += w * (s.E_part[PARTS.rightLeg] || 0);
+    sum[PARTS.torso] += w * (s.E_part[PARTS.torso] || 0);
+  }
+
+  if (!(sumW > 0)) return new Set();
+  const avg = {
+    [PARTS.leftArm]: sum[PARTS.leftArm] / sumW,
+    [PARTS.rightArm]: sum[PARTS.rightArm] / sumW,
+    [PARTS.leftLeg]: sum[PARTS.leftLeg] / sumW,
+    [PARTS.rightLeg]: sum[PARTS.rightLeg] / sumW,
+    [PARTS.torso]: sum[PARTS.torso] / sumW,
+  };
+
+  const vals = Object.values(avg);
+  const maxE = Math.max(...vals, 0);
+  const absTh = 0.12;
+  const relTh = 0.6;
+
+  const active = new Set();
+  for (const [part, v] of Object.entries(avg)) {
+    if (v >= absTh && v >= maxE * relTh) active.add(part);
+  }
+  return active;
+}
+
+function drawPoseConnections(ctx, points, getXYV, rect, colorByConnection) {
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 3;
+  for (const [a, b] of DEMO_POSE_CONNECTIONS) {
+    const pa = getXYV(points?.[a]);
+    const pb = getXYV(points?.[b]);
+    if (!pa || !pb) continue;
+    if ((typeof pa.v === "number" && pa.v < 0.5) || (typeof pb.v === "number" && pb.v < 0.5)) continue;
+    const c = typeof colorByConnection === "function" ? colorByConnection(a, b) : "rgba(255,255,255,0.95)";
+    ctx.strokeStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(rect.ox + pa.x * rect.dw, rect.oy + pa.y * rect.dh);
+    ctx.lineTo(rect.ox + pb.x * rect.dw, rect.oy + pb.y * rect.dh);
+    ctx.stroke();
+  }
+}
+
+function drawPosePoints(ctx, points, getXYV, rect, color) {
+  ctx.fillStyle = color;
+  for (let i = 0; i < 33; i += 1) {
+    const p = getXYV(points?.[i]);
+    if (!p) continue;
+    if (typeof p.v === "number" && p.v < 0.5) continue;
+    ctx.beginPath();
+    ctx.arc(rect.ox + p.x * rect.dw, rect.oy + p.y * rect.dh, 3.5, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
+
+function getDemoTraceByMode(mode) {
+  return mode === "hard" ? state.demo.hard : state.demo.easy;
+}
+
+function updateOrangeState(nowT, instantScore, overallScore) {
+  const st = state.orange;
+  if (!Number.isFinite(nowT)) return st.active;
+  const dt = typeof st.lastT === "number" ? Math.max(0, nowT - st.lastT) : 0;
+  st.lastT = nowT;
+
+  const thr = st.threshold;
+  const okOverall = typeof overallScore === "number" && overallScore >= thr;
+  const okInstant = typeof instantScore === "number" && instantScore >= thr;
+
+  st.window.push({ t: nowT, ok: okInstant });
+  const cutoff = nowT - st.requireSec;
+  while (st.window.length && st.window[0].t < cutoff) st.window.shift();
+
+  let ratio = 0;
+  if (st.window.length) {
+    let okN = 0;
+    for (const it of st.window) if (it.ok) okN += 1;
+    ratio = okN / st.window.length;
+  }
+  const okMaj = ratio >= st.instantMajorityRatio;
+  const ok = okOverall && okMaj;
+
+  if (ok) st.goodSec += dt;
+  else st.goodSec = 0;
+
+  st.active = st.goodSec >= st.requireSec;
+  return st.active;
 }
 
 function drawUserOverlay() {
@@ -877,17 +1121,25 @@ function updateUiLoop() {
   const okHard = rHard.ok ? rHard.score.toFixed(0) : "—";
 
   let overallEasy = "—";
+  let overallEasyNum = null;
   if (rEasy.ok) {
     const wg = computeEnergyGateWeight(rEasy.ErefWin);
     const ov = pushOverall(state.overall.easy, tScore, rEasy.score, wg);
-    if (typeof ov === "number") overallEasy = ov.toFixed(0);
+    if (typeof ov === "number") {
+      overallEasyNum = ov;
+      overallEasy = ov.toFixed(0);
+    }
   }
 
   let overallHard = "—";
+  let overallHardNum = null;
   if (rHard.ok) {
     const wg = computeEnergyGateWeight(rHard.ErefWin);
     const ov = pushOverall(state.overall.hard, tScore, rHard.score, wg);
-    if (typeof ov === "number") overallHard = ov.toFixed(0);
+    if (typeof ov === "number") {
+      overallHardNum = ov;
+      overallHard = ov.toFixed(0);
+    }
   }
 
   setUi({
@@ -896,6 +1148,58 @@ function updateUiLoop() {
     overallEasy,
     overallHard,
   });
+
+  // ---- Interactive overlay coloring (test only)
+  const hintMode = state.ui.hintMode === "hard" ? "hard" : "easy";
+  const trace = getDemoTraceByMode(hintMode);
+  const demoLm = trace?.samples ? getDemoLandmarksAtTime(trace.samples, tScore) : null;
+  const activeParts = trace ? computeActiveParts(trace, tScore) : new Set();
+  const selectedInstant =
+    hintMode === "hard" ? (rHard.ok ? rHard.score : null) : (rEasy.ok ? rEasy.score : null);
+  const selectedOverall = hintMode === "hard" ? overallHardNum : overallEasyNum;
+  const isOrange = updateOrangeState(tScore, selectedInstant, selectedOverall);
+
+  if (els.outputCanvas) {
+    const ctx = els.outputCanvas.getContext("2d");
+    if (ctx) {
+      const w = Math.max(1, Math.floor(els.outputCanvas.clientWidth));
+      const h = Math.max(1, Math.floor(els.outputCanvas.clientHeight));
+      const dpr = window.devicePixelRatio || 1;
+      const targetW = Math.max(1, Math.floor(w * dpr));
+      const targetH = Math.max(1, Math.floor(h * dpr));
+      if (els.outputCanvas.width !== targetW || els.outputCanvas.height !== targetH) {
+        els.outputCanvas.width = targetW;
+        els.outputCanvas.height = targetH;
+      }
+
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      // Demo overlay (green) in contain rect to preserve 16:9
+      if (demoLm) {
+        const demoRect = computeContainRect(w, h, DEMO_SOURCE_ASPECT);
+        drawPoseConnections(ctx, demoLm, getArrXYV, demoRect, () => "rgba(34,197,94,0.90)");
+        drawPosePoints(ctx, demoLm, getArrXYV, demoRect, "rgba(34,197,94,0.95)");
+      }
+
+      // User skeleton (white / red hints / orange when good 3s)
+      const userRect = { ox: 0, oy: 0, dw: w, dh: h };
+      const orangeColor = "rgba(249,115,22,0.95)";
+      const whiteColor = "rgba(255,255,255,0.92)";
+      const redColor = "rgba(239,68,68,0.95)";
+      const baseColor = isOrange ? orangeColor : whiteColor;
+      const colorByConn = (a, b) => {
+        if (isOrange) return orangeColor;
+        const part = partOfConnection(a, b);
+        return activeParts.has(part) ? redColor : whiteColor;
+      };
+      drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, userRect, colorByConn);
+      drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, userRect, baseColor);
+
+      ctx.restore();
+    }
+  }
 }
 
 async function main() {
@@ -913,6 +1217,8 @@ async function main() {
 
     computeDemoEnergyForTrace(state.demo.easy);
     computeDemoEnergyForTrace(state.demo.hard);
+    computeDemoPartEnergyForTrace(state.demo.easy);
+    computeDemoPartEnergyForTrace(state.demo.hard);
 
     if (!state.videoId && typeof easy.videoId === "string" && easy.videoId) {
       state.videoId = easy.videoId;
@@ -921,6 +1227,17 @@ async function main() {
     loadVideoByIdIfReady();
   } catch (err) {
     console.error("[DemoTrace] load failed:", err);
+  }
+
+  if (els.hintModeSelect) {
+    els.hintModeSelect.addEventListener("change", () => {
+      const v = els.hintModeSelect.value === "hard" ? "hard" : "easy";
+      state.ui.hintMode = v;
+      state.orange.active = false;
+      state.orange.goodSec = 0;
+      state.orange.window = [];
+      state.orange.lastT = null;
+    });
   }
 
   if (els.loadVideoButton) {
