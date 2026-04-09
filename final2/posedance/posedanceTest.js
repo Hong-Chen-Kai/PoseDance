@@ -75,8 +75,6 @@ function $(id) {
 function initDomRefs() {
   els.similarityEasyText = $("similarityEasyText");
   els.similarityHardText = $("similarityHardText");
-  els.trackingText = $("trackingText");
-  els.demoNameText = $("demoNameText");
   els.videoUrlInput = $("videoUrlInput");
   els.loadVideoButton = $("loadVideoButton");
   els.startCameraButton = $("startCameraButton");
@@ -94,11 +92,9 @@ function initDomRefs() {
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
 }
 
-function setUi({ easy = "—", hard = "—", tracking = "—", demoName = null } = {}) {
+function setUi({ easy = "—", hard = "—" } = {}) {
   if (els.similarityEasyText) els.similarityEasyText.textContent = easy;
   if (els.similarityHardText) els.similarityHardText.textContent = hard;
-  if (els.trackingText) els.trackingText.textContent = tracking;
-  if (els.demoNameText && demoName !== null) els.demoNameText.textContent = demoName;
 }
 
 function extractVideoId(input) {
@@ -720,24 +716,12 @@ function updateUiLoop() {
   const tScore = ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
 
   if (!state.latestUserLandmarks) {
-    setUi({
-      easy: "—",
-      hard: "—",
-      tracking: !ytOk
-        ? "YouTube 載入中…"
-        : state.cameraRunning
-          ? "追蹤中..."
-          : "請啟動攝影機",
-    });
+    setUi({ easy: "—", hard: "—" });
     return;
   }
 
   if (tScore === null) {
-    setUi({
-      easy: "—",
-      hard: "—",
-      tracking: state.cameraRunning ? "追蹤中（等播放器時間）…" : "請啟動攝影機",
-    });
+    setUi({ easy: "—", hard: "—" });
     return;
   }
 
@@ -746,12 +730,10 @@ function updateUiLoop() {
 
   const okEasy = rEasy.ok ? rEasy.score.toFixed(0) : "—";
   const okHard = rHard.ok ? rHard.score.toFixed(0) : "—";
-  const valid = rEasy.ok ? rEasy.validPoints : rHard.ok ? rHard.validPoints : 0;
 
   setUi({
     easy: okEasy,
     hard: okHard,
-    tracking: valid > 0 ? `OK（${valid}/33）` : "Tracking weak",
   });
 }
 
@@ -767,9 +749,6 @@ async function main() {
     ]);
     state.demo.easy = easy;
     state.demo.hard = hard;
-    setUi({
-      demoName: `Easy+Hard 已載入（${easy.sampleCount ?? easy.samples?.length ?? "?"} 點）`,
-    });
 
     if (!state.videoId && typeof easy.videoId === "string" && easy.videoId) {
       state.videoId = easy.videoId;
@@ -778,9 +757,6 @@ async function main() {
     loadVideoByIdIfReady();
   } catch (err) {
     console.error("[DemoTrace] load failed:", err);
-    setUi({
-      demoName: `示範 JSON 載入失敗：${err?.message ?? err}`,
-    });
   }
 
   if (els.loadVideoButton) {
