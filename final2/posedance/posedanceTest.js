@@ -64,6 +64,16 @@ const state = {
     sigmaTimeSec: 0.12,
     tauDist: 0.12,
     minValidPoints: 15,
+    historySec: 4,
+    energyE0: 0.08,
+    energyE1: 0.35,
+    energyMinWeight: 0.2,
+  },
+
+  // Rolling overall buffers (Phase 1)
+  overall: {
+    easy: [],
+    hard: [],
   },
 };
 
@@ -75,6 +85,8 @@ function $(id) {
 function initDomRefs() {
   els.similarityEasyText = $("similarityEasyText");
   els.similarityHardText = $("similarityHardText");
+  els.overallEasyText = $("overallEasyText");
+  els.overallHardText = $("overallHardText");
   els.videoUrlInput = $("videoUrlInput");
   els.loadVideoButton = $("loadVideoButton");
   els.startCameraButton = $("startCameraButton");
@@ -92,9 +104,11 @@ function initDomRefs() {
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
 }
 
-function setUi({ easy = "—", hard = "—" } = {}) {
+function setUi({ easy = "—", hard = "—", overallEasy = "—", overallHard = "—" } = {}) {
   if (els.similarityEasyText) els.similarityEasyText.textContent = easy;
   if (els.similarityHardText) els.similarityHardText.textContent = hard;
+  if (els.overallEasyText) els.overallEasyText.textContent = overallEasy;
+  if (els.overallHardText) els.overallHardText.textContent = overallHard;
 }
 
 function extractVideoId(input) {
@@ -502,6 +516,50 @@ function normalizePose2D(getPoint, visTh) {
   return { pts };
 }
 
+function computeDemoEnergyForTrace(trace) {
+  const cfg = state.similarity;
+  const visTh = cfg.visibilityThreshold;
+  const samples = trace?.samples;
+  if (!Array.isArray(samples) || samples.length === 0) return;
+
+  let prevNorm = null;
+  let prevT = null;
+  for (let i = 0; i < samples.length; i += 1) {
+    const s = samples[i];
+    if (!s || !Array.isArray(s.lm) || s.lm.length !== 33) continue;
+    const t = typeof s.t === "number" && Number.isFinite(s.t) ? s.t : null;
+    const norm = normalizePose2D((k) => getArrXYV(s.lm?.[k]), visTh);
+    if (!norm || t === null) {
+      s.E_ref = 0;
+      prevNorm = null;
+      prevT = null;
+      continue;
+    }
+
+    let E = 0;
+    if (prevNorm && typeof prevT === "number") {
+      const dt = Math.max(1e-3, t - prevT);
+      const dists = [];
+      for (let j = 0; j < 33; j += 1) {
+        const a = prevNorm.pts[j];
+        const b = norm.pts[j];
+        if (!a || !b) continue;
+        const d = dist2(a, b);
+        if (!Number.isFinite(d)) continue;
+        dists.push(d / dt);
+      }
+      if (dists.length) {
+        dists.sort((x, y) => x - y);
+        E = dists[Math.floor(dists.length / 2)];
+      }
+    }
+
+    s.E_ref = Number.isFinite(E) ? E : 0;
+    prevNorm = norm;
+    prevT = t;
+  }
+}
+
 function computeMeanDist(userLandmarks, demoLmArray) {
   const cfg = state.similarity;
   const visTh = cfg.visibilityThreshold;
@@ -560,6 +618,7 @@ function computeWindowScoreD(userLandmarks, trace, t) {
 
   let sumW = 0;
   let sumD = 0;
+  let sumWE = 0;
   let bestD = Infinity;
   let bestN = 0;
 
@@ -574,6 +633,7 @@ function computeWindowScoreD(userLandmarks, trace, t) {
     const w = wTime * wPose;
     sumW += w;
     sumD += w * r.meanDist;
+    sumWE += w * (typeof s.E_ref === "number" && Number.isFinite(s.E_ref) ? s.E_ref : 0);
     if (r.meanDist < bestD) {
       bestD = r.meanDist;
       bestN = r.validPoints;
@@ -582,8 +642,47 @@ function computeWindowScoreD(userLandmarks, trace, t) {
 
   if (!(sumW > 0)) return { ok: false, reason: "no_valid_candidates" };
   const meanDist = sumD / sumW;
+  const ErefWin = sumWE / sumW;
   const score = Math.max(0, Math.min(100, 100 * Math.exp(-cfg.k * meanDist)));
-  return { ok: true, score, meanDist, validPoints: bestN };
+  return { ok: true, score, meanDist, validPoints: bestN, ErefWin };
+}
+
+function clamp01(x) {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
+}
+
+function computeEnergyGateWeight(E) {
+  const cfg = state.similarity;
+  const E0 = cfg.energyE0;
+  const E1 = Math.max(E0 + 1e-6, cfg.energyE1);
+  const minW = cfg.energyMinWeight;
+  const u = clamp01((E - E0) / (E1 - E0));
+  return minW + (1 - minW) * u;
+}
+
+function pushOverall(buffer, nowT, score, w) {
+  const cfg = state.similarity;
+  const historySec = cfg.historySec;
+  if (!Number.isFinite(nowT) || !Number.isFinite(score)) return null;
+  const ww = Number.isFinite(w) ? w : 1;
+  buffer.push({ t: nowT, score, w: ww });
+
+  const cutoff = nowT - historySec;
+  while (buffer.length && buffer[0].t < cutoff) buffer.shift();
+
+  let sumW = 0;
+  let sum = 0;
+  for (const it of buffer) {
+    if (!it) continue;
+    const iw = Number.isFinite(it.w) ? it.w : 1;
+    const is = Number.isFinite(it.score) ? it.score : null;
+    if (is === null) continue;
+    sumW += iw;
+    sum += iw * is;
+  }
+  if (!(sumW > 0)) return null;
+  return sum / sumW;
 }
 
 function drawUserOverlay() {
@@ -716,12 +815,12 @@ function updateUiLoop() {
   const tScore = ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
 
   if (!state.latestUserLandmarks) {
-    setUi({ easy: "—", hard: "—" });
+    setUi({ easy: "—", hard: "—", overallEasy: "—", overallHard: "—" });
     return;
   }
 
   if (tScore === null) {
-    setUi({ easy: "—", hard: "—" });
+    setUi({ easy: "—", hard: "—", overallEasy: "—", overallHard: "—" });
     return;
   }
 
@@ -731,9 +830,25 @@ function updateUiLoop() {
   const okEasy = rEasy.ok ? rEasy.score.toFixed(0) : "—";
   const okHard = rHard.ok ? rHard.score.toFixed(0) : "—";
 
+  let overallEasy = "—";
+  if (rEasy.ok) {
+    const wg = computeEnergyGateWeight(rEasy.ErefWin);
+    const ov = pushOverall(state.overall.easy, tScore, rEasy.score, wg);
+    if (typeof ov === "number") overallEasy = ov.toFixed(0);
+  }
+
+  let overallHard = "—";
+  if (rHard.ok) {
+    const wg = computeEnergyGateWeight(rHard.ErefWin);
+    const ov = pushOverall(state.overall.hard, tScore, rHard.score, wg);
+    if (typeof ov === "number") overallHard = ov.toFixed(0);
+  }
+
   setUi({
     easy: okEasy,
     hard: okHard,
+    overallEasy,
+    overallHard,
   });
 }
 
@@ -749,6 +864,9 @@ async function main() {
     ]);
     state.demo.easy = easy;
     state.demo.hard = hard;
+
+    computeDemoEnergyForTrace(state.demo.easy);
+    computeDemoEnergyForTrace(state.demo.hard);
 
     if (!state.videoId && typeof easy.videoId === "string" && easy.videoId) {
       state.videoId = easy.videoId;
