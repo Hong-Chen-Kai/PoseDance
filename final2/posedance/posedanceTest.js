@@ -894,10 +894,17 @@ function computeActiveParts(trace, t) {
   return active;
 }
 
-function drawPoseConnections(ctx, points, getXYV, rect, colorByConnection) {
+function drawPoseConnections(
+  ctx,
+  points,
+  getXYV,
+  rect,
+  colorByConnection,
+  lineWidth = 3,
+) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.lineWidth = 3;
+  ctx.lineWidth = lineWidth;
   for (const [a, b] of DEMO_POSE_CONNECTIONS) {
     const pa = getXYV(points?.[a]);
     const pb = getXYV(points?.[b]);
@@ -912,14 +919,20 @@ function drawPoseConnections(ctx, points, getXYV, rect, colorByConnection) {
   }
 }
 
-function drawPosePoints(ctx, points, getXYV, rect, color) {
+function drawPosePoints(ctx, points, getXYV, rect, color, radius = 3.5) {
   ctx.fillStyle = color;
   for (let i = 0; i < 33; i += 1) {
     const p = getXYV(points?.[i]);
     if (!p) continue;
     if (typeof p.v === "number" && p.v < 0.5) continue;
     ctx.beginPath();
-    ctx.arc(rect.ox + p.x * rect.dw, rect.oy + p.y * rect.dh, 3.5, 0, 2 * Math.PI);
+    ctx.arc(
+      rect.ox + p.x * rect.dw,
+      rect.oy + p.y * rect.dh,
+      radius,
+      0,
+      2 * Math.PI,
+    );
     ctx.fill();
   }
 }
@@ -1176,15 +1189,14 @@ function updateUiLoop() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
-      // Demo overlay (green) in contain rect to preserve 16:9
-      if (demoLm) {
-        const demoRect = computeContainRect(w, h, DEMO_SOURCE_ASPECT);
-        drawPoseConnections(ctx, demoLm, getArrXYV, demoRect, () => "rgba(34,197,94,0.90)");
-        drawPosePoints(ctx, demoLm, getArrXYV, demoRect, "rgba(34,197,94,0.95)");
-      }
+      // Draw in the same contain-rect as the camera video (object-fit: contain)
+      const videoAspect =
+        els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+          ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
+          : w / Math.max(1, h);
+      const stageRect = computeContainRect(w, h, videoAspect);
 
       // User skeleton (white / red hints / orange when good 3s)
-      const userRect = { ox: 0, oy: 0, dw: w, dh: h };
       const orangeColor = "rgba(249,115,22,0.95)";
       const whiteColor = "rgba(255,255,255,0.92)";
       const redColor = "rgba(239,68,68,0.95)";
@@ -1194,8 +1206,21 @@ function updateUiLoop() {
         const part = partOfConnection(a, b);
         return activeParts.has(part) ? redColor : whiteColor;
       };
-      drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, userRect, colorByConn);
-      drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, userRect, baseColor);
+      drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, stageRect, colorByConn, 3);
+      drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, stageRect, baseColor, 3.5);
+
+      // Demo overlay (green) on top so it's always visible
+      if (demoLm) {
+        drawPoseConnections(
+          ctx,
+          demoLm,
+          getArrXYV,
+          stageRect,
+          () => "rgba(34,197,94,0.95)",
+          5,
+        );
+        drawPosePoints(ctx, demoLm, getArrXYV, stageRect, "rgba(34,197,94,0.98)", 4.5);
+      }
 
       ctx.restore();
     }
