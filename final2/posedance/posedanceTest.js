@@ -109,6 +109,7 @@ function initDomRefs() {
 
   els.inputVideo = $("input_video");
   els.outputCanvas = $("output_canvas");
+  els.overlayCanvas = $("overlay_canvas");
   els.demoCanvasEasy = $("demo_canvas_easy");
   els.demoCanvasHard = $("demo_canvas_hard");
 
@@ -1172,17 +1173,17 @@ function updateUiLoop() {
   const selectedOverall = hintMode === "hard" ? overallHardNum : overallEasyNum;
   const isOrange = updateOrangeState(tScore, selectedInstant, selectedOverall);
 
-  if (els.outputCanvas) {
-    const ctx = els.outputCanvas.getContext("2d");
+  if (els.overlayCanvas) {
+    const ctx = els.overlayCanvas.getContext("2d");
     if (ctx) {
-      const w = Math.max(1, Math.floor(els.outputCanvas.clientWidth));
-      const h = Math.max(1, Math.floor(els.outputCanvas.clientHeight));
+      const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+      const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
       const dpr = window.devicePixelRatio || 1;
       const targetW = Math.max(1, Math.floor(w * dpr));
       const targetH = Math.max(1, Math.floor(h * dpr));
-      if (els.outputCanvas.width !== targetW || els.outputCanvas.height !== targetH) {
-        els.outputCanvas.width = targetW;
-        els.outputCanvas.height = targetH;
+      if (els.overlayCanvas.width !== targetW || els.overlayCanvas.height !== targetH) {
+        els.overlayCanvas.width = targetW;
+        els.overlayCanvas.height = targetH;
       }
 
       ctx.save();
@@ -1229,6 +1230,8 @@ function updateUiLoop() {
 
 async function main() {
   initDomRefs();
+  // debug handle for DevTools
+  window.__posedanceTestState = state;
   setupYtFloatingWindow();
   initYouTubePlayerIfPossible();
 

@@ -1,0 +1,19 @@
+.camera-wrapper {
+  position: relative;
+}
+
+#overlay_canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 確保 output_canvas 在 overlay 下方（原本用來畫骨架/遮罩的那層） */
+#output_canvas {
+  z-index: 5;
+}
+
