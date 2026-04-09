@@ -67,7 +67,7 @@ const state = {
     historySec: 4,
     energyE0: 0.08,
     energyE1: 0.35,
-    energyMinWeight: 0.2,
+    energyMinWeight: 0.1,
   },
 
   // Rolling overall buffers (Phase 1)
@@ -104,7 +104,12 @@ function initDomRefs() {
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
 }
 
-function setUi({ easy = "—", hard = "—", overallEasy = "—", overallHard = "—" } = {}) {
+function setUi({
+  easy = "—",
+  hard = "—",
+  overallEasy = "—",
+  overallHard = "—",
+} = {}) {
   if (els.similarityEasyText) els.similarityEasyText.textContent = easy;
   if (els.similarityHardText) els.similarityHardText.textContent = hard;
   if (els.overallEasyText) els.overallEasyText.textContent = overallEasy;
@@ -117,7 +122,8 @@ function extractVideoId(input) {
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
   try {
     const url = new URL(trimmed);
-    if (url.hostname === "youtu.be") return url.pathname.replace("/", "") || null;
+    if (url.hostname === "youtu.be")
+      return url.pathname.replace("/", "") || null;
     const v = url.searchParams.get("v");
     if (v) return v;
   } catch {
@@ -155,7 +161,8 @@ function initYouTubePlayerIfPossible() {
     playerVars: {
       playsinline: 1,
       enablejsapi: 1,
-      origin: typeof window !== "undefined" ? window.location.origin : undefined,
+      origin:
+        typeof window !== "undefined" ? window.location.origin : undefined,
     },
     events: {
       onReady: () => {
@@ -299,11 +306,13 @@ function setupYtFloatingWindow() {
 async function loadDemoTrace(url) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
-    const hint = res.status === 404 ? "（請確認已 commit / push demo JSON 至儲存庫）" : "";
+    const hint =
+      res.status === 404 ? "（請確認已 commit / push demo JSON 至儲存庫）" : "";
     throw new Error(`HTTP ${res.status} 載入失敗：${url} ${hint}`.trim());
   }
   const data = await res.json();
-  if (!data || !Array.isArray(data.samples)) throw new Error(`格式無效（需含 samples[]）：${url}`);
+  if (!data || !Array.isArray(data.samples))
+    throw new Error(`格式無效（需含 samples[]）：${url}`);
   return data;
 }
 
@@ -321,7 +330,8 @@ function computeContainRect(width, height, sourceAspect) {
 
 function getDemoTimeBracket(samples, t) {
   if (!Array.isArray(samples) || samples.length === 0) return null;
-  if (samples.length === 1) return { left: samples[0], right: samples[0], alpha: 0 };
+  if (samples.length === 1)
+    return { left: samples[0], right: samples[0], alpha: 0 };
   const firstT = samples[0]?.t ?? 0;
   const lastT = samples[samples.length - 1]?.t ?? 0;
   if (t <= firstT) return { left: samples[0], right: samples[0], alpha: 0 };
@@ -368,8 +378,12 @@ function interpolateLandmarks(lmA, lmB, alpha) {
     out.push([
       ax + (bx - ax) * alpha,
       ay + (by - ay) * alpha,
-      typeof az === "number" && typeof bz === "number" ? az + (bz - az) * alpha : (az ?? bz),
-      typeof av === "number" && typeof bv === "number" ? av + (bv - av) * alpha : (av ?? bv),
+      typeof az === "number" && typeof bz === "number"
+        ? az + (bz - az) * alpha
+        : (az ?? bz),
+      typeof av === "number" && typeof bv === "number"
+        ? av + (bv - av) * alpha
+        : (av ?? bv),
     ]);
   }
   return out;
@@ -404,7 +418,9 @@ function drawDemoSkeletonAtTime(trace, canvas, currentTime) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
-  const tEnd = trace?.samples?.length ? trace.samples[trace.samples.length - 1]?.t : Infinity;
+  const tEnd = trace?.samples?.length
+    ? trace.samples[trace.samples.length - 1]?.t
+    : Infinity;
   if (typeof tEnd === "number" && currentTime > tEnd) {
     ctx.restore();
     return;
@@ -428,8 +444,18 @@ function drawDemoSkeletonAtTime(trace, canvas, currentTime) {
     if (!pa || !pb) continue;
     const [ax, ay, , av] = pa;
     const [bx, by, , bv] = pb;
-    if (typeof ax !== "number" || typeof ay !== "number" || typeof bx !== "number" || typeof by !== "number") continue;
-    if ((typeof av === "number" && av <= 0.5) || (typeof bv === "number" && bv <= 0.5)) continue;
+    if (
+      typeof ax !== "number" ||
+      typeof ay !== "number" ||
+      typeof bx !== "number" ||
+      typeof by !== "number"
+    )
+      continue;
+    if (
+      (typeof av === "number" && av <= 0.5) ||
+      (typeof bv === "number" && bv <= 0.5)
+    )
+      continue;
     ctx.beginPath();
     ctx.moveTo(rect.ox + ax * rect.dw, rect.oy + ay * rect.dh);
     ctx.lineTo(rect.ox + bx * rect.dw, rect.oy + by * rect.dh);
@@ -578,7 +604,8 @@ function computeMeanDist(userLandmarks, demoLmArray) {
     sum += d;
     n += 1;
   }
-  if (n < cfg.minValidPoints) return { ok: false, reason: "too_few_points", validPoints: n };
+  if (n < cfg.minValidPoints)
+    return { ok: false, reason: "too_few_points", validPoints: n };
   return { ok: true, meanDist: sum / n, validPoints: n };
 }
 
@@ -633,7 +660,9 @@ function computeWindowScoreD(userLandmarks, trace, t) {
     const w = wTime * wPose;
     sumW += w;
     sumD += w * r.meanDist;
-    sumWE += w * (typeof s.E_ref === "number" && Number.isFinite(s.E_ref) ? s.E_ref : 0);
+    sumWE +=
+      w *
+      (typeof s.E_ref === "number" && Number.isFinite(s.E_ref) ? s.E_ref : 0);
     if (r.meanDist < bestD) {
       bestD = r.meanDist;
       bestN = r.validPoints;
@@ -695,7 +724,10 @@ function drawUserOverlay() {
   const dpr = window.devicePixelRatio || 1;
   const targetW = Math.max(1, Math.floor(w * dpr));
   const targetH = Math.max(1, Math.floor(h * dpr));
-  if (els.outputCanvas.width !== targetW || els.outputCanvas.height !== targetH) {
+  if (
+    els.outputCanvas.width !== targetW ||
+    els.outputCanvas.height !== targetH
+  ) {
     els.outputCanvas.width = targetW;
     els.outputCanvas.height = targetH;
   }
@@ -730,7 +762,11 @@ async function initPose() {
       if (!poseInstance) throw new Error("MediaPipe PoseLandmarker 初始化失敗");
 
       PoseModel.setCallback((result) => {
-        if (!result || !Array.isArray(result.landmarks) || result.landmarks.length !== 33) {
+        if (
+          !result ||
+          !Array.isArray(result.landmarks) ||
+          result.landmarks.length !== 33
+        ) {
           state.latestUserLandmarks = null;
           return;
         }
@@ -765,7 +801,8 @@ async function initPose() {
           console.error("Pose detect failed:", err);
         } finally {
           isProcessing = false;
-          if (pendingFrame && !isProcessing) requestAnimationFrame(processFrames);
+          if (pendingFrame && !isProcessing)
+            requestAnimationFrame(processFrames);
         }
       };
 
@@ -792,7 +829,8 @@ async function initPose() {
 }
 
 function getPlayerTimeSafe() {
-  if (!state.player || typeof state.player.getCurrentTime !== "function") return null;
+  if (!state.player || typeof state.player.getCurrentTime !== "function")
+    return null;
   try {
     const t = state.player.getCurrentTime();
     return typeof t === "number" && Number.isFinite(t) ? t : null;
@@ -805,14 +843,14 @@ function updateUiLoop() {
   requestAnimationFrame(updateUiLoop);
 
   const tRaw = getPlayerTimeSafe();
-  const tDemo =
-    typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : 0;
+  const tDemo = typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : 0;
 
   drawDemoSkeletonAtTime(state.demo.easy, els.demoCanvasEasy, tDemo);
   drawDemoSkeletonAtTime(state.demo.hard, els.demoCanvasHard, tDemo);
 
   const ytOk = Boolean(state.ready && state.player);
-  const tScore = ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
+  const tScore =
+    ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
 
   if (!state.latestUserLandmarks) {
     setUi({ easy: "—", hard: "—", overallEasy: "—", overallHard: "—" });
@@ -824,8 +862,16 @@ function updateUiLoop() {
     return;
   }
 
-  const rEasy = computeWindowScoreD(state.latestUserLandmarks, state.demo.easy, tScore);
-  const rHard = computeWindowScoreD(state.latestUserLandmarks, state.demo.hard, tScore);
+  const rEasy = computeWindowScoreD(
+    state.latestUserLandmarks,
+    state.demo.easy,
+    tScore,
+  );
+  const rHard = computeWindowScoreD(
+    state.latestUserLandmarks,
+    state.demo.hard,
+    tScore,
+  );
 
   const okEasy = rEasy.ok ? rEasy.score.toFixed(0) : "—";
   const okHard = rHard.ok ? rHard.score.toFixed(0) : "—";
@@ -893,4 +939,3 @@ async function main() {
 }
 
 main();
-
