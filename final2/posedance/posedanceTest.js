@@ -82,12 +82,16 @@ const state = {
 
   orange: {
     active: false,
-    goodSec: 0,
+    enterGoodSec: 0,
+    exitBadSec: 0,
     window: [],
     lastT: null,
-    threshold: 90,
-    requireSec: 3,
-    instantMajorityRatio: 0.7,
+    enterThreshold: 85,
+    enterRequireSec: 3,
+    enterInstantMajorityRatio: 0.6,
+    exitThreshold: 80,
+    exitRequireSec: 1.5,
+    exitInstantMajorityRatio: 0.6,
   },
 };
 
@@ -948,27 +952,58 @@ function updateOrangeState(nowT, instantScore, overallScore) {
   const dt = typeof st.lastT === "number" ? Math.max(0, nowT - st.lastT) : 0;
   st.lastT = nowT;
 
-  const thr = st.threshold;
-  const okOverall = typeof overallScore === "number" && overallScore >= thr;
-  const okInstant = typeof instantScore === "number" && instantScore >= thr;
+  const enterThr = st.enterThreshold;
+  const exitThr = st.exitThreshold;
 
-  st.window.push({ t: nowT, ok: okInstant });
-  const cutoff = nowT - st.requireSec;
+  const enterOkOverall =
+    typeof overallScore === "number" && overallScore >= enterThr;
+  const enterOkInstant =
+    typeof instantScore === "number" && instantScore >= enterThr;
+
+  const exitOkOverall = typeof overallScore === "number" && overallScore >= exitThr;
+  const exitOkInstant = typeof instantScore === "number" && instantScore >= exitThr;
+
+  st.window.push({ t: nowT, enterOk: enterOkInstant, exitOk: exitOkInstant });
+  const winSec = st.active ? Math.max(st.exitRequireSec, 0.5) : Math.max(st.enterRequireSec, 0.5);
+  const cutoff = nowT - winSec;
   while (st.window.length && st.window[0].t < cutoff) st.window.shift();
 
-  let ratio = 0;
+  let enterRatio = 0;
+  let exitRatio = 0;
   if (st.window.length) {
-    let okN = 0;
-    for (const it of st.window) if (it.ok) okN += 1;
-    ratio = okN / st.window.length;
+    let enterN = 0;
+    let exitN = 0;
+    for (const it of st.window) {
+      if (it.enterOk) enterN += 1;
+      if (it.exitOk) exitN += 1;
+    }
+    enterRatio = enterN / st.window.length;
+    exitRatio = exitN / st.window.length;
   }
-  const okMaj = ratio >= st.instantMajorityRatio;
-  const ok = okOverall && okMaj;
 
-  if (ok) st.goodSec += dt;
-  else st.goodSec = 0;
+  if (!st.active) {
+    const ok = enterOkOverall && enterRatio >= st.enterInstantMajorityRatio;
+    if (ok) st.enterGoodSec += dt;
+    else st.enterGoodSec = 0;
+    if (st.enterGoodSec >= st.enterRequireSec) {
+      st.active = true;
+      st.exitBadSec = 0;
+      st.window = [];
+    }
+    return st.active;
+  }
 
-  st.active = st.goodSec >= st.requireSec;
+  // active: stay blue unless clearly deviating for a while
+  const okStay = exitOkOverall && exitRatio >= st.exitInstantMajorityRatio;
+  if (!okStay) st.exitBadSec += dt;
+  else st.exitBadSec = 0;
+
+  if (st.exitBadSec >= st.exitRequireSec) {
+    st.active = false;
+    st.enterGoodSec = 0;
+    st.window = [];
+  }
+
   return st.active;
 }
 
@@ -1197,30 +1232,31 @@ function updateUiLoop() {
           : w / Math.max(1, h);
       const stageRect = computeContainRect(w, h, videoAspect);
 
-      // User skeleton (white / red hints / orange when good 3s)
-      const orangeColor = "rgba(249,115,22,0.95)";
+      // User skeleton (white / red hints / blue when good)
+      const blueColor = "rgba(59,130,246,0.95)";
       const whiteColor = "rgba(255,255,255,0.92)";
       const redColor = "rgba(239,68,68,0.95)";
-      const baseColor = isOrange ? orangeColor : whiteColor;
+      const baseColor = isOrange ? blueColor : whiteColor;
       const colorByConn = (a, b) => {
-        if (isOrange) return orangeColor;
+        if (isOrange) return blueColor;
         const part = partOfConnection(a, b);
         return activeParts.has(part) ? redColor : whiteColor;
       };
       drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, stageRect, colorByConn, 3);
       drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, stageRect, baseColor, 3.5);
 
-      // Demo overlay (green) on top so it's always visible
+      // Demo overlay (green / blue) on top so it's always visible
       if (demoLm) {
+        const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
         drawPoseConnections(
           ctx,
           demoLm,
           getArrXYV,
           stageRect,
-          () => "rgba(34,197,94,0.95)",
+          () => demoColor,
           5,
         );
-        drawPosePoints(ctx, demoLm, getArrXYV, stageRect, "rgba(34,197,94,0.98)", 4.5);
+        drawPosePoints(ctx, demoLm, getArrXYV, stageRect, demoColor, 4.5);
       }
 
       ctx.restore();
@@ -1262,7 +1298,8 @@ async function main() {
       const v = els.hintModeSelect.value === "hard" ? "hard" : "easy";
       state.ui.hintMode = v;
       state.orange.active = false;
-      state.orange.goodSec = 0;
+      state.orange.enterGoodSec = 0;
+      state.orange.exitBadSec = 0;
       state.orange.window = [];
       state.orange.lastT = null;
     });
