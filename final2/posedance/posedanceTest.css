@@ -1,5 +1,15 @@
 .camera-wrapper {
   position: relative;
+  background: #000000;
+}
+
+.main,
+.main__stage {
+  background: #000000;
+}
+
+#input_video {
+  display: none;
 }
 
 .topbar__url-input--compact {

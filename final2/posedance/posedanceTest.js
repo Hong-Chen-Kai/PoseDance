@@ -149,8 +149,6 @@ function initDomRefs() {
   els.inputVideo = $("input_video");
   els.outputCanvas = $("output_canvas");
   els.overlayCanvas = $("overlay_canvas");
-  els.demoCanvasEasy = $("demo_canvas_easy");
-  els.demoCanvasHard = $("demo_canvas_hard");
 
   els.songModalBackdrop = $("songModalBackdrop");
   els.songModalCloseButton = $("songModalCloseButton");
@@ -1436,9 +1434,6 @@ function updateUiLoop() {
   const tRaw = getPlayerTimeSafe();
   const tDemo = typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : 0;
 
-  drawDemoSkeletonAtTime(state.demo.easy, els.demoCanvasEasy, tDemo);
-  drawDemoSkeletonAtTime(state.demo.hard, els.demoCanvasHard, tDemo);
-
   const ytOk = Boolean(state.ready && state.player);
   const tScore =
     ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
@@ -1540,8 +1535,10 @@ function updateUiLoop() {
   });
 
   // ---- Interactive overlay coloring (test only)
+  const isRecordingMode = Boolean(state.recorder?.armed);
+
   const hintMode = state.ui.hintMode === "hard" ? "hard" : "easy";
-  const trace = getDemoTraceByMode(hintMode);
+  const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
   const demoLm = trace?.samples ? getDemoLandmarksAtTime(trace.samples, tScore) : null;
   const activeParts = trace ? computeActiveParts(trace, tScore) : new Set();
   const selectedInstant =
@@ -1581,13 +1578,14 @@ function updateUiLoop() {
       const colorByConn = (a, b) => {
         if (isOrange) return blueColor;
         const part = partOfConnection(a, b);
+        if (isRecordingMode) return whiteColor;
         return activeParts.has(part) ? redColor : whiteColor;
       };
       drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, stageRect, colorByConn, 3);
       drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, stageRect, baseColor, 3.5);
 
       // Demo overlay (green / blue) on top so it's always visible
-      if (demoLm) {
+      if (demoLm && !isRecordingMode) {
         const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
         drawPoseConnections(
           ctx,
