@@ -53,6 +53,22 @@ const state = {
     hintMode: "easy",
   },
 
+  music: {
+    open: false,
+    categories: [],
+    selectedCategory: null,
+    q: "",
+    page: 1,
+    limit: 20,
+    sort: "uploaded_at",
+    order: "desc",
+    items: [],
+    total: 0,
+    pages: 1,
+    loading: false,
+    error: null,
+  },
+
   // Pose
   poseReady: false,
   cameraRunning: false,
@@ -108,6 +124,7 @@ function initDomRefs() {
   els.videoUrlInput = $("videoUrlInput");
   els.hintModeSelect = $("hintModeSelect");
   els.loadVideoButton = $("loadVideoButton");
+  els.pickSongButton = $("pickSongButton");
   els.startCameraButton = $("startCameraButton");
   els.poseInfoText = $("poseInfoText");
 
@@ -116,6 +133,16 @@ function initDomRefs() {
   els.overlayCanvas = $("overlay_canvas");
   els.demoCanvasEasy = $("demo_canvas_easy");
   els.demoCanvasHard = $("demo_canvas_hard");
+
+  els.songModalBackdrop = $("songModalBackdrop");
+  els.songModalCloseButton = $("songModalCloseButton");
+  els.songCategories = $("songCategories");
+  els.songList = $("songList");
+  els.songSearchInput = $("songSearchInput");
+  els.songSearchButton = $("songSearchButton");
+  els.songPrevPageButton = $("songPrevPageButton");
+  els.songNextPageButton = $("songNextPageButton");
+  els.songPageText = $("songPageText");
 
   els.ytWrapper = $("ytPlayerWrapper");
   els.ytDragHandle = $("ytDragHandle");
@@ -152,19 +179,201 @@ function extractVideoId(input) {
   return null;
 }
 
-function loadVideoByIdIfReady() {
+function loadVideoByIdIfReady({ autoplay = true } = {}) {
   if (
     !state.ready ||
     !state.player ||
     !state.videoId ||
-    typeof state.player.loadVideoById !== "function"
+    (typeof state.player.loadVideoById !== "function" &&
+      typeof state.player.cueVideoById !== "function")
   ) {
     return false;
   }
   if (state.lastLoadedVideoId === state.videoId) return true;
-  state.player.loadVideoById(state.videoId);
+  if (!autoplay && typeof state.player.cueVideoById === "function") {
+    state.player.cueVideoById(state.videoId);
+  } else {
+    state.player.loadVideoById(state.videoId);
+  }
   state.lastLoadedVideoId = state.videoId;
   return true;
+}
+
+const API_BASE = "https://imuse.ncnu.edu.tw/Midi-library";
+
+async function fetchJson(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+function parseYoutubeUrlFromText(text) {
+  if (!text) return null;
+  const m = String(text).match(/https?:\/\/(?:www\.)?(?:youtu\.be\/[^\s]+|youtube\.com\/[^\s]+)/i);
+  return m ? m[0] : null;
+}
+
+function extractVideoIdFromAny(raw) {
+  const id = extractVideoId(raw);
+  if (id) return id;
+  const url = parseYoutubeUrlFromText(raw);
+  return url ? extractVideoId(url) : null;
+}
+
+function openSongModal() {
+  state.music.open = true;
+  if (els.songModalBackdrop) {
+    els.songModalBackdrop.classList.add("is-open");
+    els.songModalBackdrop.setAttribute("aria-hidden", "false");
+  }
+}
+
+function closeSongModal() {
+  state.music.open = false;
+  if (els.songModalBackdrop) {
+    els.songModalBackdrop.classList.remove("is-open");
+    els.songModalBackdrop.setAttribute("aria-hidden", "true");
+  }
+}
+
+function renderSongCategories() {
+  if (!els.songCategories) return;
+  const cats = Array.isArray(state.music.categories) ? state.music.categories : [];
+  const selected = state.music.selectedCategory;
+  const parts = [];
+  parts.push(
+    `<button class="modal__cat ${selected ? "" : "is-active"}" data-cat="">全部</button>`,
+  );
+  for (const c of cats) {
+    const safe = String(c);
+    const active = selected === safe;
+    parts.push(
+      `<button class="modal__cat ${active ? "is-active" : ""}" data-cat="${encodeURIComponent(safe)}">${safe}</button>`,
+    );
+  }
+  els.songCategories.innerHTML = parts.join("");
+  els.songCategories.querySelectorAll(".modal__cat").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const catEnc = btn.getAttribute("data-cat") || "";
+      state.music.selectedCategory = catEnc ? decodeURIComponent(catEnc) : null;
+      renderSongCategories();
+      renderSongList();
+    });
+  });
+}
+
+function renderSongList() {
+  if (!els.songList) return;
+  const m = state.music;
+  if (m.loading) {
+    els.songList.innerHTML = `<div class="modal__item"><div><div class="modal__item-title">載入中...</div></div></div>`;
+    return;
+  }
+  if (m.error) {
+    els.songList.innerHTML = `<div class="modal__item"><div><div class="modal__item-title">載入失敗</div><div class="modal__item-meta">${String(m.error)}</div></div></div>`;
+    return;
+  }
+
+  const selectedCat = m.selectedCategory;
+  const list = (Array.isArray(m.items) ? m.items : []).filter((it) => {
+    if (!selectedCat) return true;
+    const cats = Array.isArray(it?.categories) ? it.categories : [];
+    return cats.includes(selectedCat) || it?.categories_text === selectedCat;
+  });
+
+  if (!list.length) {
+    els.songList.innerHTML = `<div class="modal__item"><div><div class="modal__item-title">沒有資料</div><div class="modal__item-meta">請換分類或搜尋</div></div></div>`;
+  } else {
+    els.songList.innerHTML = list
+      .map((it) => {
+        const title = it?.title ? String(it.title) : "（無標題）";
+        const composer = it?.composer ? String(it.composer) : "";
+        const catText = it?.categories_text ? String(it.categories_text) : "";
+        const tags = it?.tags ? String(it.tags) : "";
+        const desc = it?.description ? String(it.description) : "";
+        const id = it?.id ? String(it.id) : "";
+        const meta = [composer, catText, tags].filter(Boolean).join(" · ");
+        return `
+          <div class="modal__item">
+            <div>
+              <div class="modal__item-title">${title}</div>
+              <div class="modal__item-meta">${meta}</div>
+              <div class="modal__item-meta">${desc}</div>
+            </div>
+            <button class="modal__pick" data-mid="${encodeURIComponent(id)}">選取</button>
+          </div>
+        `;
+      })
+      .join("");
+
+    els.songList.querySelectorAll(".modal__pick").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const midEnc = btn.getAttribute("data-mid") || "";
+        const mid = midEnc ? decodeURIComponent(midEnc) : "";
+        const it = (Array.isArray(m.items) ? m.items : []).find((x) => String(x?.id || "") === mid);
+        if (!it) return;
+        const url = parseYoutubeUrlFromText(it.description) || "";
+        const vid = extractVideoIdFromAny(url);
+        if (!vid) return;
+        if (els.videoUrlInput) els.videoUrlInput.value = vid;
+        state.videoId = vid;
+        state.lastLoadedVideoId = null;
+        loadVideoByIdIfReady({ autoplay: false });
+        closeSongModal();
+      });
+    });
+  }
+
+  if (els.songPageText) {
+    els.songPageText.textContent = `第 ${m.page}/${m.pages} 頁（共 ${m.total}）`;
+  }
+  if (els.songPrevPageButton) els.songPrevPageButton.disabled = m.page <= 1;
+  if (els.songNextPageButton) els.songNextPageButton.disabled = m.page >= m.pages;
+}
+
+async function loadCategories() {
+  const m = state.music;
+  try {
+    m.error = null;
+    const data = await fetchJson(`${API_BASE}/api/categories`);
+    m.categories = Array.isArray(data) ? data : [];
+    renderSongCategories();
+  } catch (err) {
+    m.categories = [];
+    m.error = err?.message || String(err);
+  }
+}
+
+async function loadMidisPage() {
+  const m = state.music;
+  m.loading = true;
+  m.error = null;
+  renderSongList();
+  const q = m.q ? `q=${encodeURIComponent(m.q)}` : "";
+  const url = `${API_BASE}/api/midis?${[
+    q,
+    `page=${encodeURIComponent(m.page)}`,
+    `limit=${encodeURIComponent(m.limit)}`,
+    `sort=${encodeURIComponent(m.sort)}`,
+    `order=${encodeURIComponent(m.order)}`,
+  ]
+    .filter(Boolean)
+    .join("&")}`;
+  try {
+    const data = await fetchJson(url);
+    m.items = Array.isArray(data?.items) ? data.items : [];
+    m.total = typeof data?.total === "number" ? data.total : 0;
+    m.page = typeof data?.page === "number" ? data.page : m.page;
+    m.pages = typeof data?.pages === "number" ? data.pages : 1;
+  } catch (err) {
+    m.items = [];
+    m.total = 0;
+    m.pages = 1;
+    m.error = err?.message || String(err);
+  } finally {
+    m.loading = false;
+    renderSongList();
+  }
 }
 
 function initYouTubePlayerIfPossible() {
@@ -1312,7 +1521,57 @@ async function main() {
       if (!id) return;
       state.videoId = id;
       state.lastLoadedVideoId = null;
-      loadVideoByIdIfReady();
+      loadVideoByIdIfReady({ autoplay: true });
+    });
+  }
+
+  if (els.pickSongButton) {
+    els.pickSongButton.addEventListener("click", async () => {
+      openSongModal();
+      if (!state.music.categories.length) await loadCategories();
+      state.music.page = 1;
+      state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
+      await loadMidisPage();
+    });
+  }
+
+  if (els.songModalCloseButton) {
+    els.songModalCloseButton.addEventListener("click", () => closeSongModal());
+  }
+  if (els.songModalBackdrop) {
+    els.songModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === els.songModalBackdrop) closeSongModal();
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.music.open) closeSongModal();
+  });
+
+  if (els.songSearchButton) {
+    els.songSearchButton.addEventListener("click", async () => {
+      state.music.page = 1;
+      state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
+      await loadMidisPage();
+    });
+  }
+  if (els.songSearchInput) {
+    els.songSearchInput.addEventListener("keydown", async (e) => {
+      if (e.key !== "Enter") return;
+      state.music.page = 1;
+      state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
+      await loadMidisPage();
+    });
+  }
+  if (els.songPrevPageButton) {
+    els.songPrevPageButton.addEventListener("click", async () => {
+      state.music.page = Math.max(1, state.music.page - 1);
+      await loadMidisPage();
+    });
+  }
+  if (els.songNextPageButton) {
+    els.songNextPageButton.addEventListener("click", async () => {
+      state.music.page = Math.min(state.music.pages, state.music.page + 1);
+      await loadMidisPage();
     });
   }
 

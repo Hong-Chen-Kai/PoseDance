@@ -30,25 +30,68 @@
           <div class="topbar__controls-group topbar__controls-group--left">
             <input
               id="videoUrlInput"
-              class="topbar__url-input"
+              class="topbar__url-input topbar__url-input--compact"
               type="text"
               placeholder="貼上 YouTube 網址"
             />
-            <select id="hintModeSelect" class="topbar__url-input" style="max-width: 140px">
-              <option value="easy" selected>提示：Easy</option>
-              <option value="hard">提示：Hard</option>
-            </select>
-          </div>
-          <div class="topbar__controls-group topbar__controls-group--right">
             <button id="loadVideoButton" class="btn btn-load" type="button">
               載入影片
             </button>
+            <button id="pickSongButton" class="btn btn-load" type="button">
+              挑選音樂
+            </button>
+          </div>
+          <div class="topbar__controls-group topbar__controls-group--right">
+            <select id="hintModeSelect" class="topbar__mode-select">
+              <option value="easy" selected>提示：Easy</option>
+              <option value="hard">提示：Hard</option>
+            </select>
             <button id="startCameraButton" class="btn btn-camera" type="button">
               啟動攝影機
             </button>
           </div>
         </div>
       </header>
+
+      <div class="modal-backdrop" id="songModalBackdrop" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-label="挑選音樂">
+          <div class="modal__header">
+            <div class="modal__title">挑選音樂</div>
+            <button class="modal__close" id="songModalCloseButton" type="button">
+              關閉
+            </button>
+          </div>
+          <div class="modal__body">
+            <aside class="modal__sidebar">
+              <div class="modal__section-title">分類</div>
+              <div class="modal__categories" id="songCategories"></div>
+            </aside>
+            <section class="modal__content">
+              <div class="modal__search">
+                <input
+                  id="songSearchInput"
+                  class="topbar__url-input"
+                  type="text"
+                  placeholder="搜尋歌名/作曲者（q）"
+                />
+                <button id="songSearchButton" class="btn btn-load" type="button">
+                  搜尋
+                </button>
+              </div>
+              <div class="modal__list" id="songList"></div>
+              <div class="modal__footer">
+                <button id="songPrevPageButton" class="btn btn-load" type="button">
+                  上一頁
+                </button>
+                <div class="small" id="songPageText">—</div>
+                <button id="songNextPageButton" class="btn btn-load" type="button">
+                  下一頁
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
 
       <main class="main">
         <section
