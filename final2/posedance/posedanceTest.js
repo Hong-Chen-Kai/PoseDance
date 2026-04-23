@@ -1696,12 +1696,12 @@ function updateUiLoop() {
       // Demo overlay (green / blue) on top so it's always visible
       if (demoLm && !isRecordingMode) {
         const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
-        const PAD = 10;
-        const GAP = 10;
-        const sideAreaRatio = 0.26; // 左右側欄占比
+        const PAD = 6;
+        const GAP = 8;
+        const sideAreaRatio = 0.36; // 左右側欄占比（示範骨架放大）
         const leftAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
         const rightAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
-        const centerMinW = 220;
+        const centerMinW = 300;
         const availableCenterW = w - leftAreaW - rightAreaW - PAD * 2 - GAP * 2;
         const useSide =
           availableCenterW >= centerMinW &&
