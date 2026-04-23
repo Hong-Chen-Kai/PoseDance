@@ -142,19 +142,11 @@ function initDomRefs() {
   els.videoUrlInput = $("videoUrlInput");
   els.modeSelect = $("modeSelect");
   els.hintModeSelect = $("hintModeSelect");
-  els.demoScaleOverlay = $("demoScaleOverlay");
-  els.demoScaleL1Panel = $("demoScaleL1Panel");
-  els.demoScaleL2Panel = $("demoScaleL2Panel");
-  els.demoScaleR1Panel = $("demoScaleR1Panel");
-  els.demoScaleR2Panel = $("demoScaleR2Panel");
   els.demoScaleL1 = $("demoScaleL1");
   els.demoScaleL2 = $("demoScaleL2");
   els.demoScaleR1 = $("demoScaleR1");
   els.demoScaleR2 = $("demoScaleR2");
-  els.demoScaleL1Text = $("demoScaleL1Text");
-  els.demoScaleL2Text = $("demoScaleL2Text");
-  els.demoScaleR1Text = $("demoScaleR1Text");
-  els.demoScaleR2Text = $("demoScaleR2Text");
+  els.demoScaleBottom = $("demoScaleBottom");
   els.loadVideoButton = $("loadVideoButton");
   els.pickSongButton = $("pickSongButton");
   els.loadSkeletonButton = $("loadSkeletonButton");
@@ -254,24 +246,13 @@ function setControlsDisabled(disabled) {
   if (els.recordButton) els.recordButton.disabled = dis || !state.cameraRunning || !state.ready;
 }
 
-function setDemoScaleText(key) {
-  const s = state.ui?.demoScale?.[key];
-  const v = typeof s === "number" && Number.isFinite(s) ? s : 1;
-  const text = `${v.toFixed(2)}x`;
-  if (key === "l1" && els.demoScaleL1Text) els.demoScaleL1Text.textContent = text;
-  if (key === "l2" && els.demoScaleL2Text) els.demoScaleL2Text.textContent = text;
-  if (key === "r1" && els.demoScaleR1Text) els.demoScaleR1Text.textContent = text;
-  if (key === "r2" && els.demoScaleR2Text) els.demoScaleR2Text.textContent = text;
-}
-
 function bindDemoScaleSlider(el, key) {
   if (!el) return;
-  const clamp = (x) => Math.max(0.6, Math.min(2.5, x));
+  const clamp = (x) => Math.max(1.5, Math.min(3.5, x));
   const read = () => {
     const raw = Number(el.value);
     const v = Number.isFinite(raw) ? clamp(raw) : 1;
     state.ui.demoScale[key] = v;
-    setDemoScaleText(key);
   };
   el.addEventListener("input", read);
   el.addEventListener("change", read);
@@ -293,7 +274,7 @@ function applyMode(mode) {
   setModeUiText();
   const isMode2 = state.ui.mode === "mode2";
   setControlsDisabled(isMode2);
-  if (els.demoScaleOverlay) els.demoScaleOverlay.style.display = isMode2 ? "none" : "";
+  if (els.demoScaleBottom) els.demoScaleBottom.style.display = isMode2 ? "none" : "";
   if (isMode2) {
     if (state.music.open) closeSongModal();
     if (state.cameraRunning) stopCameraIfRunning();
@@ -1850,28 +1831,6 @@ function updateUiLoop() {
             mkCell(rightX + cellW + GAP),
           ];
 
-          // 讓滑桿貼在各格下緣內側（overlayCanvas 是鏡像顯示，overlay 容器也鏡像過，所以可直接用 rect 座標）
-          const panels = [
-            els.demoScaleL1Panel,
-            els.demoScaleL2Panel,
-            els.demoScaleR1Panel,
-            els.demoScaleR2Panel,
-          ];
-          for (let i = 0; i < rects.length; i += 1) {
-            const p = panels[i];
-            if (!p) continue;
-            p.style.display = "";
-            const r0 = rects[i];
-            const inset = 8;
-            const ph = 28;
-            const py = Math.max(r0.oy + 6, r0.oy + r0.dh - ph - inset);
-            const px = r0.ox + 6;
-            const pw = Math.max(140, Math.floor(r0.dw - 12));
-            p.style.left = `${px}px`;
-            p.style.top = `${py}px`;
-            p.style.width = `${pw}px`;
-          }
-
           const scales = [
             state.ui?.demoScale?.l1 ?? 1,
             state.ui?.demoScale?.l2 ?? 1,
@@ -1887,11 +1846,6 @@ function updateUiLoop() {
             drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
           }
         } else {
-          // 畫面太窄時隱藏四個滑桿（避免漂在不對的位置）
-          if (els.demoScaleL1Panel) els.demoScaleL1Panel.style.display = "none";
-          if (els.demoScaleL2Panel) els.demoScaleL2Panel.style.display = "none";
-          if (els.demoScaleR1Panel) els.demoScaleR1Panel.style.display = "none";
-          if (els.demoScaleR2Panel) els.demoScaleR2Panel.style.display = "none";
           // fallback: 畫在原本位置（避免視窗太窄時看不到）
           drawPoseConnections(ctx, demoLm, getArrXYV, stageRect, () => demoColor, 5);
           drawPosePoints(ctx, demoLm, getArrXYV, stageRect, demoColor, 4.5);
