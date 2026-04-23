@@ -1831,11 +1831,13 @@ function updateUiLoop() {
             mkCell(rightX + cellW + GAP),
           ];
 
+          // 注意：overlay_canvas 以 CSS 做了水平鏡像（scaleX(-1)），視覺左右會對調。
+          // 這裡把滑桿的 L1/L2/R1/R2 重新對應到「畫面上由左到右」的四格。
           const scales = [
-            state.ui?.demoScale?.l1 ?? 1,
-            state.ui?.demoScale?.l2 ?? 1,
+            state.ui?.demoScale?.r2 ?? 1, // 視覺最右 ↔ 畫布最左
             state.ui?.demoScale?.r1 ?? 1,
-            state.ui?.demoScale?.r2 ?? 1,
+            state.ui?.demoScale?.l2 ?? 1,
+            state.ui?.demoScale?.l1 ?? 1, // 視覺最左 ↔ 畫布最右
           ];
 
           for (let i = 0; i < rects.length; i += 1) {
