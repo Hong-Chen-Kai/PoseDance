@@ -50,6 +50,7 @@ const state = {
   demo: { easy: null, hard: null, loaded: null },
 
   ui: {
+    mode: "mode1",
     hintMode: "easy",
   },
 
@@ -136,7 +137,9 @@ function initDomRefs() {
   els.overallEasyText = $("overallEasyText");
   els.overallHardText = $("overallHardText");
   els.overallLoadedText = $("overallLoadedText");
+  els.modeText = $("modeText");
   els.videoUrlInput = $("videoUrlInput");
+  els.modeSelect = $("modeSelect");
   els.hintModeSelect = $("hintModeSelect");
   els.loadVideoButton = $("loadVideoButton");
   els.pickSongButton = $("pickSongButton");
@@ -181,6 +184,75 @@ function setUi({
   if (els.overallEasyText) els.overallEasyText.textContent = overallEasy;
   if (els.overallHardText) els.overallHardText.textContent = overallHard;
   if (els.overallLoadedText) els.overallLoadedText.textContent = overallLoaded;
+}
+
+function setModeUiText() {
+  if (!els.modeText) return;
+  els.modeText.textContent = state.ui.mode === "mode2" ? "Mode 2（未實作）" : "Mode 1";
+}
+
+function clearOverlayCanvas() {
+  if (!els.overlayCanvas) return;
+  const ctx = els.overlayCanvas.getContext("2d");
+  if (!ctx) return;
+
+  const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+  const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+  const dpr = window.devicePixelRatio || 1;
+  const targetW = Math.max(1, Math.floor(w * dpr));
+  const targetH = Math.max(1, Math.floor(h * dpr));
+  if (els.overlayCanvas.width !== targetW || els.overlayCanvas.height !== targetH) {
+    els.overlayCanvas.width = targetW;
+    els.overlayCanvas.height = targetH;
+  }
+
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.restore();
+}
+
+function stopCameraIfRunning() {
+  state.poseLoopActive = false;
+  state.cameraRunning = false;
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach((t) => t.stop());
+    state.cameraStream = null;
+  }
+  if (els.inputVideo) els.inputVideo.srcObject = null;
+  if (els.startCameraButton) els.startCameraButton.textContent = "啟動攝影機";
+  state.latestUserLandmarks = null;
+  drawUserOverlay();
+  clearOverlayCanvas();
+}
+
+function setControlsDisabled(disabled) {
+  const dis = Boolean(disabled);
+  if (els.videoUrlInput) els.videoUrlInput.disabled = dis;
+  if (els.loadVideoButton) els.loadVideoButton.disabled = dis;
+  if (els.pickSongButton) els.pickSongButton.disabled = dis;
+  if (els.loadSkeletonButton) els.loadSkeletonButton.disabled = dis;
+  if (els.hintModeSelect) els.hintModeSelect.disabled = dis;
+  if (els.startCameraButton) els.startCameraButton.disabled = dis;
+  if (els.recordButton) els.recordButton.disabled = dis || !state.cameraRunning || !state.ready;
+}
+
+function applyMode(mode) {
+  state.ui.mode = mode === "mode2" ? "mode2" : "mode1";
+  setModeUiText();
+  const isMode2 = state.ui.mode === "mode2";
+  setControlsDisabled(isMode2);
+  if (isMode2) {
+    if (state.music.open) closeSongModal();
+    if (state.cameraRunning) stopCameraIfRunning();
+    state.recorder.armed = false;
+    state.recorder.active = false;
+    state.recorder.armStartPlayerTimeSec = null;
+    state.recorder.startedAtIso = null;
+    state.recorder.lastRecordedT = Number.NEGATIVE_INFINITY;
+    state.recorder.samples = [];
+    setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
+  }
 }
 
 function extractVideoId(input) {
@@ -416,7 +488,8 @@ function initYouTubePlayerIfPossible() {
     events: {
       onReady: () => {
         state.ready = true;
-        loadVideoByIdIfReady();
+        // 避免一進頁面就自動播放：預設只 cue（或維持當前）
+        loadVideoByIdIfReady({ autoplay: false });
       },
       onError: (event) => {
         console.error("[YouTube] errorCode =", event.data);
@@ -597,6 +670,12 @@ function createDownload(filename, obj) {
 
 function setRecordUi(tScore) {
   if (!els.recordButton) return;
+  if (state.ui.mode === "mode2") {
+    els.recordButton.disabled = true;
+    els.recordButton.textContent = "開始錄製";
+    els.recordButton.classList.remove("btn-record--active");
+    return;
+  }
   const rec = state.recorder;
   els.recordButton.disabled = !state.cameraRunning || !state.ready;
 
@@ -1344,6 +1423,7 @@ async function initPose() {
       els.startCameraButton.textContent = "啟動攝影機";
       state.latestUserLandmarks = null;
       drawUserOverlay();
+      clearOverlayCanvas();
       return;
     }
 
@@ -1440,6 +1520,13 @@ function updateUiLoop() {
   const tScore =
     ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
 
+  if (state.ui.mode === "mode2") {
+    setRecordUi(tScore);
+    setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
+    clearOverlayCanvas();
+    return;
+  }
+
   // --- Recorder state machine (record user pose vs YouTube time)
   const rec = state.recorder;
   if (rec.armed && typeof tScore === "number" && Number.isFinite(tScore)) {
@@ -1466,11 +1553,13 @@ function updateUiLoop() {
 
   if (!state.latestUserLandmarks) {
     setUi({ easy: "—", hard: "—", overallEasy: "—", overallHard: "—" });
+    clearOverlayCanvas();
     return;
   }
 
   if (tScore === null) {
     setUi({ easy: "—", hard: "—", overallEasy: "—", overallHard: "—" });
+    clearOverlayCanvas();
     return;
   }
 
@@ -1607,15 +1696,47 @@ function updateUiLoop() {
       // Demo overlay (green / blue) on top so it's always visible
       if (demoLm && !isRecordingMode) {
         const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
-        drawPoseConnections(
-          ctx,
-          demoLm,
-          getArrXYV,
-          stageRect,
-          () => demoColor,
-          5,
-        );
-        drawPosePoints(ctx, demoLm, getArrXYV, stageRect, demoColor, 4.5);
+        const PAD = 10;
+        const GAP = 10;
+        const sideAreaRatio = 0.26; // 左右側欄占比
+        const leftAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
+        const rightAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
+        const centerMinW = 220;
+        const availableCenterW = w - leftAreaW - rightAreaW - PAD * 2 - GAP * 2;
+        const useSide =
+          availableCenterW >= centerMinW &&
+          leftAreaW + rightAreaW + centerMinW + PAD * 2 + GAP * 2 <= w;
+
+        if (useSide) {
+          const leftX = PAD;
+          const rightX = w - PAD - rightAreaW;
+          const areaY = PAD;
+          const areaH = h - PAD * 2;
+
+          const cellW = Math.floor((leftAreaW - GAP) / 2);
+          const cellH = areaH;
+
+          const mkCell = (x0) => {
+            const r = computeContainRect(cellW, cellH, DEMO_SOURCE_ASPECT);
+            return { ox: x0 + r.ox, oy: areaY + r.oy, dw: r.dw, dh: r.dh };
+          };
+
+          const rects = [
+            mkCell(leftX),
+            mkCell(leftX + cellW + GAP),
+            mkCell(rightX),
+            mkCell(rightX + cellW + GAP),
+          ];
+
+          for (const r of rects) {
+            drawPoseConnections(ctx, demoLm, getArrXYV, r, () => demoColor, 5);
+            drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
+          }
+        } else {
+          // fallback: 畫在原本位置（避免視窗太窄時看不到）
+          drawPoseConnections(ctx, demoLm, getArrXYV, stageRect, () => demoColor, 5);
+          drawPosePoints(ctx, demoLm, getArrXYV, stageRect, demoColor, 4.5);
+        }
       }
 
       ctx.restore();
@@ -1627,6 +1748,7 @@ async function main() {
   initDomRefs();
   // debug handle for DevTools
   window.__posedanceTestState = state;
+  setModeUiText();
   setupYtFloatingWindow();
   initYouTubePlayerIfPossible();
 
@@ -1647,7 +1769,8 @@ async function main() {
       state.videoId = easy.videoId;
       if (els.videoUrlInput) els.videoUrlInput.value = easy.videoId;
     }
-    loadVideoByIdIfReady();
+    // 初始載入 demo 附帶的 videoId：只 cue 不自動播放
+    loadVideoByIdIfReady({ autoplay: false });
   } catch (err) {
     console.error("[DemoTrace] load failed:", err);
   }
@@ -1666,8 +1789,19 @@ async function main() {
     });
   }
 
+  if (els.modeSelect) {
+    els.modeSelect.addEventListener("change", () => {
+      const raw = els.modeSelect.value;
+      applyMode(raw === "mode2" ? "mode2" : "mode1");
+    });
+    applyMode(els.modeSelect.value);
+  } else {
+    applyMode("mode1");
+  }
+
   if (els.loadVideoButton) {
     els.loadVideoButton.addEventListener("click", () => {
+      if (state.ui.mode === "mode2") return;
       const raw = els.videoUrlInput ? els.videoUrlInput.value : "";
       const id = extractVideoId(raw);
       if (!id) return;
@@ -1679,10 +1813,12 @@ async function main() {
 
   if (els.loadSkeletonButton && els.skeletonFileInput) {
     els.loadSkeletonButton.addEventListener("click", () => {
+      if (state.ui.mode === "mode2") return;
       els.skeletonFileInput.value = "";
       els.skeletonFileInput.click();
     });
     els.skeletonFileInput.addEventListener("change", async () => {
+      if (state.ui.mode === "mode2") return;
       const file = els.skeletonFileInput.files && els.skeletonFileInput.files[0];
       if (!file) return;
       try {
@@ -1700,6 +1836,7 @@ async function main() {
 
   if (els.recordButton) {
     els.recordButton.addEventListener("click", () => {
+      if (state.ui.mode === "mode2") return;
       const rec = state.recorder;
       if (!rec.armed) {
         rec.armed = true;
@@ -1735,6 +1872,7 @@ async function main() {
 
   if (els.pickSongButton) {
     els.pickSongButton.addEventListener("click", async () => {
+      if (state.ui.mode === "mode2") return;
       openSongModal();
       if (!state.music.categories.length) await loadCategories();
       state.music.page = 1;
@@ -1757,6 +1895,7 @@ async function main() {
 
   if (els.songSearchButton) {
     els.songSearchButton.addEventListener("click", async () => {
+      if (state.ui.mode === "mode2") return;
       state.music.page = 1;
       state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
       await loadMidisPage();
@@ -1764,6 +1903,7 @@ async function main() {
   }
   if (els.songSearchInput) {
     els.songSearchInput.addEventListener("keydown", async (e) => {
+      if (state.ui.mode === "mode2") return;
       if (e.key !== "Enter") return;
       state.music.page = 1;
       state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
@@ -1772,12 +1912,14 @@ async function main() {
   }
   if (els.songPrevPageButton) {
     els.songPrevPageButton.addEventListener("click", async () => {
+      if (state.ui.mode === "mode2") return;
       state.music.page = Math.max(1, state.music.page - 1);
       await loadMidisPage();
     });
   }
   if (els.songNextPageButton) {
     els.songNextPageButton.addEventListener("click", async () => {
+      if (state.ui.mode === "mode2") return;
       state.music.page = Math.min(state.music.pages, state.music.page + 1);
       await loadMidisPage();
     });

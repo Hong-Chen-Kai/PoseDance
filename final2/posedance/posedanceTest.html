@@ -28,6 +28,9 @@
             Loaded（即時/整體）：<span id="similarityLoadedText">—</span> /
             <span id="overallLoadedText">—</span>
           </span>
+          <span class="small">
+            Mode：<span id="modeText">Mode 1</span>
+          </span>
         </div>
 
         <div class="topbar__controls">
@@ -56,6 +59,10 @@
             />
           </div>
           <div class="topbar__controls-group topbar__controls-group--right">
+            <select id="modeSelect" class="topbar__mode-select" aria-label="模式">
+              <option value="mode1" selected>Mode 1</option>
+              <option value="mode2">Mode 2</option>
+            </select>
             <select id="hintModeSelect" class="topbar__mode-select">
               <option value="easy" selected>Easy</option>
               <option value="hard">Hard</option>
