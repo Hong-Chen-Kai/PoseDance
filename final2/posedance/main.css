@@ -347,11 +347,11 @@ dd {
 }
 
 .yt-wrapper__drag-handle {
-  height: 28px;
+  height: 20px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px;
+  padding: 0 8px;
   background: rgba(255, 255, 255, 0.9);
   cursor: grab;
   user-select: none;
@@ -359,16 +359,44 @@ dd {
 
 .yt-wrapper__player {
   flex: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .yt-wrapper__resize-handle {
   position: absolute;
-  right: 0;
-  bottom: 0;
   width: 16px;
   height: 16px;
-  cursor: nwse-resize;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.35) 51%, rgba(255, 255, 255, 0.35) 100%);
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.yt-wrapper__resize-handle--br {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.yt-wrapper__resize-handle--tl {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+  transform: rotate(180deg);
+}
+
+.yt-wrapper__resize-handle--tr {
+  right: 0;
+  top: 0;
+  cursor: nesw-resize;
+  transform: rotate(90deg);
+}
+
+.yt-wrapper__resize-handle--bl {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+  transform: rotate(270deg);
 }
 
 @media (max-width: 900px) {

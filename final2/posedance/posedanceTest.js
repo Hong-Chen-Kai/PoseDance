@@ -650,63 +650,63 @@ function setupYtFloatingWindow() {
     let startH = 0;
     let startLeft = 0;
     let startTop = 0;
+    let rafPending = false;
+    let lastClientX = 0;
+    let lastClientY = 0;
+
+    const applyResize = () => {
+      rafPending = false;
+      if (!resizing) return;
+      const dx = lastClientX - startX;
+      const dy = lastClientY - startY;
+
+      // Compute unclamped box from the dragged corner
+      let left = startLeft;
+      let top = startTop;
+      let width = startW;
+      let height = startH;
+
+      if (corner === "br") {
+        width = startW + dx;
+        height = startH + dy;
+      } else if (corner === "tr") {
+        width = startW + dx;
+        height = startH - dy;
+        top = startTop + dy;
+      } else if (corner === "bl") {
+        width = startW - dx;
+        height = startH + dy;
+        left = startLeft + dx;
+      } else {
+        // tl
+        width = startW - dx;
+        height = startH - dy;
+        left = startLeft + dx;
+        top = startTop + dy;
+      }
+
+      // Clamp size
+      width = Math.min(Math.max(minW, width), maxW);
+      height = Math.min(Math.max(minH, height), maxH);
+
+      // Clamp position to viewport
+      left = Math.min(Math.max(0, left), window.innerWidth - width);
+      top = Math.min(Math.max(0, top), window.innerHeight - height);
+
+      wrapper.style.width = `${width}px`;
+      wrapper.style.height = `${height}px`;
+      wrapper.style.left = `${left}px`;
+      wrapper.style.top = `${top}px`;
+    };
 
     const onMove = (e) => {
       if (!resizing) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const dx = clientX - startX;
-      const dy = clientY - startY;
-
-      // Desired deltas depend on which corner is dragged.
-      let dw = 0;
-      let dh = 0;
-      let dl = 0;
-      let dt = 0;
-      if (corner === "br") {
-        dw = dx;
-        dh = dy;
-      } else if (corner === "tr") {
-        dw = dx;
-        dh = -dy;
-        dt = dy;
-      } else if (corner === "bl") {
-        dw = -dx;
-        dh = dy;
-        dl = dx;
-      } else {
-        // tl
-        dw = -dx;
-        dh = -dy;
-        dl = dx;
-        dt = dy;
+      lastClientX = e.touches ? e.touches[0].clientX : e.clientX;
+      lastClientY = e.touches ? e.touches[0].clientY : e.clientY;
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(applyResize);
       }
-
-      const nextW = Math.min(Math.max(minW, startW + dw), maxW);
-      const nextH = Math.min(Math.max(minH, startH + dh), maxH);
-
-      // If clamped, adjust left/top accordingly so the dragged corner feels anchored.
-      const appliedDW = nextW - startW;
-      const appliedDH = nextH - startH;
-      const nextLeft =
-        corner === "br" || corner === "tr"
-          ? startLeft
-          : Math.min(
-              Math.max(0, startLeft + (dl !== 0 ? (startW - nextW) : 0)),
-              window.innerWidth - nextW,
-            );
-      const nextTop =
-        corner === "br" || corner === "bl"
-          ? startTop
-          : Math.min(
-              Math.max(0, startTop + (dt !== 0 ? (startH - nextH) : 0)),
-              window.innerHeight - nextH,
-            );
-
-      wrapper.style.width = `${nextW}px`;
-      wrapper.style.height = `${nextH}px`;
-      wrapper.style.left = `${nextLeft}px`;
-      wrapper.style.top = `${nextTop}px`;
     };
 
     const stop = () => {
@@ -726,6 +726,8 @@ function setupYtFloatingWindow() {
       startTop = rect.top;
       startX = e.touches ? e.touches[0].clientX : e.clientX;
       startY = e.touches ? e.touches[0].clientY : e.clientY;
+      lastClientX = startX;
+      lastClientY = startY;
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", stop);
       document.addEventListener("touchmove", onMove, { passive: false });
