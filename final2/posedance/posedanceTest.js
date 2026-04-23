@@ -142,7 +142,11 @@ function initDomRefs() {
   els.videoUrlInput = $("videoUrlInput");
   els.modeSelect = $("modeSelect");
   els.hintModeSelect = $("hintModeSelect");
-  els.demoScalePanel = $("demoScalePanel");
+  els.demoScaleOverlay = $("demoScaleOverlay");
+  els.demoScaleL1Panel = $("demoScaleL1Panel");
+  els.demoScaleL2Panel = $("demoScaleL2Panel");
+  els.demoScaleR1Panel = $("demoScaleR1Panel");
+  els.demoScaleR2Panel = $("demoScaleR2Panel");
   els.demoScaleL1 = $("demoScaleL1");
   els.demoScaleL2 = $("demoScaleL2");
   els.demoScaleR1 = $("demoScaleR1");
@@ -286,7 +290,7 @@ function applyMode(mode) {
   setModeUiText();
   const isMode2 = state.ui.mode === "mode2";
   setControlsDisabled(isMode2);
-  if (els.demoScalePanel) els.demoScalePanel.style.display = isMode2 ? "none" : "";
+  if (els.demoScaleOverlay) els.demoScaleOverlay.style.display = isMode2 ? "none" : "";
   if (isMode2) {
     if (state.music.open) closeSongModal();
     if (state.cameraRunning) stopCameraIfRunning();
@@ -573,6 +577,9 @@ function setupYtFloatingWindow() {
     let startY = 0;
     let startLeft = 0;
     let startTop = 0;
+    let rafPending = false;
+    let nextLeft = 0;
+    let nextTop = 0;
 
     const onMove = (e) => {
       if (!dragging) return;
@@ -580,16 +587,22 @@ function setupYtFloatingWindow() {
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       const dx = clientX - startX;
       const dy = clientY - startY;
-      const nextLeft = Math.min(
+      nextLeft = Math.min(
         Math.max(0, startLeft + dx),
         window.innerWidth - readRect().width,
       );
-      const nextTop = Math.min(
+      nextTop = Math.min(
         Math.max(0, startTop + dy),
         window.innerHeight - readRect().height,
       );
-      wrapper.style.left = `${nextLeft}px`;
-      wrapper.style.top = `${nextTop}px`;
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(() => {
+          rafPending = false;
+          wrapper.style.left = `${nextLeft}px`;
+          wrapper.style.top = `${nextTop}px`;
+        });
+      }
     };
 
     const stop = () => {
@@ -1773,6 +1786,28 @@ function updateUiLoop() {
             mkCell(rightX + cellW + GAP),
           ];
 
+          // 讓滑桿貼在各格下緣內側（overlayCanvas 是鏡像顯示，overlay 容器也鏡像過，所以可直接用 rect 座標）
+          const panels = [
+            els.demoScaleL1Panel,
+            els.demoScaleL2Panel,
+            els.demoScaleR1Panel,
+            els.demoScaleR2Panel,
+          ];
+          for (let i = 0; i < rects.length; i += 1) {
+            const p = panels[i];
+            if (!p) continue;
+            p.style.display = "";
+            const r0 = rects[i];
+            const inset = 8;
+            const ph = 28;
+            const py = Math.max(r0.oy + 6, r0.oy + r0.dh - ph - inset);
+            const px = r0.ox + 6;
+            const pw = Math.max(140, Math.floor(r0.dw - 12));
+            p.style.left = `${px}px`;
+            p.style.top = `${py}px`;
+            p.style.width = `${pw}px`;
+          }
+
           const scales = [
             state.ui?.demoScale?.l1 ?? 1,
             state.ui?.demoScale?.l2 ?? 1,
@@ -1788,6 +1823,11 @@ function updateUiLoop() {
             drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
           }
         } else {
+          // 畫面太窄時隱藏四個滑桿（避免漂在不對的位置）
+          if (els.demoScaleL1Panel) els.demoScaleL1Panel.style.display = "none";
+          if (els.demoScaleL2Panel) els.demoScaleL2Panel.style.display = "none";
+          if (els.demoScaleR1Panel) els.demoScaleR1Panel.style.display = "none";
+          if (els.demoScaleR2Panel) els.demoScaleR2Panel.style.display = "none";
           // fallback: 畫在原本位置（避免視窗太窄時看不到）
           drawPoseConnections(ctx, demoLm, getArrXYV, stageRect, () => demoColor, 5);
           drawPosePoints(ctx, demoLm, getArrXYV, stageRect, demoColor, 4.5);

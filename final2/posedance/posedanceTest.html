@@ -124,6 +124,30 @@
             <video id="input_video" playsinline></video>
             <canvas id="output_canvas"></canvas>
             <canvas id="overlay_canvas"></canvas>
+
+            <!-- 示範骨架縮放（貼在各格下緣內側） -->
+            <div id="demoScaleOverlay" class="demo-scale-overlay" aria-label="示範骨架縮放">
+              <div class="demo-scale-cell" id="demoScaleL1Panel">
+                <span class="demo-scale-cell__tag">L1</span>
+                <input id="demoScaleL1" type="range" min="0.6" max="2.5" step="0.05" value="1" />
+                <span class="demo-scale-cell__value" id="demoScaleL1Text">1.00x</span>
+              </div>
+              <div class="demo-scale-cell" id="demoScaleL2Panel">
+                <span class="demo-scale-cell__tag">L2</span>
+                <input id="demoScaleL2" type="range" min="0.6" max="2.5" step="0.05" value="1" />
+                <span class="demo-scale-cell__value" id="demoScaleL2Text">1.00x</span>
+              </div>
+              <div class="demo-scale-cell" id="demoScaleR1Panel">
+                <span class="demo-scale-cell__tag">R1</span>
+                <input id="demoScaleR1" type="range" min="0.6" max="2.5" step="0.05" value="1" />
+                <span class="demo-scale-cell__value" id="demoScaleR1Text">1.00x</span>
+              </div>
+              <div class="demo-scale-cell" id="demoScaleR2Panel">
+                <span class="demo-scale-cell__tag">R2</span>
+                <input id="demoScaleR2" type="range" min="0.6" max="2.5" step="0.05" value="1" />
+                <span class="demo-scale-cell__value" id="demoScaleR2Text">1.00x</span>
+              </div>
+            </div>
           </div>
           <div class="hud small" id="poseInfoText">尚未開始偵測</div>
         </section>
@@ -138,32 +162,6 @@
         <div class="yt-wrapper__resize-handle" id="ytResizeHandle"></div>
       </div>
 
-      <!-- 右下角：示範骨架縮放 -->
-      <div id="demoScalePanel" class="demo-scale" aria-label="示範骨架縮放面板">
-        <div class="demo-scale__title">示範骨架縮放</div>
-        <div class="demo-scale__grid">
-          <label class="demo-scale__row">
-            <span class="demo-scale__label">L1</span>
-            <input id="demoScaleL1" type="range" min="0.6" max="2.5" step="0.05" value="1" />
-            <span class="demo-scale__value" id="demoScaleL1Text">1.00x</span>
-          </label>
-          <label class="demo-scale__row">
-            <span class="demo-scale__label">L2</span>
-            <input id="demoScaleL2" type="range" min="0.6" max="2.5" step="0.05" value="1" />
-            <span class="demo-scale__value" id="demoScaleL2Text">1.00x</span>
-          </label>
-          <label class="demo-scale__row">
-            <span class="demo-scale__label">R1</span>
-            <input id="demoScaleR1" type="range" min="0.6" max="2.5" step="0.05" value="1" />
-            <span class="demo-scale__value" id="demoScaleR1Text">1.00x</span>
-          </label>
-          <label class="demo-scale__row">
-            <span class="demo-scale__label">R2</span>
-            <input id="demoScaleR2" type="range" min="0.6" max="2.5" step="0.05" value="1" />
-            <span class="demo-scale__value" id="demoScaleR2Text">1.00x</span>
-          </label>
-        </div>
-      </div>
     </div>
 
     <script type="importmap">
