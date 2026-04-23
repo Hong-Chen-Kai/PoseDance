@@ -180,6 +180,9 @@ function initDomRefs() {
   els.ytWrapper = $("ytPlayerWrapper");
   els.ytDragHandle = $("ytDragHandle");
   els.ytResizeHandle = $("ytResizeHandle");
+  els.ytResizeHandleTL = $("ytResizeHandleTL");
+  els.ytResizeHandleTR = $("ytResizeHandleTR");
+  els.ytResizeHandleBL = $("ytResizeHandleBL");
 
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
 }
@@ -556,7 +559,10 @@ function setupYtFloatingWindow() {
 
   const wrapper = els.ytWrapper;
   const dragHandle = els.ytDragHandle || wrapper;
-  const resizeHandle = els.ytResizeHandle;
+  const resizeHandleBR = els.ytResizeHandle;
+  const resizeHandleTL = els.ytResizeHandleTL;
+  const resizeHandleTR = els.ytResizeHandleTR;
+  const resizeHandleBL = els.ytResizeHandleBL;
 
   const minW = 200;
   const minH = 140;
@@ -635,52 +641,108 @@ function setupYtFloatingWindow() {
     });
   }
 
-  if (resizeHandle) {
+  const attachCornerResize = (handle, corner) => {
+    if (!handle) return;
     let resizing = false;
-    let resizeStartX = 0;
-    let resizeStartY = 0;
+    let startX = 0;
+    let startY = 0;
     let startW = 0;
     let startH = 0;
+    let startLeft = 0;
+    let startTop = 0;
 
-    const onResizeMove = (e) => {
+    const onMove = (e) => {
       if (!resizing) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const dx = clientX - resizeStartX;
-      const dy = clientY - resizeStartY;
-      const nextW = Math.min(Math.max(minW, startW + dx), maxW);
-      const nextH = Math.min(Math.max(minH, startH + dy), maxH);
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      // Desired deltas depend on which corner is dragged.
+      let dw = 0;
+      let dh = 0;
+      let dl = 0;
+      let dt = 0;
+      if (corner === "br") {
+        dw = dx;
+        dh = dy;
+      } else if (corner === "tr") {
+        dw = dx;
+        dh = -dy;
+        dt = dy;
+      } else if (corner === "bl") {
+        dw = -dx;
+        dh = dy;
+        dl = dx;
+      } else {
+        // tl
+        dw = -dx;
+        dh = -dy;
+        dl = dx;
+        dt = dy;
+      }
+
+      const nextW = Math.min(Math.max(minW, startW + dw), maxW);
+      const nextH = Math.min(Math.max(minH, startH + dh), maxH);
+
+      // If clamped, adjust left/top accordingly so the dragged corner feels anchored.
+      const appliedDW = nextW - startW;
+      const appliedDH = nextH - startH;
+      const nextLeft =
+        corner === "br" || corner === "tr"
+          ? startLeft
+          : Math.min(
+              Math.max(0, startLeft + (dl !== 0 ? (startW - nextW) : 0)),
+              window.innerWidth - nextW,
+            );
+      const nextTop =
+        corner === "br" || corner === "bl"
+          ? startTop
+          : Math.min(
+              Math.max(0, startTop + (dt !== 0 ? (startH - nextH) : 0)),
+              window.innerHeight - nextH,
+            );
+
       wrapper.style.width = `${nextW}px`;
       wrapper.style.height = `${nextH}px`;
+      wrapper.style.left = `${nextLeft}px`;
+      wrapper.style.top = `${nextTop}px`;
     };
 
-    const stopResize = () => {
+    const stop = () => {
       resizing = false;
-      document.removeEventListener("mousemove", onResizeMove);
-      document.removeEventListener("mouseup", stopResize);
-      document.removeEventListener("touchmove", onResizeMove);
-      document.removeEventListener("touchend", stopResize);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", stop);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", stop);
     };
 
-    const startResize = (e) => {
+    const start = (e) => {
       resizing = true;
       const rect = readRect();
       startW = rect.width;
       startH = rect.height;
-      resizeStartX = e.touches ? e.touches[0].clientX : e.clientX;
-      resizeStartY = e.touches ? e.touches[0].clientY : e.clientY;
-      document.addEventListener("mousemove", onResizeMove);
-      document.addEventListener("mouseup", stopResize);
-      document.addEventListener("touchmove", onResizeMove, { passive: false });
-      document.addEventListener("touchend", stopResize);
+      startLeft = rect.left;
+      startTop = rect.top;
+      startX = e.touches ? e.touches[0].clientX : e.clientX;
+      startY = e.touches ? e.touches[0].clientY : e.clientY;
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", stop);
+      document.addEventListener("touchmove", onMove, { passive: false });
+      document.addEventListener("touchend", stop);
     };
 
-    resizeHandle.addEventListener("mousedown", startResize);
-    resizeHandle.addEventListener("touchstart", (e) => {
+    handle.addEventListener("mousedown", start);
+    handle.addEventListener("touchstart", (e) => {
       e.preventDefault();
-      startResize(e);
+      start(e);
     });
-  }
+  };
+
+  attachCornerResize(resizeHandleBR, "br");
+  attachCornerResize(resizeHandleTL, "tl");
+  attachCornerResize(resizeHandleTR, "tr");
+  attachCornerResize(resizeHandleBL, "bl");
 }
 
 async function loadDemoTrace(url) {
