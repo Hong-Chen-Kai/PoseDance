@@ -204,50 +204,70 @@
 }
 
 .demo-scale-bottom {
-  position: sticky;
-  bottom: 0;
   z-index: 40;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 8px 12px 10px;
-  background: rgba(15, 23, 42, 0.72);
-  border-top: 1px solid rgba(148, 163, 184, 0.22);
-  backdrop-filter: blur(10px);
 }
 
-.demo-scale-bottom input[type="range"] {
+.demo-scale-bottom--overlay {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr minmax(24px, 22%) 1fr;
+  gap: 10px;
+}
+
+.demo-scale-bottom__left,
+.demo-scale-bottom__right {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.demo-scale-bottom__spacer {
+  pointer-events: none;
+}
+
+.demo-scale-bottom--overlay input[type="range"] {
   width: 100%;
-  height: 14px;
+  height: 10px;
   accent-color: rgba(34, 197, 94, 0.95);
+  pointer-events: auto;
 }
 
 /* 更細的 track */
-.demo-scale-bottom input[type="range"]::-webkit-slider-runnable-track {
-  height: 4px;
+.demo-scale-bottom--overlay input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.35);
 }
 
-.demo-scale-bottom input[type="range"]::-webkit-slider-thumb {
+.demo-scale-bottom--overlay input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  margin-top: -4px;
+  width: 10px;
+  height: 10px;
+  margin-top: -3.5px;
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.95);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
-.demo-scale-bottom input[type="range"]::-moz-range-track {
-  height: 4px;
+.demo-scale-bottom--overlay input[type="range"]::-moz-range-track {
+  height: 3px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.35);
 }
 
-.demo-scale-bottom input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+.demo-scale-bottom--overlay input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
   border: none;
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.95);
@@ -255,8 +275,17 @@
 }
 
 @media (max-width: 900px) {
-  .demo-scale-bottom {
-    grid-template-columns: 1fr 1fr;
+  .demo-scale-bottom--overlay {
+    grid-template-columns: 1fr minmax(16px, 10%) 1fr;
+    padding: 8px 8px;
+    gap: 8px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+  }
+  .demo-scale-bottom__left,
+  .demo-scale-bottom__right {
+    gap: 8px;
   }
 }
 

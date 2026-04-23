@@ -124,18 +124,23 @@
             <video id="input_video" playsinline></video>
             <canvas id="output_canvas"></canvas>
             <canvas id="overlay_canvas"></canvas>
+
+            <!-- 畫布內側底部：示範骨架縮放（依序 L1 / L2 / R1 / R2，中間留空） -->
+            <div id="demoScaleBottom" class="demo-scale-bottom demo-scale-bottom--overlay" aria-label="示範骨架縮放">
+              <div class="demo-scale-bottom__left">
+                <input id="demoScaleL1" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
+                <input id="demoScaleL2" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
+              </div>
+              <div class="demo-scale-bottom__spacer" aria-hidden="true"></div>
+              <div class="demo-scale-bottom__right">
+                <input id="demoScaleR1" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
+                <input id="demoScaleR2" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
+              </div>
+            </div>
           </div>
           <div class="hud small" id="poseInfoText">尚未開始偵測</div>
         </section>
       </main>
-
-      <!-- 底部：示範骨架縮放（依序 L1 / L2 / R1 / R2） -->
-      <div id="demoScaleBottom" class="demo-scale-bottom" aria-label="示範骨架縮放">
-        <input id="demoScaleL1" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
-        <input id="demoScaleL2" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
-        <input id="demoScaleR1" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
-        <input id="demoScaleR2" type="range" min="1.5" max="3.5" step="0.05" value="3.5" />
-      </div>
 
       <!-- 右下角：可拖曳/縮放的 YouTube 小視窗 -->
       <div id="ytPlayerWrapper" class="yt-wrapper" aria-label="YouTube 播放器">
