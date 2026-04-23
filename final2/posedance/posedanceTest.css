@@ -212,7 +212,7 @@
   left: 8px;
   right: 8px;
   bottom: 8px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.55);
   border: 1px solid rgba(148, 163, 184, 0.20);
@@ -220,14 +220,14 @@
   pointer-events: none;
   display: grid;
   grid-template-columns: 1fr minmax(24px, 22%) 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .demo-scale-bottom__left,
 .demo-scale-bottom__right {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
   pointer-events: none;
 }
 
@@ -237,41 +237,50 @@
 
 .demo-scale-bottom--overlay input[type="range"] {
   width: 100%;
-  height: 10px;
+  height: 7px;
   accent-color: rgba(34, 197, 94, 0.95);
   pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
 }
 
 /* 更細的 track */
 .demo-scale-bottom--overlay input[type="range"]::-webkit-slider-runnable-track {
-  height: 3px;
+  height: 2px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.35);
 }
 
 .demo-scale-bottom--overlay input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 10px;
-  height: 10px;
-  margin-top: -3.5px;
+  width: 7px;
+  height: 7px;
+  margin-top: -2.5px;
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.95);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .demo-scale-bottom--overlay input[type="range"]::-moz-range-track {
-  height: 3px;
+  height: 2px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.35);
 }
 
 .demo-scale-bottom--overlay input[type="range"]::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
   border: none;
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.95);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.demo-scale-bottom--overlay input[type="range"]::-moz-range-progress {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.55);
 }
 
 @media (max-width: 900px) {
