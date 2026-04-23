@@ -52,6 +52,7 @@ const state = {
   ui: {
     mode: "mode1",
     hintMode: "easy",
+    demoScale: { l1: 1, l2: 1, r1: 1, r2: 1 },
   },
 
   recorder: {
@@ -141,6 +142,15 @@ function initDomRefs() {
   els.videoUrlInput = $("videoUrlInput");
   els.modeSelect = $("modeSelect");
   els.hintModeSelect = $("hintModeSelect");
+  els.demoScalePanel = $("demoScalePanel");
+  els.demoScaleL1 = $("demoScaleL1");
+  els.demoScaleL2 = $("demoScaleL2");
+  els.demoScaleR1 = $("demoScaleR1");
+  els.demoScaleR2 = $("demoScaleR2");
+  els.demoScaleL1Text = $("demoScaleL1Text");
+  els.demoScaleL2Text = $("demoScaleL2Text");
+  els.demoScaleR1Text = $("demoScaleR1Text");
+  els.demoScaleR2Text = $("demoScaleR2Text");
   els.loadVideoButton = $("loadVideoButton");
   els.pickSongButton = $("pickSongButton");
   els.loadSkeletonButton = $("loadSkeletonButton");
@@ -237,11 +247,46 @@ function setControlsDisabled(disabled) {
   if (els.recordButton) els.recordButton.disabled = dis || !state.cameraRunning || !state.ready;
 }
 
+function setDemoScaleText(key) {
+  const s = state.ui?.demoScale?.[key];
+  const v = typeof s === "number" && Number.isFinite(s) ? s : 1;
+  const text = `${v.toFixed(2)}x`;
+  if (key === "l1" && els.demoScaleL1Text) els.demoScaleL1Text.textContent = text;
+  if (key === "l2" && els.demoScaleL2Text) els.demoScaleL2Text.textContent = text;
+  if (key === "r1" && els.demoScaleR1Text) els.demoScaleR1Text.textContent = text;
+  if (key === "r2" && els.demoScaleR2Text) els.demoScaleR2Text.textContent = text;
+}
+
+function bindDemoScaleSlider(el, key) {
+  if (!el) return;
+  const clamp = (x) => Math.max(0.6, Math.min(2.5, x));
+  const read = () => {
+    const raw = Number(el.value);
+    const v = Number.isFinite(raw) ? clamp(raw) : 1;
+    state.ui.demoScale[key] = v;
+    setDemoScaleText(key);
+  };
+  el.addEventListener("input", read);
+  el.addEventListener("change", read);
+  // init from DOM
+  read();
+}
+
+function scaleRectAboutCenter(rect, s) {
+  const ss = typeof s === "number" && Number.isFinite(s) ? s : 1;
+  const cx = rect.ox + rect.dw / 2;
+  const cy = rect.oy + rect.dh / 2;
+  const dw = rect.dw * ss;
+  const dh = rect.dh * ss;
+  return { ox: cx - dw / 2, oy: cy - dh / 2, dw, dh };
+}
+
 function applyMode(mode) {
   state.ui.mode = mode === "mode2" ? "mode2" : "mode1";
   setModeUiText();
   const isMode2 = state.ui.mode === "mode2";
   setControlsDisabled(isMode2);
+  if (els.demoScalePanel) els.demoScalePanel.style.display = isMode2 ? "none" : "";
   if (isMode2) {
     if (state.music.open) closeSongModal();
     if (state.cameraRunning) stopCameraIfRunning();
@@ -1728,7 +1773,17 @@ function updateUiLoop() {
             mkCell(rightX + cellW + GAP),
           ];
 
-          for (const r of rects) {
+          const scales = [
+            state.ui?.demoScale?.l1 ?? 1,
+            state.ui?.demoScale?.l2 ?? 1,
+            state.ui?.demoScale?.r1 ?? 1,
+            state.ui?.demoScale?.r2 ?? 1,
+          ];
+
+          for (let i = 0; i < rects.length; i += 1) {
+            const r0 = rects[i];
+            const s = scales[i];
+            const r = scaleRectAboutCenter(r0, s);
             drawPoseConnections(ctx, demoLm, getArrXYV, r, () => demoColor, 5);
             drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
           }
@@ -1749,6 +1804,10 @@ async function main() {
   // debug handle for DevTools
   window.__posedanceTestState = state;
   setModeUiText();
+  bindDemoScaleSlider(els.demoScaleL1, "l1");
+  bindDemoScaleSlider(els.demoScaleL2, "l2");
+  bindDemoScaleSlider(els.demoScaleR1, "r1");
+  bindDemoScaleSlider(els.demoScaleR2, "r2");
   setupYtFloatingWindow();
   initYouTubePlayerIfPossible();
 

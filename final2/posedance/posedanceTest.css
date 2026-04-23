@@ -203,3 +203,55 @@
   display: none;
 }
 
+.demo-scale {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px 12px 10px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.72);
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.35);
+  z-index: 9998;
+  user-select: none;
+  backdrop-filter: blur(8px);
+}
+
+.demo-scale__title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.demo-scale__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.demo-scale__row {
+  display: grid;
+  grid-template-columns: 28px 1fr 52px;
+  align-items: center;
+  gap: 10px;
+}
+
+.demo-scale__label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+.demo-scale input[type="range"] {
+  width: 100%;
+}
+
+.demo-scale__value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  text-align: right;
+  opacity: 0.95;
+}
+
