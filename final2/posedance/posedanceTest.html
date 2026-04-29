@@ -31,6 +31,7 @@
           <span class="small">
             Mode：<span id="modeText">Mode 1</span>
           </span>
+          <span class="small" id="mode2WarnText" style="display: none">Mode 2 警告：骨架影片來源不一致</span>
         </div>
 
         <div class="topbar__controls">
@@ -50,8 +51,39 @@
             <button id="loadSkeletonButton" class="btn btn-load" type="button">
               載入骨架
             </button>
+            <button
+              id="loadSkeletonAButton"
+              class="btn btn-load"
+              type="button"
+              style="display: none"
+            >
+              載入骨架A
+            </button>
+            <button
+              id="loadSkeletonBButton"
+              class="btn btn-load"
+              type="button"
+              style="display: none"
+            >
+              載入骨架B
+            </button>
+            <button
+              id="loadSkeletonCButton"
+              class="btn btn-load"
+              type="button"
+              style="display: none"
+            >
+              載入骨架C
+            </button>
             <input
               id="skeletonFileInput"
+              class="topbar__file-input"
+              type="file"
+              accept="application/json,.json"
+              style="display: none"
+            />
+            <input
+              id="mode2SkeletonFileInput"
               class="topbar__file-input"
               type="file"
               accept="application/json,.json"

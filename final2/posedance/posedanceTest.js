@@ -49,6 +49,13 @@ const state = {
 
   demo: { easy: null, hard: null, loaded: null },
 
+  mode2: {
+    a: null,
+    b: null,
+    c: null,
+    pendingSlot: null, // 'a' | 'b' | 'c'
+  },
+
   ui: {
     mode: "mode1",
     hintMode: "easy",
@@ -142,6 +149,7 @@ function initDomRefs() {
   els.videoUrlInput = $("videoUrlInput");
   els.modeSelect = $("modeSelect");
   els.hintModeSelect = $("hintModeSelect");
+  els.mode2WarnText = $("mode2WarnText");
   els.demoScaleL1 = $("demoScaleL1");
   els.demoScaleL2 = $("demoScaleL2");
   els.demoScaleR1 = $("demoScaleR1");
@@ -150,7 +158,11 @@ function initDomRefs() {
   els.loadVideoButton = $("loadVideoButton");
   els.pickSongButton = $("pickSongButton");
   els.loadSkeletonButton = $("loadSkeletonButton");
+  els.loadSkeletonAButton = $("loadSkeletonAButton");
+  els.loadSkeletonBButton = $("loadSkeletonBButton");
+  els.loadSkeletonCButton = $("loadSkeletonCButton");
   els.skeletonFileInput = $("skeletonFileInput");
+  els.mode2SkeletonFileInput = $("mode2SkeletonFileInput");
   els.startCameraButton = $("startCameraButton");
   els.recordButton = $("recordButton");
   els.poseInfoText = $("poseInfoText");
@@ -197,7 +209,7 @@ function setUi({
 
 function setModeUiText() {
   if (!els.modeText) return;
-  els.modeText.textContent = state.ui.mode === "mode2" ? "Mode 2（未實作）" : "Mode 1";
+  els.modeText.textContent = state.ui.mode === "mode2" ? "Mode 2" : "Mode 1";
 }
 
 function clearOverlayCanvas() {
@@ -273,18 +285,36 @@ function applyMode(mode) {
   state.ui.mode = mode === "mode2" ? "mode2" : "mode1";
   setModeUiText();
   const isMode2 = state.ui.mode === "mode2";
-  setControlsDisabled(isMode2);
-  if (els.demoScaleBottom) els.demoScaleBottom.style.display = isMode2 ? "none" : "";
   if (isMode2) {
-    if (state.music.open) closeSongModal();
-    if (state.cameraRunning) stopCameraIfRunning();
+    // Mode2：允許 YouTube 與攝影機繼續運作；只禁用與 Mode1 相關的控制
+    setControlsDisabled(false);
+    if (els.hintModeSelect) els.hintModeSelect.disabled = true;
+    if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "none";
+    if (els.loadSkeletonAButton) els.loadSkeletonAButton.style.display = "";
+    if (els.loadSkeletonBButton) els.loadSkeletonBButton.style.display = "";
+    if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "";
+    if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
+    if (els.recordButton) els.recordButton.disabled = true;
+    if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
+
     state.recorder.armed = false;
     state.recorder.active = false;
     state.recorder.armStartPlayerTimeSec = null;
     state.recorder.startedAtIso = null;
     state.recorder.lastRecordedT = Number.NEGATIVE_INFINITY;
     state.recorder.samples = [];
+    state.mode2.pendingSlot = null;
     setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
+  } else {
+    // Mode1：恢復所有 Mode1 控制
+    setControlsDisabled(false);
+    if (els.hintModeSelect) els.hintModeSelect.disabled = false;
+    if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "";
+    if (els.loadSkeletonAButton) els.loadSkeletonAButton.style.display = "none";
+    if (els.loadSkeletonBButton) els.loadSkeletonBButton.style.display = "none";
+    if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "none";
+    if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
+    if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
   }
 }
 
@@ -1613,6 +1643,142 @@ function getPlayerTimeSafe() {
   }
 }
 
+function updateMode2VideoMismatchWarn() {
+  if (!els.mode2WarnText) return;
+  const vids = [
+    state.mode2?.a?.videoId,
+    state.mode2?.b?.videoId,
+    state.mode2?.c?.videoId,
+  ].filter((x) => typeof x === "string" && x.length > 0);
+  const unique = new Set(vids);
+  const current = state.videoId;
+  const anyMismatchWithCurrent =
+    typeof current === "string" &&
+    current.length > 0 &&
+    vids.some((v) => v !== current);
+  const anyMismatchAmongABCs = unique.size >= 2;
+
+  const show = anyMismatchAmongABCs || anyMismatchWithCurrent;
+  els.mode2WarnText.style.display = show ? "inline" : "none";
+}
+
+function drawMode2Overlay(tScore) {
+  if (!els.overlayCanvas) return;
+  if (typeof tScore !== "number" || !Number.isFinite(tScore)) return;
+
+  const ctx = els.overlayCanvas.getContext("2d");
+  if (!ctx) return;
+
+  const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+  const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+  const dpr = window.devicePixelRatio || 1;
+  const targetW = Math.max(1, Math.floor(w * dpr));
+  const targetH = Math.max(1, Math.floor(h * dpr));
+  if (els.overlayCanvas.width !== targetW || els.overlayCanvas.height !== targetH) {
+    els.overlayCanvas.width = targetW;
+    els.overlayCanvas.height = targetH;
+  }
+
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const videoAspect =
+    els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+      ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
+      : w / Math.max(1, h);
+  const stageRect = computeContainRect(w, h, videoAspect);
+
+  // demo (A/B/C) colors
+  const demoColor = "rgba(34,197,94,0.95)";
+  // user (center) colors
+  const userColor = "rgba(59,130,246,0.95)";
+
+  // A/B/C traces
+  const traceA = state.mode2?.a;
+  const traceB = state.mode2?.b;
+  const traceC = state.mode2?.c;
+
+  const demoLmA = traceA?.samples ? getDemoLandmarksAtTime(traceA.samples, tScore) : null;
+  const demoLmB = traceB?.samples ? getDemoLandmarksAtTime(traceB.samples, tScore) : null;
+  const demoLmC = traceC?.samples ? getDemoLandmarksAtTime(traceC.samples, tScore) : null;
+
+  // scale mapping (UI -> role)
+  // L1 -> A (left bottom), L2 -> B (right bottom), R1 -> C (top center), R2 -> user (center)
+  const scaleA = state.ui?.demoScale?.l1 ?? 1;
+  const scaleB = state.ui?.demoScale?.l2 ?? 1;
+  const scaleC = state.ui?.demoScale?.r1 ?? 1;
+  const scaleUser = state.ui?.demoScale?.r2 ?? 1;
+
+  // Layout areas inside overlay canvas.
+  const PAD = 8;
+  const GAP = 12;
+  const sideW = Math.max(140, Math.floor(w * 0.26));
+  const topH = Math.max(120, Math.floor(h * 0.40));
+  const bottomH = Math.max(120, h - PAD * 2 - topH);
+  const centerW = Math.max(160, w - PAD * 2 - sideW * 2 - GAP);
+
+  const rectLeftBottomArea = { ox: PAD, oy: PAD + topH, dw: sideW, dh: bottomH };
+  const rectRightBottomArea = {
+    ox: PAD + sideW + GAP + centerW,
+    oy: PAD + topH,
+    dw: sideW,
+    dh: bottomH,
+  };
+  const rectTopCenterArea = { ox: PAD + sideW + GAP, oy: PAD, dw: centerW, dh: topH };
+
+  const containLeftBottom = computeContainRect(rectLeftBottomArea.dw, rectLeftBottomArea.dh, DEMO_SOURCE_ASPECT);
+  const containRightBottom = computeContainRect(rectRightBottomArea.dw, rectRightBottomArea.dh, DEMO_SOURCE_ASPECT);
+  const containTopCenter = computeContainRect(rectTopCenterArea.dw, rectTopCenterArea.dh, DEMO_SOURCE_ASPECT);
+
+  // Because overlay_canvas has CSS mirror (scaleX(-1)), "on-screen left" corresponds to "right-side canvas coordinate".
+  // So we swap A/B placement to keep A on-screen-left and B on-screen-right.
+  const rectA0 = {
+    ox: rectRightBottomArea.ox + containRightBottom.ox,
+    oy: rectRightBottomArea.oy + containRightBottom.oy,
+    dw: containRightBottom.dw,
+    dh: containRightBottom.dh,
+  };
+  const rectB0 = {
+    ox: rectLeftBottomArea.ox + containLeftBottom.ox,
+    oy: rectLeftBottomArea.oy + containLeftBottom.oy,
+    dw: containLeftBottom.dw,
+    dh: containLeftBottom.dh,
+  };
+  const rectC0 = {
+    ox: rectTopCenterArea.ox + containTopCenter.ox,
+    oy: rectTopCenterArea.oy + containTopCenter.oy,
+    dw: containTopCenter.dw,
+    dh: containTopCenter.dh,
+  };
+
+  const rectA = scaleRectAboutCenter(rectA0, scaleA);
+  const rectB = scaleRectAboutCenter(rectB0, scaleB);
+  const rectC = scaleRectAboutCenter(rectC0, scaleC);
+  const rectUser = scaleRectAboutCenter(stageRect, scaleUser);
+
+  // Draw A/B/C first (behind), then user skeleton on top.
+  if (demoLmA) {
+    drawPoseConnections(ctx, demoLmA, getArrXYV, rectA, () => demoColor, 5);
+    drawPosePoints(ctx, demoLmA, getArrXYV, rectA, demoColor, 4.5);
+  }
+  if (demoLmB) {
+    drawPoseConnections(ctx, demoLmB, getArrXYV, rectB, () => demoColor, 5);
+    drawPosePoints(ctx, demoLmB, getArrXYV, rectB, demoColor, 4.5);
+  }
+  if (demoLmC) {
+    drawPoseConnections(ctx, demoLmC, getArrXYV, rectC, () => demoColor, 5);
+    drawPosePoints(ctx, demoLmC, getArrXYV, rectC, demoColor, 4.5);
+  }
+
+  if (state.latestUserLandmarks) {
+    drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, rectUser, () => userColor, 3);
+    drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, rectUser, userColor, 3.5);
+  }
+
+  ctx.restore();
+}
+
 function updateUiLoop() {
   requestAnimationFrame(updateUiLoop);
 
@@ -1625,8 +1791,20 @@ function updateUiLoop() {
 
   if (state.ui.mode === "mode2") {
     setRecordUi(tScore);
-    setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
-    clearOverlayCanvas();
+    setUi({
+      easy: "—",
+      hard: "—",
+      loaded: "—",
+      overallEasy: "—",
+      overallHard: "—",
+      overallLoaded: "—",
+    });
+    if (typeof tScore === "number" && Number.isFinite(tScore)) {
+      updateMode2VideoMismatchWarn();
+      drawMode2Overlay(tScore);
+    } else {
+      clearOverlayCanvas();
+    }
     return;
   }
 
@@ -1879,6 +2057,12 @@ async function main() {
     state.demo.easy = easy;
     state.demo.hard = hard;
 
+    // Mode2 預設：A=easy、B=hard、C=easy（等你錄好再用本機載入替換）
+    state.mode2.a = easy;
+    state.mode2.b = hard;
+    state.mode2.c = easy;
+    updateMode2VideoMismatchWarn();
+
     computeDemoEnergyForTrace(state.demo.easy);
     computeDemoEnergyForTrace(state.demo.hard);
     computeDemoPartEnergyForTrace(state.demo.easy);
@@ -1920,7 +2104,6 @@ async function main() {
 
   if (els.loadVideoButton) {
     els.loadVideoButton.addEventListener("click", () => {
-      if (state.ui.mode === "mode2") return;
       const raw = els.videoUrlInput ? els.videoUrlInput.value : "";
       const id = extractVideoId(raw);
       if (!id) return;
@@ -1949,6 +2132,44 @@ async function main() {
         setUi({ loaded: "—", overallLoaded: "—" });
       } catch (err) {
         console.error("[LoadedTrace] load failed:", err);
+      }
+    });
+  }
+
+  // Mode2: 載入骨架 A/B/C
+  if (
+    els.mode2SkeletonFileInput &&
+    (els.loadSkeletonAButton || els.loadSkeletonBButton || els.loadSkeletonCButton)
+  ) {
+    const onClickSlot = (slot) => {
+      if (state.ui.mode !== "mode2") return;
+      state.mode2.pendingSlot = slot;
+      els.mode2SkeletonFileInput.value = "";
+      els.mode2SkeletonFileInput.click();
+    };
+
+    if (els.loadSkeletonAButton) {
+      els.loadSkeletonAButton.addEventListener("click", () => onClickSlot("a"));
+    }
+    if (els.loadSkeletonBButton) {
+      els.loadSkeletonBButton.addEventListener("click", () => onClickSlot("b"));
+    }
+    if (els.loadSkeletonCButton) {
+      els.loadSkeletonCButton.addEventListener("click", () => onClickSlot("c"));
+    }
+
+    els.mode2SkeletonFileInput.addEventListener("change", async () => {
+      const file =
+        els.mode2SkeletonFileInput.files && els.mode2SkeletonFileInput.files[0];
+      const slot = state.mode2.pendingSlot;
+      state.mode2.pendingSlot = null;
+      if (!file || !slot) return;
+      try {
+        const data = await loadTraceFromFile(file);
+        state.mode2[slot] = data;
+        updateMode2VideoMismatchWarn();
+      } catch (err) {
+        console.error("[Mode2Trace] load failed:", err);
       }
     });
   }
@@ -1991,7 +2212,6 @@ async function main() {
 
   if (els.pickSongButton) {
     els.pickSongButton.addEventListener("click", async () => {
-      if (state.ui.mode === "mode2") return;
       openSongModal();
       if (!state.music.categories.length) await loadCategories();
       state.music.page = 1;
@@ -2014,7 +2234,6 @@ async function main() {
 
   if (els.songSearchButton) {
     els.songSearchButton.addEventListener("click", async () => {
-      if (state.ui.mode === "mode2") return;
       state.music.page = 1;
       state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
       await loadMidisPage();
@@ -2022,7 +2241,6 @@ async function main() {
   }
   if (els.songSearchInput) {
     els.songSearchInput.addEventListener("keydown", async (e) => {
-      if (state.ui.mode === "mode2") return;
       if (e.key !== "Enter") return;
       state.music.page = 1;
       state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
@@ -2031,14 +2249,12 @@ async function main() {
   }
   if (els.songPrevPageButton) {
     els.songPrevPageButton.addEventListener("click", async () => {
-      if (state.ui.mode === "mode2") return;
       state.music.page = Math.max(1, state.music.page - 1);
       await loadMidisPage();
     });
   }
   if (els.songNextPageButton) {
     els.songNextPageButton.addEventListener("click", async () => {
-      if (state.ui.mode === "mode2") return;
       state.music.page = Math.min(state.music.pages, state.music.page + 1);
       await loadMidisPage();
     });
