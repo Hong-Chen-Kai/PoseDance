@@ -54,6 +54,7 @@ const state = {
     b: null,
     c: null,
     pendingSlot: null, // 'a' | 'b' | 'c'
+    abcEnabled: true,
   },
 
   ui: {
@@ -161,6 +162,7 @@ function initDomRefs() {
   els.loadSkeletonAButton = $("loadSkeletonAButton");
   els.loadSkeletonBButton = $("loadSkeletonBButton");
   els.loadSkeletonCButton = $("loadSkeletonCButton");
+  els.toggleMode2DemoABCButton = $("toggleMode2DemoABCButton");
   els.skeletonFileInput = $("skeletonFileInput");
   els.mode2SkeletonFileInput = $("mode2SkeletonFileInput");
   els.startCameraButton = $("startCameraButton");
@@ -260,7 +262,7 @@ function setControlsDisabled(disabled) {
 
 function bindDemoScaleSlider(el, key) {
   if (!el) return;
-  const clamp = (x) => Math.max(1.5, Math.min(3.5, x));
+  const clamp = (x) => Math.max(1.5, Math.min(3.3, x));
   const read = () => {
     const raw = Number(el.value);
     const v = Number.isFinite(raw) ? clamp(raw) : 1;
@@ -293,6 +295,8 @@ function applyMode(mode) {
     if (els.loadSkeletonAButton) els.loadSkeletonAButton.style.display = "";
     if (els.loadSkeletonBButton) els.loadSkeletonBButton.style.display = "";
     if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "";
+    if (els.toggleMode2DemoABCButton)
+      els.toggleMode2DemoABCButton.style.display = "";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.recordButton) els.recordButton.disabled = true;
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
@@ -304,6 +308,7 @@ function applyMode(mode) {
     state.recorder.lastRecordedT = Number.NEGATIVE_INFINITY;
     state.recorder.samples = [];
     state.mode2.pendingSlot = null;
+    // Mode2 進入時維持 abcEnabled；若你要每次進入都強制開，我們再改
     setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
   } else {
     // Mode1：恢復所有 Mode1 控制
@@ -313,6 +318,8 @@ function applyMode(mode) {
     if (els.loadSkeletonAButton) els.loadSkeletonAButton.style.display = "none";
     if (els.loadSkeletonBButton) els.loadSkeletonBButton.style.display = "none";
     if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "none";
+    if (els.toggleMode2DemoABCButton)
+      els.toggleMode2DemoABCButton.style.display = "none";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
   }
@@ -1758,17 +1765,20 @@ function drawMode2Overlay(tScore) {
   const rectUser = scaleRectAboutCenter(stageRect, scaleUser);
 
   // Draw A/B/C first (behind), then user skeleton on top.
-  if (demoLmA) {
-    drawPoseConnections(ctx, demoLmA, getArrXYV, rectA, () => demoColor, 5);
-    drawPosePoints(ctx, demoLmA, getArrXYV, rectA, demoColor, 4.5);
-  }
-  if (demoLmB) {
-    drawPoseConnections(ctx, demoLmB, getArrXYV, rectB, () => demoColor, 5);
-    drawPosePoints(ctx, demoLmB, getArrXYV, rectB, demoColor, 4.5);
-  }
-  if (demoLmC) {
-    drawPoseConnections(ctx, demoLmC, getArrXYV, rectC, () => demoColor, 5);
-    drawPosePoints(ctx, demoLmC, getArrXYV, rectC, demoColor, 4.5);
+  // abcEnabled=false：只保留使用者即時骨架
+  if (state.mode2?.abcEnabled) {
+    if (demoLmA) {
+      drawPoseConnections(ctx, demoLmA, getArrXYV, rectA, () => demoColor, 5);
+      drawPosePoints(ctx, demoLmA, getArrXYV, rectA, demoColor, 4.5);
+    }
+    if (demoLmB) {
+      drawPoseConnections(ctx, demoLmB, getArrXYV, rectB, () => demoColor, 5);
+      drawPosePoints(ctx, demoLmB, getArrXYV, rectB, demoColor, 4.5);
+    }
+    if (demoLmC) {
+      drawPoseConnections(ctx, demoLmC, getArrXYV, rectC, () => demoColor, 5);
+      drawPosePoints(ctx, demoLmC, getArrXYV, rectC, demoColor, 4.5);
+    }
   }
 
   if (state.latestUserLandmarks) {
@@ -1799,6 +1809,12 @@ function updateUiLoop() {
       overallHard: "—",
       overallLoaded: "—",
     });
+    // 關閉攝影機時清空骨架（包含 A/B/C）
+    if (!state.cameraRunning) {
+      clearOverlayCanvas();
+      return;
+    }
+
     if (typeof tScore === "number" && Number.isFinite(tScore)) {
       updateMode2VideoMismatchWarn();
       drawMode2Overlay(tScore);
@@ -2171,6 +2187,22 @@ async function main() {
       } catch (err) {
         console.error("[Mode2Trace] load failed:", err);
       }
+    });
+  }
+
+  // Mode2：關閉/開啟示範骨架 A/B/C
+  if (els.toggleMode2DemoABCButton) {
+    // init text
+    els.toggleMode2DemoABCButton.textContent = state.mode2.abcEnabled
+      ? "關閉骨架A/B/C"
+      : "顯示骨架A/B/C";
+
+    els.toggleMode2DemoABCButton.addEventListener("click", () => {
+      state.mode2.abcEnabled = !state.mode2.abcEnabled;
+      els.toggleMode2DemoABCButton.textContent = state.mode2.abcEnabled
+        ? "關閉骨架A/B/C"
+        : "顯示骨架A/B/C";
+      clearOverlayCanvas();
     });
   }
 
