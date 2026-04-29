@@ -298,7 +298,6 @@ function applyMode(mode) {
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
-    if (els.recordButton) els.recordButton.disabled = true;
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
 
     state.recorder.armed = false;
@@ -810,12 +809,6 @@ function createDownload(filename, obj) {
 
 function setRecordUi(tScore) {
   if (!els.recordButton) return;
-  if (state.ui.mode === "mode2") {
-    els.recordButton.disabled = true;
-    els.recordButton.textContent = "開始錄製";
-    els.recordButton.classList.remove("btn-record--active");
-    return;
-  }
   const rec = state.recorder;
   els.recordButton.disabled = !state.cameraRunning || !state.ready;
 
@@ -1800,6 +1793,28 @@ function updateUiLoop() {
     ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
 
   if (state.ui.mode === "mode2") {
+    // Mode2 也要支援錄製：錄製狀態機與 Mode1 相同
+    const rec = state.recorder;
+    if (rec.armed && typeof tScore === "number" && Number.isFinite(tScore)) {
+      if (typeof rec.armStartPlayerTimeSec !== "number") {
+        rec.armStartPlayerTimeSec = tScore;
+      }
+      if (!rec.active) {
+        const elapsed = tScore - rec.armStartPlayerTimeSec;
+        if (elapsed >= rec.delaySec) {
+          rec.active = true;
+          rec.startedAtIso = new Date().toISOString();
+          rec.lastRecordedT = Number.NEGATIVE_INFINITY;
+        }
+      }
+      if (rec.active && state.latestUserLandmarks) {
+        if (tScore - rec.lastRecordedT >= RECORD_SAMPLE_MIN_DT) {
+          rec.samples.push({ t: tScore, lm: toLmArray(state.latestUserLandmarks) });
+          rec.lastRecordedT = tScore;
+        }
+      }
+    }
+
     setRecordUi(tScore);
     setUi({
       easy: "—",
@@ -2208,7 +2223,6 @@ async function main() {
 
   if (els.recordButton) {
     els.recordButton.addEventListener("click", () => {
-      if (state.ui.mode === "mode2") return;
       const rec = state.recorder;
       if (!rec.armed) {
         rec.armed = true;
