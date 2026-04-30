@@ -137,6 +137,11 @@ function $(id) {
   return document.getElementById(id);
 }
 
+const consoleUiStatus = {
+  lastLogAt: 0,
+  lastSig: "",
+};
+
 const RECORD_SAMPLE_MIN_DT = 1 / 30; // 30fps 上限
 
 function initDomRefs() {
@@ -207,9 +212,22 @@ function setUi({
   if (els.overallEasyText) els.overallEasyText.textContent = overallEasy;
   if (els.overallHardText) els.overallHardText.textContent = overallHard;
   if (els.overallLoadedText) els.overallLoadedText.textContent = overallLoaded;
+
+  // UI 狀態改用 console 顯示（節流 + 只有變更才輸出）
+  const now = performance.now();
+  const mode = state.ui?.mode === "mode2" ? "Mode 2" : "Mode 1";
+  const sig = `${mode}|${easy}|${overallEasy}|${hard}|${overallHard}|${loaded}|${overallLoaded}`;
+  if (sig !== consoleUiStatus.lastSig && now - consoleUiStatus.lastLogAt >= 250) {
+    consoleUiStatus.lastSig = sig;
+    consoleUiStatus.lastLogAt = now;
+    console.log(
+      `[UI] ${mode} | Easy(即時/整體)=${easy}/${overallEasy} | Hard(即時/整體)=${hard}/${overallHard} | Loaded(即時/整體)=${loaded}/${overallLoaded}`,
+    );
+  }
 }
 
 function setModeUiText() {
+  // 原本頁面會顯示 modeText；現在改為不佔版面（仍可在 console / 下拉選單看模式）
   if (!els.modeText) return;
   els.modeText.textContent = state.ui.mode === "mode2" ? "Mode 2" : "Mode 1";
 }
