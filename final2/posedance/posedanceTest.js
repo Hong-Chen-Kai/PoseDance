@@ -234,12 +234,22 @@ function clampRectToCanvas(rect, w, h) {
   const minH = 24;
   let ox = rect.ox;
   let oy = rect.oy;
-  let dw = Math.max(minW, rect.dw);
-  let dh = Math.max(minH, rect.dh);
+  let dw = rect.dw;
+  let dh = rect.dh;
 
-  // keep size within canvas
-  dw = Math.min(dw, w);
-  dh = Math.min(dh, h);
+  // 先確保最小尺寸：用同一倍率放大，避免扭曲
+  if (dw < minW || dh < minH) {
+    const sUp = Math.max(minW / Math.max(1e-6, dw), minH / Math.max(1e-6, dh));
+    dw *= sUp;
+    dh *= sUp;
+  }
+
+  // 再確保不超出畫布：用同一倍率縮小，避免扭曲
+  if (dw > w || dh > h) {
+    const sDown = Math.min(w / Math.max(1e-6, dw), h / Math.max(1e-6, dh));
+    dw *= sDown;
+    dh *= sDown;
+  }
 
   // clamp position so rect stays inside
   ox = Math.max(0, Math.min(w - dw, ox));
