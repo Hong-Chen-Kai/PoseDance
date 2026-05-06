@@ -2599,18 +2599,22 @@ async function main() {
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
 
       const selId = state.interact.selectedId;
-      const selRect = (selId && typeof tScore === "number" && Number.isFinite(tScore))
-        ? getSkeletonBBoxRectForId(selId, defaults, tScore, 8)
-        : (selId ? getDrawRect(selId, defaults) : null);
-      const corner = selRect ? rectCornerHit(selRect, x, y, 10) : null;
-      if (selId && selRect && corner) {
+      // Use tight bbox only for corner-hit UX, but apply resize to draw-rect (container).
+      const selBox =
+        selId && typeof tScore === "number" && Number.isFinite(tScore)
+          ? getSkeletonBBoxRectForId(selId, defaults, tScore, 8)
+          : (selId ? getDrawRect(selId, defaults) : null);
+      const corner = selBox ? rectCornerHit(selBox, x, y, 10) : null;
+      if (selId && selBox && corner) {
+        const baseRect = getDrawRect(selId, defaults);
+        if (!baseRect) return;
         state.interact.drag = {
           active: true,
           id: selId,
           kind: "resize",
           corner,
           startPointer: { x, y },
-          startRect: { ...selRect },
+          startRect: { ...baseRect },
         };
         els.overlayCanvas.setPointerCapture?.(ev.pointerId);
         ev.preventDefault();
@@ -2634,10 +2638,9 @@ async function main() {
       state.interact.selectedId = picked;
       if (!picked) return;
 
-      const pickedRect =
-        typeof tScore === "number" && Number.isFinite(tScore)
-          ? getSkeletonBBoxRectForId(picked, defaults, tScore, 8)
-          : getDrawRect(picked, defaults);
+      // Move should operate on draw-rect (container), not tight bbox.
+      const pickedRect = getDrawRect(picked, defaults);
+      if (!pickedRect) return;
       state.interact.drag = {
         active: true,
         id: picked,
@@ -2726,10 +2729,8 @@ async function main() {
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
-      const base =
-        typeof tScore === "number" && Number.isFinite(tScore)
-          ? getSkeletonBBoxRectForId(id, defaults, tScore, 8)
-          : getDrawRect(id, defaults);
+      // Wheel zoom should scale the draw-rect (container), not the tight bbox.
+      const base = getDrawRect(id, defaults);
       if (!base) return;
 
       const delta = ev.deltaY;
