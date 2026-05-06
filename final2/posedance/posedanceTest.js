@@ -265,6 +265,16 @@ function rectContains(rect, x, y) {
   return x >= rect.ox && x <= rect.ox + rect.dw && y >= rect.oy && y <= rect.oy + rect.dh;
 }
 
+function shrinkRect(rect, insetPx) {
+  if (!rect) return rect;
+  const inset = Math.max(0, insetPx || 0);
+  const ox = rect.ox + inset;
+  const oy = rect.oy + inset;
+  const dw = Math.max(0, rect.dw - inset * 2);
+  const dh = Math.max(0, rect.dh - inset * 2);
+  return { ox, oy, dw, dh };
+}
+
 function rectCornerHit(rect, x, y, handleSize = 10) {
   if (!rect) return null;
   const hs = handleSize;
@@ -626,6 +636,37 @@ function getDrawOrderIds() {
 function getPickOrderIds() {
   // Topmost last-draw has priority => reverse draw order
   return [...getDrawOrderIds()].reverse();
+}
+
+function getSliderScaleForId(id) {
+  if (state.ui.mode === "mode2") {
+    if (id === SKELETON_IDS.m2_a) return state.ui?.demoScale?.l1 ?? 1;
+    if (id === SKELETON_IDS.m2_b) return state.ui?.demoScale?.l2 ?? 1;
+    if (id === SKELETON_IDS.m2_c) return state.ui?.demoScale?.r1 ?? 1;
+    if (id === SKELETON_IDS.m2_user) return state.ui?.demoScale?.r2 ?? 1;
+    return 1;
+  }
+
+  // Mode1：demo 四格沿用目前鏡像對應
+  const scales = [
+    state.ui?.demoScale?.r2 ?? 1, // 視覺最右 ↔ 畫布最左
+    state.ui?.demoScale?.r1 ?? 1,
+    state.ui?.demoScale?.l2 ?? 1,
+    state.ui?.demoScale?.l1 ?? 1, // 視覺最左 ↔ 畫布最右
+  ];
+  if (id === SKELETON_IDS.m1_demo_0) return scales[0];
+  if (id === SKELETON_IDS.m1_demo_1) return scales[1];
+  if (id === SKELETON_IDS.m1_demo_2) return scales[2];
+  if (id === SKELETON_IDS.m1_demo_3) return scales[3];
+  return 1;
+}
+
+function getDrawRect(id, defaultRects) {
+  const r0 = getActiveRect(id, defaultRects);
+  if (!r0) return null;
+  if (!shouldApplyScaleSlider(id)) return r0;
+  const s = getSliderScaleForId(id);
+  return scaleRectAboutCenter(r0, s);
 }
 
 const API_BASE = "https://imuse.ncnu.edu.tw/Midi-library";
@@ -1976,24 +2017,10 @@ function drawMode2Overlay(tScore) {
 
   // scale mapping (UI -> role)
   // L1 -> A (left bottom), L2 -> B (right bottom), R1 -> C (top center), R2 -> user (center)
-  const scaleA = state.ui?.demoScale?.l1 ?? 1;
-  const scaleB = state.ui?.demoScale?.l2 ?? 1;
-  const scaleC = state.ui?.demoScale?.r1 ?? 1;
-  const scaleUser = state.ui?.demoScale?.r2 ?? 1;
-
-  const rectA0 = getActiveRect(SKELETON_IDS.m2_a, defaultRects);
-  const rectB0 = getActiveRect(SKELETON_IDS.m2_b, defaultRects);
-  const rectC0 = getActiveRect(SKELETON_IDS.m2_c, defaultRects);
-  const rectUser0 = getActiveRect(SKELETON_IDS.m2_user, defaultRects);
-
-  const rectA =
-    rectA0 && shouldApplyScaleSlider(SKELETON_IDS.m2_a) ? scaleRectAboutCenter(rectA0, scaleA) : rectA0;
-  const rectB =
-    rectB0 && shouldApplyScaleSlider(SKELETON_IDS.m2_b) ? scaleRectAboutCenter(rectB0, scaleB) : rectB0;
-  const rectC =
-    rectC0 && shouldApplyScaleSlider(SKELETON_IDS.m2_c) ? scaleRectAboutCenter(rectC0, scaleC) : rectC0;
-  const rectUser =
-    rectUser0 && shouldApplyScaleSlider(SKELETON_IDS.m2_user) ? scaleRectAboutCenter(rectUser0, scaleUser) : rectUser0;
+  const rectA = getDrawRect(SKELETON_IDS.m2_a, defaultRects);
+  const rectB = getDrawRect(SKELETON_IDS.m2_b, defaultRects);
+  const rectC = getDrawRect(SKELETON_IDS.m2_c, defaultRects);
+  const rectUser = getDrawRect(SKELETON_IDS.m2_user, defaultRects);
 
   // Draw A/B/C first (behind), then user skeleton on top.
   // abcEnabled=false：只保留使用者即時骨架
@@ -2020,12 +2047,12 @@ function drawMode2Overlay(tScore) {
   // selection box
   const sel = state.interact?.selectedId;
   if (sel) {
-    const rSel = getActiveRect(sel, defaultRects);
+    const rSel = getDrawRect(sel, defaultRects);
     if (rSel) {
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = 2;
       ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
-      const hs = 6;
+      const hs = 4;
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
@@ -2239,7 +2266,7 @@ function updateUiLoop() {
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaultRects = getDefaultRectsMode1(w, h, videoAspect);
-      const stageRect0 = getActiveRect(SKELETON_IDS.m1_user, defaultRects);
+      const stageRect0 = getDrawRect(SKELETON_IDS.m1_user, defaultRects);
       const stageRect = stageRect0 || computeContainRect(w, h, videoAspect);
 
       // User skeleton (white / red hints / blue when good)
@@ -2268,20 +2295,9 @@ function updateUiLoop() {
           SKELETON_IDS.m1_demo_3,
         ];
 
-        // 注意：overlay_canvas 以 CSS 做了水平鏡像（scaleX(-1)），視覺左右會對調。
-        // 這裡把滑桿的 L1/L2/R1/R2 重新對應到「畫面上由左到右」的四格。
-        const scales = [
-          state.ui?.demoScale?.r2 ?? 1, // 視覺最右 ↔ 畫布最左
-          state.ui?.demoScale?.r1 ?? 1,
-          state.ui?.demoScale?.l2 ?? 1,
-          state.ui?.demoScale?.l1 ?? 1, // 視覺最左 ↔ 畫布最右
-        ];
-
         for (let i = 0; i < rectIds.length; i += 1) {
           const id = rectIds[i];
-          const r0 = getActiveRect(id, defaultRects) || stageRect;
-          const s = scales[i];
-          const r = shouldApplyScaleSlider(id) ? scaleRectAboutCenter(r0, s) : r0;
+          const r = getDrawRect(id, defaultRects) || stageRect;
           drawPoseConnections(ctx, demoLm, getArrXYV, r, () => demoColor, 5);
           drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
         }
@@ -2290,12 +2306,12 @@ function updateUiLoop() {
       // selection box
       const sel = state.interact?.selectedId;
       if (sel) {
-        const rSel = getActiveRect(sel, defaultRects);
+        const rSel = getDrawRect(sel, defaultRects);
         if (rSel) {
           ctx.strokeStyle = "rgba(255,255,255,0.85)";
           ctx.lineWidth = 2;
           ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
-          const hs = 6;
+          const hs = 4;
           ctx.fillStyle = "rgba(255,255,255,0.9)";
           ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
           ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
@@ -2500,7 +2516,7 @@ async function main() {
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
 
       const selId = state.interact.selectedId;
-      const selRect = selId ? getActiveRect(selId, defaults) : null;
+      const selRect = selId ? getDrawRect(selId, defaults) : null;
       const corner = selRect ? rectCornerHit(selRect, x, y, 10) : null;
       if (selId && selRect && corner) {
         state.interact.drag = {
@@ -2516,11 +2532,12 @@ async function main() {
         return;
       }
 
-      // pick topmost under pointer
+      // pick topmost under pointer (use drawRect, then shrink hit area to be closer)
       let picked = null;
       for (const id of getPickOrderIds()) {
-        const r = getActiveRect(id, defaults);
-        if (rectContains(r, x, y)) {
+        const r = getDrawRect(id, defaults);
+        const hit = shrinkRect(r, 10);
+        if (rectContains(hit, x, y)) {
           picked = id;
           break;
         }
@@ -2529,7 +2546,7 @@ async function main() {
       state.interact.selectedId = picked;
       if (!picked) return;
 
-      const pickedRect = getActiveRect(picked, defaults);
+      const pickedRect = getDrawRect(picked, defaults);
       state.interact.drag = {
         active: true,
         id: picked,
@@ -2617,7 +2634,7 @@ async function main() {
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
-      const base = getActiveRect(id, defaults);
+      const base = getDrawRect(id, defaults);
       if (!base) return;
 
       const delta = ev.deltaY;

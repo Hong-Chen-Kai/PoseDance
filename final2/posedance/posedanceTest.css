@@ -208,6 +208,11 @@
   z-index: 40;
 }
 
+/* 拖曳/縮放已取代底部縮放拉桿：先隱藏 UI（保留 JS 邏輯） */
+#demoScaleBottom {
+  display: none;
+}
+
 .demo-scale-bottom--overlay {
   position: absolute;
   left: 8px;
