@@ -61,6 +61,7 @@ const state = {
     mode: "mode1",
     hintMode: "easy",
     demoScale: { l1: 1, l2: 1, r1: 1, r2: 1 },
+    mode1DemoEnabled: true,
   },
 
   recorder: {
@@ -171,6 +172,7 @@ function initDomRefs() {
   els.skeletonFileInput = $("skeletonFileInput");
   els.mode2SkeletonFileInput = $("mode2SkeletonFileInput");
   els.startCameraButton = $("startCameraButton");
+  els.toggleMode1DemoButton = $("toggleMode1DemoButton");
   els.recordButton = $("recordButton");
   els.poseInfoText = $("poseInfoText");
 
@@ -314,6 +316,7 @@ function applyMode(mode) {
     if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "";
+    if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "none";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
 
@@ -336,6 +339,7 @@ function applyMode(mode) {
     if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "none";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "none";
+    if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
   }
@@ -1699,10 +1703,12 @@ function drawMode2Overlay(tScore) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
+  // 攝影機關閉時 inputVideo.videoWidth/Height 可能為 0；
+  // 這裡改成「有值用攝影機比例，否則用固定 demo 比例」，避免布局依賴攝影機。
   const videoAspect =
     els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
       ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
-      : w / Math.max(1, h);
+      : DEMO_SOURCE_ASPECT;
   const stageRect = computeContainRect(w, h, videoAspect);
 
   // demo (A/B/C) colors
@@ -1840,8 +1846,6 @@ function updateUiLoop() {
       overallHard: "—",
       overallLoaded: "—",
     });
-    // 關閉攝影機：只停止，不自動清空畫面
-    if (!state.cameraRunning) return;
 
     if (typeof tScore === "number" && Number.isFinite(tScore)) {
       updateMode2VideoMismatchWarn();
@@ -2232,6 +2236,24 @@ async function main() {
         : "顯示骨架A/B/C";
       // 只有「關閉」時清空一次，避免殘影；「顯示」時不必清空
       if (!state.mode2.abcEnabled) clearOverlayCanvas();
+    });
+  }
+
+  // Mode1：顯示/隱藏示範骨架
+  const updateMode1DemoButtonText = () => {
+    if (!els.toggleMode1DemoButton) return;
+    els.toggleMode1DemoButton.textContent = state.ui.mode1DemoEnabled
+      ? "隱藏示範骨架"
+      : "顯示示範骨架";
+  };
+  updateMode1DemoButtonText();
+
+  if (els.toggleMode1DemoButton) {
+    els.toggleMode1DemoButton.addEventListener("click", () => {
+      if (state.ui.mode !== "mode1") return;
+      state.ui.mode1DemoEnabled = !state.ui.mode1DemoEnabled;
+      updateMode1DemoButtonText();
+      clearOverlayCanvas();
     });
   }
 
