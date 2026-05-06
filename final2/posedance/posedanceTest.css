@@ -190,7 +190,8 @@
   top: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  /* 需要接收 pointer 事件以支援骨架拖曳/縮放 */
+  pointer-events: auto;
   z-index: 10;
   /* 與 input_video / output_canvas 一致：鏡像使用者畫面 */
   transform: scaleX(-1);
