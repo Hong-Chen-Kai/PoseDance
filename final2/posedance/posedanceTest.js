@@ -264,7 +264,6 @@ function stopCameraIfRunning() {
   if (els.startCameraButton) els.startCameraButton.textContent = "啟動攝影機";
   state.latestUserLandmarks = null;
   drawUserOverlay();
-  clearOverlayCanvas();
 }
 
 function setControlsDisabled(disabled) {
@@ -1574,7 +1573,6 @@ async function initPose() {
       els.startCameraButton.textContent = "啟動攝影機";
       state.latestUserLandmarks = null;
       drawUserOverlay();
-      clearOverlayCanvas();
       return;
     }
 
@@ -1842,11 +1840,8 @@ function updateUiLoop() {
       overallHard: "—",
       overallLoaded: "—",
     });
-    // 關閉攝影機時清空骨架（包含 A/B/C）
-    if (!state.cameraRunning) {
-      clearOverlayCanvas();
-      return;
-    }
+    // 關閉攝影機：只停止，不自動清空畫面
+    if (!state.cameraRunning) return;
 
     if (typeof tScore === "number" && Number.isFinite(tScore)) {
       updateMode2VideoMismatchWarn();
@@ -2235,7 +2230,8 @@ async function main() {
       els.toggleMode2DemoABCButton.textContent = state.mode2.abcEnabled
         ? "關閉骨架A/B/C"
         : "顯示骨架A/B/C";
-      clearOverlayCanvas();
+      // 只有「關閉」時清空一次，避免殘影；「顯示」時不必清空
+      if (!state.mode2.abcEnabled) clearOverlayCanvas();
     });
   }
 
