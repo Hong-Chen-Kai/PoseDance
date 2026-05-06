@@ -669,6 +669,75 @@ function getDrawRect(id, defaultRects) {
   return scaleRectAboutCenter(r0, s);
 }
 
+function getTightBBoxFromLandmarks(points, getXYV, rect, padPx = 8) {
+  if (!points || !rect) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let n = 0;
+  for (let i = 0; i < 33; i += 1) {
+    const p = getXYV(points?.[i]);
+    if (!p) continue;
+    if (typeof p.v === "number" && p.v < 0.5) continue;
+    const x = rect.ox + p.x * rect.dw;
+    const y = rect.oy + p.y * rect.dh;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+    n += 1;
+  }
+  if (n < 6) return null;
+  const pad = Math.max(0, padPx || 0);
+  const ox = minX - pad;
+  const oy = minY - pad;
+  const dw = (maxX - minX) + pad * 2;
+  const dh = (maxY - minY) + pad * 2;
+  return { ox, oy, dw, dh };
+}
+
+function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
+  const drawRect = getDrawRect(id, defaultRects);
+  if (!drawRect) return null;
+
+  // decide landmarks source
+  if (state.ui.mode === "mode2") {
+    const traceA = state.mode2?.a;
+    const traceB = state.mode2?.b;
+    const traceC = state.mode2?.c;
+    const demoLmA = traceA?.samples ? getDemoLandmarksAtTime(traceA.samples, tScore) : null;
+    const demoLmB = traceB?.samples ? getDemoLandmarksAtTime(traceB.samples, tScore) : null;
+    const demoLmC = traceC?.samples ? getDemoLandmarksAtTime(traceC.samples, tScore) : null;
+
+    const lm =
+      id === SKELETON_IDS.m2_a ? demoLmA
+      : id === SKELETON_IDS.m2_b ? demoLmB
+      : id === SKELETON_IDS.m2_c ? demoLmC
+      : id === SKELETON_IDS.m2_user ? state.latestUserLandmarks
+      : null;
+    const getter = id === SKELETON_IDS.m2_user ? getLmXYV : getArrXYV;
+    const bbox = lm ? getTightBBoxFromLandmarks(lm, getter, drawRect, extraPadPx) : null;
+    return bbox || drawRect;
+  }
+
+  // mode1: demos all use the same demoLm for current hint trace
+  const hintMode =
+    state.ui.hintMode === "hard" || state.ui.hintMode === "user"
+      ? state.ui.hintMode
+      : "easy";
+  const isRecordingMode = Boolean(state.recorder?.armed);
+  const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
+  const demoLm = trace?.samples ? getDemoLandmarksAtTime(trace.samples, tScore) : null;
+
+  const isUser = id === SKELETON_IDS.m1_user;
+  const lm = isUser ? state.latestUserLandmarks : demoLm;
+  const getter = isUser ? getLmXYV : getArrXYV;
+  const bbox = lm ? getTightBBoxFromLandmarks(lm, getter, drawRect, extraPadPx) : null;
+  return bbox || drawRect;
+}
+
 const API_BASE = "https://imuse.ncnu.edu.tw/Midi-library";
 
 async function fetchJson(url) {
@@ -2047,7 +2116,7 @@ function drawMode2Overlay(tScore) {
   // selection box
   const sel = state.interact?.selectedId;
   if (sel) {
-    const rSel = getDrawRect(sel, defaultRects);
+    const rSel = getSkeletonBBoxRectForId(sel, defaultRects, tScore, 8);
     if (rSel) {
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = 2;
@@ -2306,7 +2375,10 @@ function updateUiLoop() {
       // selection box
       const sel = state.interact?.selectedId;
       if (sel) {
-        const rSel = getDrawRect(sel, defaultRects);
+        const rSel =
+          canUseTime
+            ? getSkeletonBBoxRectForId(sel, defaultRects, tScore, 8)
+            : getDrawRect(sel, defaultRects);
         if (rSel) {
           ctx.strokeStyle = "rgba(255,255,255,0.85)";
           ctx.lineWidth = 2;
@@ -2508,6 +2580,7 @@ async function main() {
       const { x, y } = pos;
       const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
       const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+      const tScore = getPlayerTimeSafe();
 
       const videoAspect =
         els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
@@ -2516,7 +2589,9 @@ async function main() {
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
 
       const selId = state.interact.selectedId;
-      const selRect = selId ? getDrawRect(selId, defaults) : null;
+      const selRect = (selId && typeof tScore === "number" && Number.isFinite(tScore))
+        ? getSkeletonBBoxRectForId(selId, defaults, tScore, 8)
+        : (selId ? getDrawRect(selId, defaults) : null);
       const corner = selRect ? rectCornerHit(selRect, x, y, 10) : null;
       if (selId && selRect && corner) {
         state.interact.drag = {
@@ -2532,11 +2607,14 @@ async function main() {
         return;
       }
 
-      // pick topmost under pointer (use drawRect, then shrink hit area to be closer)
+      // pick topmost under pointer (use tight bbox, then shrink hit area to be closer)
       let picked = null;
       for (const id of getPickOrderIds()) {
-        const r = getDrawRect(id, defaults);
-        const hit = shrinkRect(r, 10);
+        const r =
+          typeof tScore === "number" && Number.isFinite(tScore)
+            ? getSkeletonBBoxRectForId(id, defaults, tScore, 8)
+            : getDrawRect(id, defaults);
+        const hit = shrinkRect(r, 6);
         if (rectContains(hit, x, y)) {
           picked = id;
           break;
@@ -2546,7 +2624,10 @@ async function main() {
       state.interact.selectedId = picked;
       if (!picked) return;
 
-      const pickedRect = getDrawRect(picked, defaults);
+      const pickedRect =
+        typeof tScore === "number" && Number.isFinite(tScore)
+          ? getSkeletonBBoxRectForId(picked, defaults, tScore, 8)
+          : getDrawRect(picked, defaults);
       state.interact.drag = {
         active: true,
         id: picked,
@@ -2627,6 +2708,7 @@ async function main() {
       syncInteractCanvasSize();
       const id = state.interact.selectedId;
       if (!id) return;
+      const tScore = getPlayerTimeSafe();
       const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
       const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
       const videoAspect =
@@ -2634,7 +2716,10 @@ async function main() {
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
-      const base = getDrawRect(id, defaults);
+      const base =
+        typeof tScore === "number" && Number.isFinite(tScore)
+          ? getSkeletonBBoxRectForId(id, defaults, tScore, 8)
+          : getDrawRect(id, defaults);
       if (!base) return;
 
       const delta = ev.deltaY;
