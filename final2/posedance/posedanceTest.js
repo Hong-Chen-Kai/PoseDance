@@ -64,6 +64,20 @@ const state = {
     mode1DemoEnabled: true,
   },
 
+  interact: {
+    selectedId: null, // SkeletonId | null
+    rectOverrides: {}, // Record<SkeletonId, Rect>
+    drag: {
+      active: false,
+      id: null, // SkeletonId | null
+      kind: null, // 'move' | 'resize' | null
+      corner: null, // 'tl' | 'tr' | 'bl' | 'br' | null
+      startPointer: null, // {x,y} in canvas CSS pixels
+      startRect: null, // Rect
+    },
+    lastCanvasSize: null, // {w,h} (CSS px)
+  },
+
   recorder: {
     armed: false,
     active: false,
@@ -145,6 +159,20 @@ const consoleUiStatus = {
 
 const RECORD_SAMPLE_MIN_DT = 1 / 30; // 30fps 上限
 
+const SKELETON_IDS = {
+  // Mode1
+  m1_demo_0: "m1_demo_0",
+  m1_demo_1: "m1_demo_1",
+  m1_demo_2: "m1_demo_2",
+  m1_demo_3: "m1_demo_3",
+  m1_user: "m1_user",
+  // Mode2
+  m2_a: "m2_a",
+  m2_b: "m2_b",
+  m2_c: "m2_c",
+  m2_user: "m2_user",
+};
+
 function initDomRefs() {
   els.similarityEasyText = $("similarityEasyText");
   els.similarityHardText = $("similarityHardText");
@@ -198,6 +226,67 @@ function initDomRefs() {
   els.ytResizeHandleBL = $("ytResizeHandleBL");
 
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
+}
+
+function clampRectToCanvas(rect, w, h) {
+  if (!rect) return rect;
+  const minW = 24;
+  const minH = 24;
+  let ox = rect.ox;
+  let oy = rect.oy;
+  let dw = Math.max(minW, rect.dw);
+  let dh = Math.max(minH, rect.dh);
+
+  // keep size within canvas
+  dw = Math.min(dw, w);
+  dh = Math.min(dh, h);
+
+  // clamp position so rect stays inside
+  ox = Math.max(0, Math.min(w - dw, ox));
+  oy = Math.max(0, Math.min(h - dh, oy));
+  return { ox, oy, dw, dh };
+}
+
+function getPointerPosInOverlayCssPx(ev, canvasEl) {
+  if (!canvasEl) return null;
+  const r = canvasEl.getBoundingClientRect();
+  const x0 = ev.clientX - r.left;
+  const y = ev.clientY - r.top;
+  const w = Math.max(1, r.width);
+
+  // overlay_canvas is mirrored by CSS (scaleX(-1)),
+  // so screen-x needs to be mapped back to canvas coordinate.
+  const x = w - x0;
+  return { x, y, w, h: Math.max(1, r.height) };
+}
+
+function rectContains(rect, x, y) {
+  if (!rect) return false;
+  return x >= rect.ox && x <= rect.ox + rect.dw && y >= rect.oy && y <= rect.oy + rect.dh;
+}
+
+function rectCornerHit(rect, x, y, handleSize = 10) {
+  if (!rect) return null;
+  const hs = handleSize;
+  const corners = {
+    tl: { x: rect.ox, y: rect.oy },
+    tr: { x: rect.ox + rect.dw, y: rect.oy },
+    bl: { x: rect.ox, y: rect.oy + rect.dh },
+    br: { x: rect.ox + rect.dw, y: rect.oy + rect.dh },
+  };
+  for (const [k, c] of Object.entries(corners)) {
+    if (Math.abs(x - c.x) <= hs && Math.abs(y - c.y) <= hs) return k;
+  }
+  return null;
+}
+
+function scaleRectAboutAnchor(rect, anchorX, anchorY, scale) {
+  const s = typeof scale === "number" && Number.isFinite(scale) ? scale : 1;
+  const ox2 = anchorX + (rect.ox - anchorX) * s;
+  const oy2 = anchorY + (rect.oy - anchorY) * s;
+  const dw2 = rect.dw * s;
+  const dh2 = rect.dh * s;
+  return { ox: ox2, oy: oy2, dw: dw2, dh: dh2 };
 }
 
 function setUi({
@@ -302,6 +391,34 @@ function scaleRectAboutCenter(rect, s) {
   return { ox: cx - dw / 2, oy: cy - dh / 2, dw, dh };
 }
 
+function getOverlayCanvasCssSize() {
+  if (!els.overlayCanvas) return null;
+  const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+  const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+  return { w, h };
+}
+
+function syncInteractCanvasSize() {
+  const sz = getOverlayCanvasCssSize();
+  if (!sz) return;
+  const last = state.interact.lastCanvasSize;
+  if (!last) {
+    state.interact.lastCanvasSize = { w: sz.w, h: sz.h };
+    return;
+  }
+  if (last.w === sz.w && last.h === sz.h) return;
+
+  const sx = sz.w / Math.max(1, last.w);
+  const sy = sz.h / Math.max(1, last.h);
+  const out = {};
+  for (const [id, r] of Object.entries(state.interact.rectOverrides || {})) {
+    if (!r) continue;
+    out[id] = { ox: r.ox * sx, oy: r.oy * sy, dw: r.dw * sx, dh: r.dh * sy };
+  }
+  state.interact.rectOverrides = out;
+  state.interact.lastCanvasSize = { w: sz.w, h: sz.h };
+}
+
 function applyMode(mode) {
   state.ui.mode = mode === "mode2" ? "mode2" : "mode1";
   setModeUiText();
@@ -379,6 +496,136 @@ function loadVideoByIdIfReady({ autoplay = true } = {}) {
   }
   state.lastLoadedVideoId = state.videoId;
   return true;
+}
+
+function getDefaultRectsMode1(w, h, videoAspect) {
+  const stageRect = computeContainRect(w, h, videoAspect);
+
+  const PAD = 6;
+  const GAP = 8;
+  const sideAreaRatio = 0.36;
+  const leftAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
+  const rightAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
+  const centerMinW = 300;
+  const availableCenterW = w - leftAreaW - rightAreaW - PAD * 2 - GAP * 2;
+  const useSide =
+    availableCenterW >= centerMinW &&
+    leftAreaW + rightAreaW + centerMinW + PAD * 2 + GAP * 2 <= w;
+
+  const out = {
+    [SKELETON_IDS.m1_user]: stageRect,
+    [SKELETON_IDS.m1_demo_0]: stageRect,
+    [SKELETON_IDS.m1_demo_1]: stageRect,
+    [SKELETON_IDS.m1_demo_2]: stageRect,
+    [SKELETON_IDS.m1_demo_3]: stageRect,
+  };
+
+  if (!useSide) return out;
+
+  const leftX = PAD;
+  const rightX = w - PAD - rightAreaW;
+  const areaY = PAD;
+  const areaH = h - PAD * 2;
+  const cellW = Math.floor((leftAreaW - GAP) / 2);
+  const cellH = areaH;
+  const mkCell = (x0) => {
+    const r = computeContainRect(cellW, cellH, DEMO_SOURCE_ASPECT);
+    return { ox: x0 + r.ox, oy: areaY + r.oy, dw: r.dw, dh: r.dh };
+  };
+  const rects = [
+    mkCell(leftX),
+    mkCell(leftX + cellW + GAP),
+    mkCell(rightX),
+    mkCell(rightX + cellW + GAP),
+  ];
+  out[SKELETON_IDS.m1_demo_0] = rects[0];
+  out[SKELETON_IDS.m1_demo_1] = rects[1];
+  out[SKELETON_IDS.m1_demo_2] = rects[2];
+  out[SKELETON_IDS.m1_demo_3] = rects[3];
+  return out;
+}
+
+function getDefaultRectsMode2(w, h, videoAspect) {
+  const stageRect = computeContainRect(w, h, videoAspect);
+
+  const PAD = 8;
+  const GAP = 12;
+  const sideW = Math.max(140, Math.floor(w * 0.26));
+  const topH = Math.max(120, Math.floor(h * 0.40));
+  const bottomH = Math.max(120, h - PAD * 2 - topH);
+  const centerW = Math.max(160, w - PAD * 2 - sideW * 2 - GAP);
+
+  const rectLeftBottomArea = { ox: PAD, oy: PAD + topH, dw: sideW, dh: bottomH };
+  const rectRightBottomArea = {
+    ox: PAD + sideW + GAP + centerW,
+    oy: PAD + topH,
+    dw: sideW,
+    dh: bottomH,
+  };
+  const rectTopCenterArea = { ox: PAD + sideW + GAP, oy: PAD, dw: centerW, dh: topH };
+
+  const containLeftBottom = computeContainRect(rectLeftBottomArea.dw, rectLeftBottomArea.dh, DEMO_SOURCE_ASPECT);
+  const containRightBottom = computeContainRect(rectRightBottomArea.dw, rectRightBottomArea.dh, DEMO_SOURCE_ASPECT);
+  const containTopCenter = computeContainRect(rectTopCenterArea.dw, rectTopCenterArea.dh, DEMO_SOURCE_ASPECT);
+
+  // Keep the same placement convention as drawMode2Overlay:
+  // overlay_canvas is mirrored, so A/B are swapped in canvas coords to appear correct on screen.
+  const rectA0 = {
+    ox: rectRightBottomArea.ox + containRightBottom.ox,
+    oy: rectRightBottomArea.oy + containRightBottom.oy,
+    dw: containRightBottom.dw,
+    dh: containRightBottom.dh,
+  };
+  const rectB0 = {
+    ox: rectLeftBottomArea.ox + containLeftBottom.ox,
+    oy: rectLeftBottomArea.oy + containLeftBottom.oy,
+    dw: containLeftBottom.dw,
+    dh: containLeftBottom.dh,
+  };
+  const rectC0 = {
+    ox: rectTopCenterArea.ox + containTopCenter.ox,
+    oy: rectTopCenterArea.oy + containTopCenter.oy,
+    dw: containTopCenter.dw,
+    dh: containTopCenter.dh,
+  };
+
+  return {
+    [SKELETON_IDS.m2_a]: rectA0,
+    [SKELETON_IDS.m2_b]: rectB0,
+    [SKELETON_IDS.m2_c]: rectC0,
+    [SKELETON_IDS.m2_user]: stageRect,
+  };
+}
+
+function getDefaultRectsForCurrentMode(w, h, videoAspect) {
+  return state.ui.mode === "mode2"
+    ? getDefaultRectsMode2(w, h, videoAspect)
+    : getDefaultRectsMode1(w, h, videoAspect);
+}
+
+function getActiveRect(id, defaultRects) {
+  const r = state.interact?.rectOverrides?.[id];
+  return r || defaultRects?.[id] || null;
+}
+
+function shouldApplyScaleSlider(id) {
+  // If user has dragged/resized this skeleton, override wins.
+  if (state.interact?.rectOverrides?.[id]) return false;
+  return true;
+}
+
+function getDrawOrderIds() {
+  if (state.ui.mode === "mode2") {
+    // Draw A/B/C behind, user on top (same as drawMode2Overlay)
+    return [SKELETON_IDS.m2_a, SKELETON_IDS.m2_b, SKELETON_IDS.m2_c, SKELETON_IDS.m2_user];
+  }
+  // Mode1: user first then demos on top (as current drawing does)
+  return [SKELETON_IDS.m1_user, SKELETON_IDS.m1_demo_0, SKELETON_IDS.m1_demo_1, SKELETON_IDS.m1_demo_2, SKELETON_IDS.m1_demo_3];
+}
+
+function getPickOrderIds() {
+  // Topmost last-draw has priority => reverse draw order
+  return [...getDrawOrderIds()].reverse();
 }
 
 const API_BASE = "https://imuse.ncnu.edu.tw/Midi-library";
@@ -1686,6 +1933,8 @@ function drawMode2Overlay(tScore) {
   if (!els.overlayCanvas) return;
   if (typeof tScore !== "number" || !Number.isFinite(tScore)) return;
 
+  syncInteractCanvasSize();
+
   const ctx = els.overlayCanvas.getContext("2d");
   if (!ctx) return;
 
@@ -1709,7 +1958,7 @@ function drawMode2Overlay(tScore) {
     els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
       ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
       : DEMO_SOURCE_ASPECT;
-  const stageRect = computeContainRect(w, h, videoAspect);
+  const defaultRects = getDefaultRectsMode2(w, h, videoAspect);
 
   // demo (A/B/C) colors
   const demoColor = "rgba(34,197,94,0.95)";
@@ -1732,52 +1981,19 @@ function drawMode2Overlay(tScore) {
   const scaleC = state.ui?.demoScale?.r1 ?? 1;
   const scaleUser = state.ui?.demoScale?.r2 ?? 1;
 
-  // Layout areas inside overlay canvas.
-  const PAD = 8;
-  const GAP = 12;
-  const sideW = Math.max(140, Math.floor(w * 0.26));
-  const topH = Math.max(120, Math.floor(h * 0.40));
-  const bottomH = Math.max(120, h - PAD * 2 - topH);
-  const centerW = Math.max(160, w - PAD * 2 - sideW * 2 - GAP);
+  const rectA0 = getActiveRect(SKELETON_IDS.m2_a, defaultRects);
+  const rectB0 = getActiveRect(SKELETON_IDS.m2_b, defaultRects);
+  const rectC0 = getActiveRect(SKELETON_IDS.m2_c, defaultRects);
+  const rectUser0 = getActiveRect(SKELETON_IDS.m2_user, defaultRects);
 
-  const rectLeftBottomArea = { ox: PAD, oy: PAD + topH, dw: sideW, dh: bottomH };
-  const rectRightBottomArea = {
-    ox: PAD + sideW + GAP + centerW,
-    oy: PAD + topH,
-    dw: sideW,
-    dh: bottomH,
-  };
-  const rectTopCenterArea = { ox: PAD + sideW + GAP, oy: PAD, dw: centerW, dh: topH };
-
-  const containLeftBottom = computeContainRect(rectLeftBottomArea.dw, rectLeftBottomArea.dh, DEMO_SOURCE_ASPECT);
-  const containRightBottom = computeContainRect(rectRightBottomArea.dw, rectRightBottomArea.dh, DEMO_SOURCE_ASPECT);
-  const containTopCenter = computeContainRect(rectTopCenterArea.dw, rectTopCenterArea.dh, DEMO_SOURCE_ASPECT);
-
-  // Because overlay_canvas has CSS mirror (scaleX(-1)), "on-screen left" corresponds to "right-side canvas coordinate".
-  // So we swap A/B placement to keep A on-screen-left and B on-screen-right.
-  const rectA0 = {
-    ox: rectRightBottomArea.ox + containRightBottom.ox,
-    oy: rectRightBottomArea.oy + containRightBottom.oy,
-    dw: containRightBottom.dw,
-    dh: containRightBottom.dh,
-  };
-  const rectB0 = {
-    ox: rectLeftBottomArea.ox + containLeftBottom.ox,
-    oy: rectLeftBottomArea.oy + containLeftBottom.oy,
-    dw: containLeftBottom.dw,
-    dh: containLeftBottom.dh,
-  };
-  const rectC0 = {
-    ox: rectTopCenterArea.ox + containTopCenter.ox,
-    oy: rectTopCenterArea.oy + containTopCenter.oy,
-    dw: containTopCenter.dw,
-    dh: containTopCenter.dh,
-  };
-
-  const rectA = scaleRectAboutCenter(rectA0, scaleA);
-  const rectB = scaleRectAboutCenter(rectB0, scaleB);
-  const rectC = scaleRectAboutCenter(rectC0, scaleC);
-  const rectUser = scaleRectAboutCenter(stageRect, scaleUser);
+  const rectA =
+    rectA0 && shouldApplyScaleSlider(SKELETON_IDS.m2_a) ? scaleRectAboutCenter(rectA0, scaleA) : rectA0;
+  const rectB =
+    rectB0 && shouldApplyScaleSlider(SKELETON_IDS.m2_b) ? scaleRectAboutCenter(rectB0, scaleB) : rectB0;
+  const rectC =
+    rectC0 && shouldApplyScaleSlider(SKELETON_IDS.m2_c) ? scaleRectAboutCenter(rectC0, scaleC) : rectC0;
+  const rectUser =
+    rectUser0 && shouldApplyScaleSlider(SKELETON_IDS.m2_user) ? scaleRectAboutCenter(rectUser0, scaleUser) : rectUser0;
 
   // Draw A/B/C first (behind), then user skeleton on top.
   // abcEnabled=false：只保留使用者即時骨架
@@ -1799,6 +2015,23 @@ function drawMode2Overlay(tScore) {
   if (state.latestUserLandmarks) {
     drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, rectUser, () => userColor, 3);
     drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, rectUser, userColor, 3.5);
+  }
+
+  // selection box
+  const sel = state.interact?.selectedId;
+  if (sel) {
+    const rSel = getActiveRect(sel, defaultRects);
+    if (rSel) {
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
+      const hs = 6;
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
+      ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
+      ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
+      ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
+    }
   }
 
   ctx.restore();
@@ -1985,6 +2218,7 @@ function updateUiLoop() {
   if (els.overlayCanvas) {
     const ctx = els.overlayCanvas.getContext("2d");
     if (ctx) {
+      syncInteractCanvasSize();
       const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
       const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
       const dpr = window.devicePixelRatio || 1;
@@ -2004,7 +2238,9 @@ function updateUiLoop() {
         els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
-      const stageRect = computeContainRect(w, h, videoAspect);
+      const defaultRects = getDefaultRectsMode1(w, h, videoAspect);
+      const stageRect0 = getActiveRect(SKELETON_IDS.m1_user, defaultRects);
+      const stageRect = stageRect0 || computeContainRect(w, h, videoAspect);
 
       // User skeleton (white / red hints / blue when good)
       const blueColor = "rgba(59,130,246,0.95)";
@@ -2025,58 +2261,46 @@ function updateUiLoop() {
       // Demo overlay (green / blue) on top so it's always visible
       if (demoLm && !isRecordingMode && state.ui.mode1DemoEnabled) {
         const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
-        const PAD = 6;
-        const GAP = 8;
-        const sideAreaRatio = 0.36; // 左右側欄占比（示範骨架放大）
-        const leftAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
-        const rightAreaW = Math.max(140, Math.floor(w * sideAreaRatio));
-        const centerMinW = 300;
-        const availableCenterW = w - leftAreaW - rightAreaW - PAD * 2 - GAP * 2;
-        const useSide =
-          availableCenterW >= centerMinW &&
-          leftAreaW + rightAreaW + centerMinW + PAD * 2 + GAP * 2 <= w;
+        const rectIds = [
+          SKELETON_IDS.m1_demo_0,
+          SKELETON_IDS.m1_demo_1,
+          SKELETON_IDS.m1_demo_2,
+          SKELETON_IDS.m1_demo_3,
+        ];
 
-        if (useSide) {
-          const leftX = PAD;
-          const rightX = w - PAD - rightAreaW;
-          const areaY = PAD;
-          const areaH = h - PAD * 2;
+        // 注意：overlay_canvas 以 CSS 做了水平鏡像（scaleX(-1)），視覺左右會對調。
+        // 這裡把滑桿的 L1/L2/R1/R2 重新對應到「畫面上由左到右」的四格。
+        const scales = [
+          state.ui?.demoScale?.r2 ?? 1, // 視覺最右 ↔ 畫布最左
+          state.ui?.demoScale?.r1 ?? 1,
+          state.ui?.demoScale?.l2 ?? 1,
+          state.ui?.demoScale?.l1 ?? 1, // 視覺最左 ↔ 畫布最右
+        ];
 
-          const cellW = Math.floor((leftAreaW - GAP) / 2);
-          const cellH = areaH;
+        for (let i = 0; i < rectIds.length; i += 1) {
+          const id = rectIds[i];
+          const r0 = getActiveRect(id, defaultRects) || stageRect;
+          const s = scales[i];
+          const r = shouldApplyScaleSlider(id) ? scaleRectAboutCenter(r0, s) : r0;
+          drawPoseConnections(ctx, demoLm, getArrXYV, r, () => demoColor, 5);
+          drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
+        }
+      }
 
-          const mkCell = (x0) => {
-            const r = computeContainRect(cellW, cellH, DEMO_SOURCE_ASPECT);
-            return { ox: x0 + r.ox, oy: areaY + r.oy, dw: r.dw, dh: r.dh };
-          };
-
-          const rects = [
-            mkCell(leftX),
-            mkCell(leftX + cellW + GAP),
-            mkCell(rightX),
-            mkCell(rightX + cellW + GAP),
-          ];
-
-          // 注意：overlay_canvas 以 CSS 做了水平鏡像（scaleX(-1)），視覺左右會對調。
-          // 這裡把滑桿的 L1/L2/R1/R2 重新對應到「畫面上由左到右」的四格。
-          const scales = [
-            state.ui?.demoScale?.r2 ?? 1, // 視覺最右 ↔ 畫布最左
-            state.ui?.demoScale?.r1 ?? 1,
-            state.ui?.demoScale?.l2 ?? 1,
-            state.ui?.demoScale?.l1 ?? 1, // 視覺最左 ↔ 畫布最右
-          ];
-
-          for (let i = 0; i < rects.length; i += 1) {
-            const r0 = rects[i];
-            const s = scales[i];
-            const r = scaleRectAboutCenter(r0, s);
-            drawPoseConnections(ctx, demoLm, getArrXYV, r, () => demoColor, 5);
-            drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
-          }
-        } else {
-          // fallback: 畫在原本位置（避免視窗太窄時看不到）
-          drawPoseConnections(ctx, demoLm, getArrXYV, stageRect, () => demoColor, 5);
-          drawPosePoints(ctx, demoLm, getArrXYV, stageRect, demoColor, 4.5);
+      // selection box
+      const sel = state.interact?.selectedId;
+      if (sel) {
+        const rSel = getActiveRect(sel, defaultRects);
+        if (rSel) {
+          ctx.strokeStyle = "rgba(255,255,255,0.85)";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
+          const hs = 6;
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
+          ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
+          ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
+          ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
         }
       }
 
@@ -2255,6 +2479,163 @@ async function main() {
       updateMode1DemoButtonText();
       clearOverlayCanvas();
     });
+  }
+
+  // overlay_canvas interactions: select / drag / resize / wheel zoom
+  if (els.overlayCanvas) {
+    els.overlayCanvas.style.touchAction = "none";
+
+    const onPointerDown = (ev) => {
+      syncInteractCanvasSize();
+      const pos = getPointerPosInOverlayCssPx(ev, els.overlayCanvas);
+      if (!pos) return;
+      const { x, y } = pos;
+      const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+      const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+
+      const videoAspect =
+        els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+          ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
+          : DEMO_SOURCE_ASPECT;
+      const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
+
+      const selId = state.interact.selectedId;
+      const selRect = selId ? getActiveRect(selId, defaults) : null;
+      const corner = selRect ? rectCornerHit(selRect, x, y, 10) : null;
+      if (selId && selRect && corner) {
+        state.interact.drag = {
+          active: true,
+          id: selId,
+          kind: "resize",
+          corner,
+          startPointer: { x, y },
+          startRect: { ...selRect },
+        };
+        els.overlayCanvas.setPointerCapture?.(ev.pointerId);
+        ev.preventDefault();
+        return;
+      }
+
+      // pick topmost under pointer
+      let picked = null;
+      for (const id of getPickOrderIds()) {
+        const r = getActiveRect(id, defaults);
+        if (rectContains(r, x, y)) {
+          picked = id;
+          break;
+        }
+      }
+
+      state.interact.selectedId = picked;
+      if (!picked) return;
+
+      const pickedRect = getActiveRect(picked, defaults);
+      state.interact.drag = {
+        active: true,
+        id: picked,
+        kind: "move",
+        corner: null,
+        startPointer: { x, y },
+        startRect: { ...pickedRect },
+      };
+      els.overlayCanvas.setPointerCapture?.(ev.pointerId);
+      ev.preventDefault();
+    };
+
+    const onPointerMove = (ev) => {
+      const d = state.interact.drag;
+      if (!d?.active || !d.id || !d.kind || !d.startPointer || !d.startRect) return;
+      const pos = getPointerPosInOverlayCssPx(ev, els.overlayCanvas);
+      if (!pos) return;
+      const { x, y } = pos;
+      const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+      const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+
+      const dx = x - d.startPointer.x;
+      const dy = y - d.startPointer.y;
+      let r = { ...d.startRect };
+
+      if (d.kind === "move") {
+        r.ox += dx;
+        r.oy += dy;
+      } else if (d.kind === "resize" && d.corner) {
+        // uniform scale based on distance to opposite corner
+        const start = d.startRect;
+        const opp =
+          d.corner === "tl"
+            ? { x: start.ox + start.dw, y: start.oy + start.dh }
+            : d.corner === "tr"
+              ? { x: start.ox, y: start.oy + start.dh }
+              : d.corner === "bl"
+                ? { x: start.ox + start.dw, y: start.oy }
+                : { x: start.ox, y: start.oy };
+
+        const curCorner =
+          d.corner === "tl"
+            ? { x: start.ox + dx, y: start.oy + dy }
+            : d.corner === "tr"
+              ? { x: start.ox + start.dw + dx, y: start.oy + dy }
+              : d.corner === "bl"
+                ? { x: start.ox + dx, y: start.oy + start.dh + dy }
+                : { x: start.ox + start.dw + dx, y: start.oy + start.dh + dy };
+
+        const dist0 = Math.hypot((start.ox + (d.corner === "tl" || d.corner === "bl" ? 0 : start.dw)) - opp.x, (start.oy + (d.corner === "tl" || d.corner === "tr" ? 0 : start.dh)) - opp.y);
+        const dist1 = Math.hypot(curCorner.x - opp.x, curCorner.y - opp.y);
+        const s = dist0 > 1 ? dist1 / dist0 : 1;
+
+        r = scaleRectAboutAnchor(start, opp.x, opp.y, s);
+      }
+
+      r = clampRectToCanvas(r, w, h);
+      state.interact.rectOverrides[d.id] = r;
+      ev.preventDefault();
+    };
+
+    const onPointerUp = (ev) => {
+      const d = state.interact.drag;
+      if (d?.active) {
+        state.interact.drag = {
+          active: false,
+          id: null,
+          kind: null,
+          corner: null,
+          startPointer: null,
+          startRect: null,
+        };
+      }
+      ev.preventDefault();
+    };
+
+    const onWheel = (ev) => {
+      syncInteractCanvasSize();
+      const id = state.interact.selectedId;
+      if (!id) return;
+      const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+      const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+      const videoAspect =
+        els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+          ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
+          : DEMO_SOURCE_ASPECT;
+      const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
+      const base = getActiveRect(id, defaults);
+      if (!base) return;
+
+      const delta = ev.deltaY;
+      const step = 1.06;
+      const s = delta < 0 ? step : 1 / step;
+      const r0 = base;
+      const cx = r0.ox + r0.dw / 2;
+      const cy = r0.oy + r0.dh / 2;
+      let r = scaleRectAboutAnchor(r0, cx, cy, s);
+      r = clampRectToCanvas(r, w, h);
+      state.interact.rectOverrides[id] = r;
+      ev.preventDefault();
+    };
+
+    els.overlayCanvas.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    els.overlayCanvas.addEventListener("wheel", onWheel, { passive: false });
   }
 
   if (els.recordButton) {
