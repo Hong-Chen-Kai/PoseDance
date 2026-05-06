@@ -748,6 +748,71 @@ function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
   return bbox || drawRect;
 }
 
+function getSkeletonLandmarksForIdAtTime(id, tScore) {
+  if (state.ui.mode === "mode2") {
+    const traceA = state.mode2?.a;
+    const traceB = state.mode2?.b;
+    const traceC = state.mode2?.c;
+    const demoLmA = traceA?.samples ? getDemoLandmarksAtTime(traceA.samples, tScore) : null;
+    const demoLmB = traceB?.samples ? getDemoLandmarksAtTime(traceB.samples, tScore) : null;
+    const demoLmC = traceC?.samples ? getDemoLandmarksAtTime(traceC.samples, tScore) : null;
+    const lm =
+      id === SKELETON_IDS.m2_a ? demoLmA
+      : id === SKELETON_IDS.m2_b ? demoLmB
+      : id === SKELETON_IDS.m2_c ? demoLmC
+      : id === SKELETON_IDS.m2_user ? state.latestUserLandmarks
+      : null;
+    const getter = id === SKELETON_IDS.m2_user ? getLmXYV : getArrXYV;
+    return { lm, getter };
+  }
+
+  const hintMode =
+    state.ui.hintMode === "hard" || state.ui.hintMode === "user"
+      ? state.ui.hintMode
+      : "easy";
+  const isRecordingMode = Boolean(state.recorder?.armed);
+  const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
+  const demoLm = trace?.samples ? getDemoLandmarksAtTime(trace.samples, tScore) : null;
+
+  const isUser = id === SKELETON_IDS.m1_user;
+  const lm = isUser ? state.latestUserLandmarks : demoLm;
+  const getter = isUser ? getLmXYV : getArrXYV;
+  return { lm, getter };
+}
+
+function constrainRectBySkeletonBBox({ id, rect, w, h, tScore, padPx = 8, anchor = null }) {
+  if (!id || !rect || !(typeof w === "number" && w > 0) || !(typeof h === "number" && h > 0)) return rect;
+  if (!(typeof tScore === "number" && Number.isFinite(tScore))) return clampRectToCanvas(rect, w, h);
+
+  const { lm, getter } = getSkeletonLandmarksForIdAtTime(id, tScore);
+  if (!lm) return clampRectToCanvas(rect, w, h);
+
+  // If bbox is larger than canvas, uniformly scale down rect around anchor (or center).
+  let r = { ...rect };
+  let bbox = getTightBBoxFromLandmarks(lm, getter, r, padPx);
+  if (!bbox) return clampRectToCanvas(r, w, h);
+
+  if (bbox.dw > w || bbox.dh > h) {
+    const sDown = Math.min(w / Math.max(1e-6, bbox.dw), h / Math.max(1e-6, bbox.dh), 1);
+    const ax = anchor?.x ?? (r.ox + r.dw / 2);
+    const ay = anchor?.y ?? (r.oy + r.dh / 2);
+    r = scaleRectAboutAnchor(r, ax, ay, sDown);
+    bbox = getTightBBoxFromLandmarks(lm, getter, r, padPx) || bbox;
+  }
+
+  // Push rect so that bbox stays inside canvas.
+  let dx = 0;
+  let dy = 0;
+  if (bbox.ox < 0) dx += -bbox.ox;
+  if (bbox.ox + bbox.dw > w) dx += w - (bbox.ox + bbox.dw);
+  if (bbox.oy < 0) dy += -bbox.oy;
+  if (bbox.oy + bbox.dh > h) dy += h - (bbox.oy + bbox.dh);
+
+  r.ox += dx;
+  r.oy += dy;
+  return r;
+}
+
 const API_BASE = "https://imuse.ncnu.edu.tw/Midi-library";
 
 async function fetchJson(url) {
@@ -2661,10 +2726,12 @@ async function main() {
       const { x, y } = pos;
       const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
       const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+      const tScore = getPlayerTimeSafe();
 
       const dx = x - d.startPointer.x;
       const dy = y - d.startPointer.y;
       let r = { ...d.startRect };
+      let anchor = null;
 
       if (d.kind === "move") {
         r.ox += dx;
@@ -2680,6 +2747,7 @@ async function main() {
               : d.corner === "bl"
                 ? { x: start.ox + start.dw, y: start.oy }
                 : { x: start.ox, y: start.oy };
+        anchor = opp;
 
         const curCorner =
           d.corner === "tl"
@@ -2697,7 +2765,8 @@ async function main() {
         r = scaleRectAboutAnchor(start, opp.x, opp.y, s);
       }
 
-      r = clampRectToCanvas(r, w, h);
+      // Constrain by tight bbox (white selection box), not container rect.
+      r = constrainRectBySkeletonBBox({ id: d.id, rect: r, w, h, tScore, padPx: 8, anchor });
       state.interact.rectOverrides[d.id] = r;
       ev.preventDefault();
     };
@@ -2740,7 +2809,7 @@ async function main() {
       const cx = r0.ox + r0.dw / 2;
       const cy = r0.oy + r0.dh / 2;
       let r = scaleRectAboutAnchor(r0, cx, cy, s);
-      r = clampRectToCanvas(r, w, h);
+      r = constrainRectBySkeletonBBox({ id, rect: r, w, h, tScore, padPx: 8, anchor: { x: cx, y: cy } });
       state.interact.rectOverrides[id] = r;
       ev.preventDefault();
     };
