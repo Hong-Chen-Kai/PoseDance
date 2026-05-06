@@ -1880,79 +1880,8 @@ function updateUiLoop() {
 
   setRecordUi(tScore);
 
-  if (!state.latestUserLandmarks) {
-    setUi({ easy: "—", hard: "—", overallEasy: "—", overallHard: "—" });
-    clearOverlayCanvas();
-    return;
-  }
-
-  if (tScore === null) {
-    setUi({ easy: "—", hard: "—", overallEasy: "—", overallHard: "—" });
-    clearOverlayCanvas();
-    return;
-  }
-
-  const rEasy = computeWindowScoreD(
-    state.latestUserLandmarks,
-    state.demo.easy,
-    tScore,
-  );
-  const rHard = computeWindowScoreD(
-    state.latestUserLandmarks,
-    state.demo.hard,
-    tScore,
-  );
-  const rLoaded = computeWindowScoreD(
-    state.latestUserLandmarks,
-    state.demo.loaded,
-    tScore,
-  );
-
-  const okEasy = rEasy.ok ? rEasy.score.toFixed(0) : "—";
-  const okHard = rHard.ok ? rHard.score.toFixed(0) : "—";
-  const okLoaded = rLoaded.ok ? rLoaded.score.toFixed(0) : "—";
-
-  let overallEasy = "—";
-  let overallEasyNum = null;
-  if (rEasy.ok) {
-    const wg = computeEnergyGateWeight(rEasy.ErefWin);
-    const ov = pushOverall(state.overall.easy, tScore, rEasy.score, wg);
-    if (typeof ov === "number") {
-      overallEasyNum = ov;
-      overallEasy = ov.toFixed(0);
-    }
-  }
-
-  let overallHard = "—";
-  let overallHardNum = null;
-  if (rHard.ok) {
-    const wg = computeEnergyGateWeight(rHard.ErefWin);
-    const ov = pushOverall(state.overall.hard, tScore, rHard.score, wg);
-    if (typeof ov === "number") {
-      overallHardNum = ov;
-      overallHard = ov.toFixed(0);
-    }
-  }
-
-  let overallLoaded = "—";
-  let overallLoadedNum = null;
-  if (rLoaded.ok) {
-    const wg = computeEnergyGateWeight(rLoaded.ErefWin);
-    const ov = pushOverall(state.overall.loaded, tScore, rLoaded.score, wg);
-    if (typeof ov === "number") {
-      overallLoadedNum = ov;
-      overallLoaded = ov.toFixed(0);
-    }
-  }
-
-  setUi({
-    easy: okEasy,
-    hard: okHard,
-    loaded: okLoaded,
-    overallEasy,
-    overallHard,
-    overallLoaded,
-  });
+  const userLm = state.latestUserLandmarks;
+  const canUseTime = typeof tScore === "number" && Number.isFinite(tScore);
 
   // ---- Interactive overlay coloring (test only)
   const isRecordingMode = Boolean(state.recorder?.armed);
@@ -1962,8 +1891,77 @@ function updateUiLoop() {
       ? state.ui.hintMode
       : "easy";
   const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
-  const demoLm = trace?.samples ? getDemoLandmarksAtTime(trace.samples, tScore) : null;
-  const activeParts = trace ? computeActiveParts(trace, tScore) : new Set();
+
+  // Demo 只依賴 YouTube time（不依賴攝影機）
+  const demoLm =
+    state.ui.mode1DemoEnabled && trace?.samples && canUseTime
+      ? getDemoLandmarksAtTime(trace.samples, tScore)
+      : null;
+  const activeParts = trace && canUseTime ? computeActiveParts(trace, tScore) : new Set();
+
+  // Similarity / overall：只有在 userLm + 有時間軸時才計算
+  let rEasy = { ok: false, score: 0 };
+  let rHard = { ok: false, score: 0 };
+  let rLoaded = { ok: false, score: 0 };
+  let overallEasy = "—";
+  let overallHard = "—";
+  let overallLoaded = "—";
+  let overallEasyNum = null;
+  let overallHardNum = null;
+  let overallLoadedNum = null;
+  let okEasy = "—";
+  let okHard = "—";
+  let okLoaded = "—";
+
+  if (userLm && canUseTime) {
+    rEasy = computeWindowScoreD(userLm, state.demo.easy, tScore);
+    rHard = computeWindowScoreD(userLm, state.demo.hard, tScore);
+    rLoaded = computeWindowScoreD(userLm, state.demo.loaded, tScore);
+
+    okEasy = rEasy.ok ? rEasy.score.toFixed(0) : "—";
+    okHard = rHard.ok ? rHard.score.toFixed(0) : "—";
+    okLoaded = rLoaded.ok ? rLoaded.score.toFixed(0) : "—";
+
+    if (rEasy.ok) {
+      const wg = computeEnergyGateWeight(rEasy.ErefWin);
+      const ov = pushOverall(state.overall.easy, tScore, rEasy.score, wg);
+      if (typeof ov === "number") {
+        overallEasyNum = ov;
+        overallEasy = ov.toFixed(0);
+      }
+    }
+    if (rHard.ok) {
+      const wg = computeEnergyGateWeight(rHard.ErefWin);
+      const ov = pushOverall(state.overall.hard, tScore, rHard.score, wg);
+      if (typeof ov === "number") {
+        overallHardNum = ov;
+        overallHard = ov.toFixed(0);
+      }
+    }
+    if (rLoaded.ok) {
+      const wg = computeEnergyGateWeight(rLoaded.ErefWin);
+      const ov = pushOverall(state.overall.loaded, tScore, rLoaded.score, wg);
+      if (typeof ov === "number") {
+        overallLoadedNum = ov;
+        overallLoaded = ov.toFixed(0);
+      }
+    }
+  } else {
+    // 沒有 user 或沒有時間軸時，不做分數計算（畫 demo 仍可）
+    setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
+  }
+
+  if (userLm && canUseTime) {
+    setUi({
+      easy: okEasy,
+      hard: okHard,
+      loaded: okLoaded,
+      overallEasy,
+      overallHard,
+      overallLoaded,
+    });
+  }
+
   const selectedInstant =
     hintMode === "hard"
       ? rHard.ok
@@ -1982,7 +1980,7 @@ function updateUiLoop() {
       : hintMode === "user"
         ? overallLoadedNum
         : overallEasyNum;
-  const isOrange = updateOrangeState(tScore, selectedInstant, selectedOverall);
+  const isOrange = canUseTime && userLm ? updateOrangeState(tScore, selectedInstant, selectedOverall) : false;
 
   if (els.overlayCanvas) {
     const ctx = els.overlayCanvas.getContext("2d");
@@ -2005,7 +2003,7 @@ function updateUiLoop() {
       const videoAspect =
         els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
-          : w / Math.max(1, h);
+          : DEMO_SOURCE_ASPECT;
       const stageRect = computeContainRect(w, h, videoAspect);
 
       // User skeleton (white / red hints / blue when good)
@@ -2019,11 +2017,13 @@ function updateUiLoop() {
         if (isRecordingMode) return whiteColor;
         return activeParts.has(part) ? redColor : whiteColor;
       };
-      drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, stageRect, colorByConn, 3);
-      drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, stageRect, baseColor, 3.5);
+      if (userLm) {
+        drawPoseConnections(ctx, userLm, getLmXYV, stageRect, colorByConn, 3);
+        drawPosePoints(ctx, userLm, getLmXYV, stageRect, baseColor, 3.5);
+      }
 
       // Demo overlay (green / blue) on top so it's always visible
-      if (demoLm && !isRecordingMode) {
+      if (demoLm && !isRecordingMode && state.ui.mode1DemoEnabled) {
         const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
         const PAD = 6;
         const GAP = 8;
@@ -2243,8 +2243,8 @@ async function main() {
   const updateMode1DemoButtonText = () => {
     if (!els.toggleMode1DemoButton) return;
     els.toggleMode1DemoButton.textContent = state.ui.mode1DemoEnabled
-      ? "隱藏示範骨架"
-      : "顯示示範骨架";
+      ? "隱藏骨架"
+      : "顯示骨架";
   };
   updateMode1DemoButtonText();
 
