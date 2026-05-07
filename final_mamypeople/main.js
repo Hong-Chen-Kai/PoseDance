@@ -2025,10 +2025,6 @@ function drawUserOverlay() {
   ctx.restore();
 }
 
-function clamp01(x) {
-  return Math.max(0, Math.min(1, x));
-}
-
 function clamp(x, a, b) {
   return Math.max(a, Math.min(b, x));
 }
