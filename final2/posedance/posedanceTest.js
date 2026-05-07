@@ -50,11 +50,7 @@ const state = {
   demo: { easy: null, hard: null, loaded: null },
 
   mode2: {
-    a: null,
-    b: null,
-    c: null,
-    pendingSlot: null, // 'a' | 'b' | 'c'
-    abcEnabled: true,
+    traces: [], // Array<{ id, name, data, enabled }>
   },
 
   ui: {
@@ -167,11 +163,16 @@ const SKELETON_IDS = {
   m1_demo_3: "m1_demo_3",
   m1_user: "m1_user",
   // Mode2
-  m2_a: "m2_a",
-  m2_b: "m2_b",
-  m2_c: "m2_c",
   m2_user: "m2_user",
 };
+
+function mode2TraceSkeletonId(traceId) {
+  return `m2_trace_${traceId}`;
+}
+
+function isMode2TraceSkeletonId(id) {
+  return typeof id === "string" && id.startsWith("m2_trace_");
+}
 
 function initDomRefs() {
   els.similarityEasyText = $("similarityEasyText");
@@ -193,9 +194,7 @@ function initDomRefs() {
   els.loadVideoButton = $("loadVideoButton");
   els.pickSongButton = $("pickSongButton");
   els.loadSkeletonButton = $("loadSkeletonButton");
-  els.loadSkeletonAButton = $("loadSkeletonAButton");
-  els.loadSkeletonBButton = $("loadSkeletonBButton");
-  els.loadSkeletonCButton = $("loadSkeletonCButton");
+  els.loadMode2SkeletonButton = $("loadMode2SkeletonButton");
   els.toggleMode2DemoABCButton = $("toggleMode2DemoABCButton");
   els.skeletonFileInput = $("skeletonFileInput");
   els.mode2SkeletonFileInput = $("mode2SkeletonFileInput");
@@ -298,6 +297,22 @@ function rectCornerHit(rect, x, y, handleSize = 10) {
     if (Math.abs(x - c.x) <= hs && Math.abs(y - c.y) <= hs) return k;
   }
   return null;
+}
+
+function pointInRect(r, x, y) {
+  return Boolean(r) && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+}
+
+function getDeleteButtonRectForBBox(bbox) {
+  if (!bbox) return null;
+  const size = 18;
+  const pad = 6;
+  return {
+    x: bbox.ox + bbox.dw - size - pad,
+    y: bbox.oy + pad,
+    w: size,
+    h: size,
+  };
 }
 
 function scaleRectAboutAnchor(rect, anchorX, anchorY, scale) {
@@ -448,9 +463,7 @@ function applyMode(mode) {
     setControlsDisabled(false);
     if (els.hintModeSelect) els.hintModeSelect.disabled = true;
     if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "none";
-    if (els.loadSkeletonAButton) els.loadSkeletonAButton.style.display = "";
-    if (els.loadSkeletonBButton) els.loadSkeletonBButton.style.display = "";
-    if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "";
+    if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "";
     if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "none";
@@ -463,17 +476,14 @@ function applyMode(mode) {
     state.recorder.startedAtIso = null;
     state.recorder.lastRecordedT = Number.NEGATIVE_INFINITY;
     state.recorder.samples = [];
-    state.mode2.pendingSlot = null;
-    // Mode2 進入時維持 abcEnabled；若你要每次進入都強制開，我們再改
+    // mode2: no fixed A/B/C slots anymore
     setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
   } else {
     // Mode1：恢復所有 Mode1 控制
     setControlsDisabled(false);
     if (els.hintModeSelect) els.hintModeSelect.disabled = false;
     if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "";
-    if (els.loadSkeletonAButton) els.loadSkeletonAButton.style.display = "none";
-    if (els.loadSkeletonBButton) els.loadSkeletonBButton.style.display = "none";
-    if (els.loadSkeletonCButton) els.loadSkeletonCButton.style.display = "none";
+    if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "none";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "none";
     if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "";
@@ -588,33 +598,48 @@ function getDefaultRectsMode2(w, h, videoAspect) {
   const containRightBottom = computeContainRect(rectRightBottomArea.dw, rectRightBottomArea.dh, DEMO_SOURCE_ASPECT);
   const containTopCenter = computeContainRect(rectTopCenterArea.dw, rectTopCenterArea.dh, DEMO_SOURCE_ASPECT);
 
-  // Keep the same placement convention as drawMode2Overlay:
-  // overlay_canvas is mirrored, so A/B are swapped in canvas coords to appear correct on screen.
-  const rectA0 = {
+  // Base 3 slots (same as previous A/B/C layout); overlay_canvas is mirrored, so left/right are swapped in canvas coords.
+  const slot0 = {
     ox: rectRightBottomArea.ox + containRightBottom.ox,
     oy: rectRightBottomArea.oy + containRightBottom.oy,
     dw: containRightBottom.dw,
     dh: containRightBottom.dh,
   };
-  const rectB0 = {
+  const slot1 = {
     ox: rectLeftBottomArea.ox + containLeftBottom.ox,
     oy: rectLeftBottomArea.oy + containLeftBottom.oy,
     dw: containLeftBottom.dw,
     dh: containLeftBottom.dh,
   };
-  const rectC0 = {
+  const slot2 = {
     ox: rectTopCenterArea.ox + containTopCenter.ox,
     oy: rectTopCenterArea.oy + containTopCenter.oy,
     dw: containTopCenter.dw,
     dh: containTopCenter.dh,
   };
 
-  return {
-    [SKELETON_IDS.m2_a]: rectA0,
-    [SKELETON_IDS.m2_b]: rectB0,
-    [SKELETON_IDS.m2_c]: rectC0,
-    [SKELETON_IDS.m2_user]: stageRect,
-  };
+  const out = { [SKELETON_IDS.m2_user]: stageRect };
+
+  const traces = state.mode2?.traces || [];
+  for (let i = 0; i < traces.length; i += 1) {
+    const id = mode2TraceSkeletonId(traces[i].id);
+    if (i === 0) out[id] = slot0;
+    else if (i === 1) out[id] = slot1;
+    else if (i === 2) out[id] = slot2;
+    else {
+      // extra traces: stack near top-left with offsets
+      const dx = 18 * ((i - 3) % 6);
+      const dy = 14 * Math.floor((i - 3) / 6);
+      out[id] = {
+        ox: Math.max(0, slot2.ox + dx),
+        oy: Math.max(0, slot2.oy + dy),
+        dw: slot2.dw,
+        dh: slot2.dh,
+      };
+    }
+  }
+
+  return out;
 }
 
 function getDefaultRectsForCurrentMode(w, h, videoAspect) {
@@ -631,13 +656,19 @@ function getActiveRect(id, defaultRects) {
 function shouldApplyScaleSlider(id) {
   // If user has dragged/resized this skeleton, override wins.
   if (state.interact?.rectOverrides?.[id]) return false;
+  // Mode2 traces no longer use bottom sliders (UI hidden).
+  if (isMode2TraceSkeletonId(id)) return false;
   return true;
 }
 
 function getDrawOrderIds() {
   if (state.ui.mode === "mode2") {
-    // Draw A/B/C behind, user on top (same as drawMode2Overlay)
-    return [SKELETON_IDS.m2_a, SKELETON_IDS.m2_b, SKELETON_IDS.m2_c, SKELETON_IDS.m2_user];
+    // Draw traces behind, user on top
+    const ids = [];
+    const traces = state.mode2?.traces || [];
+    for (const tr of traces) ids.push(mode2TraceSkeletonId(tr.id));
+    ids.push(SKELETON_IDS.m2_user);
+    return ids;
   }
   // Mode1: user first then demos on top (as current drawing does)
   return [SKELETON_IDS.m1_user, SKELETON_IDS.m1_demo_0, SKELETON_IDS.m1_demo_1, SKELETON_IDS.m1_demo_2, SKELETON_IDS.m1_demo_3];
@@ -650,9 +681,6 @@ function getPickOrderIds() {
 
 function getSliderScaleForId(id) {
   if (state.ui.mode === "mode2") {
-    if (id === SKELETON_IDS.m2_a) return state.ui?.demoScale?.l1 ?? 1;
-    if (id === SKELETON_IDS.m2_b) return state.ui?.demoScale?.l2 ?? 1;
-    if (id === SKELETON_IDS.m2_c) return state.ui?.demoScale?.r1 ?? 1;
     if (id === SKELETON_IDS.m2_user) return state.ui?.demoScale?.r2 ?? 1;
     return 1;
   }
@@ -714,20 +742,7 @@ function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
 
   // decide landmarks source
   if (state.ui.mode === "mode2") {
-    const traceA = state.mode2?.a;
-    const traceB = state.mode2?.b;
-    const traceC = state.mode2?.c;
-    const demoLmA = traceA?.samples ? getDemoLandmarksAtTime(traceA.samples, tScore) : null;
-    const demoLmB = traceB?.samples ? getDemoLandmarksAtTime(traceB.samples, tScore) : null;
-    const demoLmC = traceC?.samples ? getDemoLandmarksAtTime(traceC.samples, tScore) : null;
-
-    const lm =
-      id === SKELETON_IDS.m2_a ? demoLmA
-      : id === SKELETON_IDS.m2_b ? demoLmB
-      : id === SKELETON_IDS.m2_c ? demoLmC
-      : id === SKELETON_IDS.m2_user ? state.latestUserLandmarks
-      : null;
-    const getter = id === SKELETON_IDS.m2_user ? getLmXYV : getArrXYV;
+    const { lm, getter } = getSkeletonLandmarksForIdAtTime(id, tScore);
     const bbox = lm ? getTightBBoxFromLandmarks(lm, getter, drawRect, extraPadPx) : null;
     return bbox || drawRect;
   }
@@ -750,20 +765,15 @@ function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
 
 function getSkeletonLandmarksForIdAtTime(id, tScore) {
   if (state.ui.mode === "mode2") {
-    const traceA = state.mode2?.a;
-    const traceB = state.mode2?.b;
-    const traceC = state.mode2?.c;
-    const demoLmA = traceA?.samples ? getDemoLandmarksAtTime(traceA.samples, tScore) : null;
-    const demoLmB = traceB?.samples ? getDemoLandmarksAtTime(traceB.samples, tScore) : null;
-    const demoLmC = traceC?.samples ? getDemoLandmarksAtTime(traceC.samples, tScore) : null;
-    const lm =
-      id === SKELETON_IDS.m2_a ? demoLmA
-      : id === SKELETON_IDS.m2_b ? demoLmB
-      : id === SKELETON_IDS.m2_c ? demoLmC
-      : id === SKELETON_IDS.m2_user ? state.latestUserLandmarks
-      : null;
-    const getter = id === SKELETON_IDS.m2_user ? getLmXYV : getArrXYV;
-    return { lm, getter };
+    if (id === SKELETON_IDS.m2_user) return { lm: state.latestUserLandmarks, getter: getLmXYV };
+    if (isMode2TraceSkeletonId(id)) {
+      const traceId = id.slice("m2_trace_".length);
+      const tr = (state.mode2?.traces || []).find((t) => String(t.id) === traceId);
+      const samples = tr?.data?.samples;
+      const lm = Array.isArray(samples) ? getDemoLandmarksAtTime(samples, tScore) : null;
+      return { lm, getter: getArrXYV };
+    }
+    return { lm: null, getter: getArrXYV };
   }
 
   const hintMode =
@@ -2097,11 +2107,9 @@ function getPlayerTimeSafe() {
 
 function updateMode2VideoMismatchWarn() {
   if (!els.mode2WarnText) return;
-  const vids = [
-    state.mode2?.a?.videoId,
-    state.mode2?.b?.videoId,
-    state.mode2?.c?.videoId,
-  ].filter((x) => typeof x === "string" && x.length > 0);
+  const vids = (state.mode2?.traces || [])
+    .map((t) => t?.data?.videoId)
+    .filter((x) => typeof x === "string" && x.length > 0);
   const unique = new Set(vids);
   const current = state.videoId;
   const anyMismatchWithCurrent =
@@ -2145,42 +2153,23 @@ function drawMode2Overlay(tScore) {
       : DEMO_SOURCE_ASPECT;
   const defaultRects = getDefaultRectsMode2(w, h, videoAspect);
 
-  // demo (A/B/C) colors
+  // demo (traces) colors
   const demoColor = "rgba(34,197,94,0.95)";
   // user (center) colors
   const userColor = "rgba(59,130,246,0.95)";
 
-  // A/B/C traces
-  const traceA = state.mode2?.a;
-  const traceB = state.mode2?.b;
-  const traceC = state.mode2?.c;
-
-  const demoLmA = traceA?.samples ? getDemoLandmarksAtTime(traceA.samples, tScore) : null;
-  const demoLmB = traceB?.samples ? getDemoLandmarksAtTime(traceB.samples, tScore) : null;
-  const demoLmC = traceC?.samples ? getDemoLandmarksAtTime(traceC.samples, tScore) : null;
-
-  // scale mapping (UI -> role)
-  // L1 -> A (left bottom), L2 -> B (right bottom), R1 -> C (top center), R2 -> user (center)
-  const rectA = getDrawRect(SKELETON_IDS.m2_a, defaultRects);
-  const rectB = getDrawRect(SKELETON_IDS.m2_b, defaultRects);
-  const rectC = getDrawRect(SKELETON_IDS.m2_c, defaultRects);
   const rectUser = getDrawRect(SKELETON_IDS.m2_user, defaultRects);
 
-  // Draw A/B/C first (behind), then user skeleton on top.
-  // abcEnabled=false：只保留使用者即時骨架
-  if (state.mode2?.abcEnabled) {
-    if (demoLmA) {
-      drawPoseConnections(ctx, demoLmA, getArrXYV, rectA, () => demoColor, 5);
-      drawPosePoints(ctx, demoLmA, getArrXYV, rectA, demoColor, 4.5);
-    }
-    if (demoLmB) {
-      drawPoseConnections(ctx, demoLmB, getArrXYV, rectB, () => demoColor, 5);
-      drawPosePoints(ctx, demoLmB, getArrXYV, rectB, demoColor, 4.5);
-    }
-    if (demoLmC) {
-      drawPoseConnections(ctx, demoLmC, getArrXYV, rectC, () => demoColor, 5);
-      drawPosePoints(ctx, demoLmC, getArrXYV, rectC, demoColor, 4.5);
-    }
+  // Draw traces first (behind), then user skeleton on top.
+  const traces = state.mode2?.traces || [];
+  for (const tr of traces) {
+    if (!tr || tr.enabled === false) continue;
+    const id = mode2TraceSkeletonId(tr.id);
+    const rect = getDrawRect(id, defaultRects);
+    const lm = tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, tScore) : null;
+    if (!rect || !lm) continue;
+    drawPoseConnections(ctx, lm, getArrXYV, rect, () => demoColor, 5);
+    drawPosePoints(ctx, lm, getArrXYV, rect, demoColor, 4.5);
   }
 
   if (state.latestUserLandmarks) {
@@ -2202,6 +2191,23 @@ function drawMode2Overlay(tScore) {
       ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
+
+      // delete button (only for mode2 traces)
+      if (isMode2TraceSkeletonId(sel)) {
+        const dr = getDeleteButtonRectForBBox(rSel);
+        if (dr) {
+          ctx.fillStyle = "rgba(239,68,68,0.92)";
+          ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
+          ctx.strokeStyle = "rgba(255,255,255,0.95)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(dr.x + 4, dr.y + 4);
+          ctx.lineTo(dr.x + dr.w - 4, dr.y + dr.h - 4);
+          ctx.moveTo(dr.x + dr.w - 4, dr.y + 4);
+          ctx.lineTo(dr.x + 4, dr.y + dr.h - 4);
+          ctx.stroke();
+        }
+      }
     }
   }
 
@@ -2492,10 +2498,12 @@ async function main() {
     state.demo.easy = easy;
     state.demo.hard = hard;
 
-    // Mode2 預設：A=easy、B=hard、C=easy（等你錄好再用本機載入替換）
-    state.mode2.a = easy;
-    state.mode2.b = hard;
-    state.mode2.c = easy;
+    // Mode2 預設：先放 3 支示範（你也可以再用「載入骨架」新增更多）
+    state.mode2.traces = [
+      { id: `demo_${formatTsForFilename()}_0`, name: "demo_easy", data: easy, enabled: true },
+      { id: `demo_${formatTsForFilename()}_1`, name: "demo_hard", data: hard, enabled: true },
+      { id: `demo_${formatTsForFilename()}_2`, name: "demo_easy2", data: easy, enabled: true },
+    ];
     updateMode2VideoMismatchWarn();
 
     computeDemoEnergyForTrace(state.demo.easy);
@@ -2571,58 +2579,64 @@ async function main() {
     });
   }
 
-  // Mode2: 載入骨架 A/B/C
-  if (
-    els.mode2SkeletonFileInput &&
-    (els.loadSkeletonAButton || els.loadSkeletonBButton || els.loadSkeletonCButton)
-  ) {
-    const onClickSlot = (slot) => {
+  // Mode2: 載入骨架（不限數量）
+  if (els.loadMode2SkeletonButton && els.mode2SkeletonFileInput) {
+    els.loadMode2SkeletonButton.addEventListener("click", () => {
       if (state.ui.mode !== "mode2") return;
-      state.mode2.pendingSlot = slot;
       els.mode2SkeletonFileInput.value = "";
       els.mode2SkeletonFileInput.click();
-    };
-
-    if (els.loadSkeletonAButton) {
-      els.loadSkeletonAButton.addEventListener("click", () => onClickSlot("a"));
-    }
-    if (els.loadSkeletonBButton) {
-      els.loadSkeletonBButton.addEventListener("click", () => onClickSlot("b"));
-    }
-    if (els.loadSkeletonCButton) {
-      els.loadSkeletonCButton.addEventListener("click", () => onClickSlot("c"));
-    }
+    });
 
     els.mode2SkeletonFileInput.addEventListener("change", async () => {
-      const file =
-        els.mode2SkeletonFileInput.files && els.mode2SkeletonFileInput.files[0];
-      const slot = state.mode2.pendingSlot;
-      state.mode2.pendingSlot = null;
-      if (!file || !slot) return;
-      try {
-        const data = await loadTraceFromFile(file);
-        state.mode2[slot] = data;
-        updateMode2VideoMismatchWarn();
-      } catch (err) {
-        console.error("[Mode2Trace] load failed:", err);
+      if (state.ui.mode !== "mode2") return;
+      const files = els.mode2SkeletonFileInput.files;
+      if (!files || !files.length) return;
+
+      for (const file of Array.from(files)) {
+        try {
+          const data = await loadTraceFromFile(file);
+          const id = `u_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+          const name = file?.name || id;
+          state.mode2.traces.push({ id, name, data, enabled: true });
+          // auto select the newly added trace
+          state.interact.selectedId = mode2TraceSkeletonId(id);
+        } catch (err) {
+          console.error("[Mode2Trace] load failed:", err);
+        }
       }
+
+      updateMode2VideoMismatchWarn();
+      clearOverlayCanvas();
     });
   }
 
-  // Mode2：關閉/開啟示範骨架 A/B/C
+  // Mode2：關閉/顯示骨架（選取則只切該支；未選取則切全部）
   if (els.toggleMode2DemoABCButton) {
-    // init text
-    els.toggleMode2DemoABCButton.textContent = state.mode2.abcEnabled
-      ? "關閉骨架A/B/C"
-      : "顯示骨架A/B/C";
+    const updateText = () => {
+      // 文案固定，狀態由選取框/實際顯示判斷即可
+      els.toggleMode2DemoABCButton.textContent = "關閉/顯示骨架";
+    };
+    updateText();
 
     els.toggleMode2DemoABCButton.addEventListener("click", () => {
-      state.mode2.abcEnabled = !state.mode2.abcEnabled;
-      els.toggleMode2DemoABCButton.textContent = state.mode2.abcEnabled
-        ? "關閉骨架A/B/C"
-        : "顯示骨架A/B/C";
-      // 只有「關閉」時清空一次，避免殘影；「顯示」時不必清空
-      if (!state.mode2.abcEnabled) clearOverlayCanvas();
+      if (state.ui.mode !== "mode2") return;
+      const traces = state.mode2.traces || [];
+      const sel = state.interact?.selectedId;
+      if (sel && isMode2TraceSkeletonId(sel)) {
+        const traceId = sel.slice("m2_trace_".length);
+        const t = traces.find((x) => String(x.id) === traceId);
+        if (t) t.enabled = !(t.enabled !== false);
+        clearOverlayCanvas();
+        return;
+      }
+
+      // fallback: toggle all
+      const anyEnabled = traces.some((t) => t && t.enabled !== false);
+      for (const t of traces) {
+        if (!t) continue;
+        t.enabled = !anyEnabled;
+      }
+      clearOverlayCanvas();
     });
   }
 
@@ -2662,6 +2676,29 @@ async function main() {
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
+
+      // If a mode2 trace is selected and user clicks the delete X, delete it.
+      const selIdForDelete = state.interact.selectedId;
+      if (
+        state.ui.mode === "mode2" &&
+        isMode2TraceSkeletonId(selIdForDelete) &&
+        typeof tScore === "number" &&
+        Number.isFinite(tScore)
+      ) {
+        const bbox = getSkeletonBBoxRectForId(selIdForDelete, defaults, tScore, 8);
+        const dr = bbox ? getDeleteButtonRectForBBox(bbox) : null;
+        if (dr && pointInRect(dr, x, y)) {
+          const traceId = selIdForDelete.slice("m2_trace_".length);
+          state.mode2.traces = (state.mode2.traces || []).filter((t) => String(t.id) !== traceId);
+          if (state.interact?.rectOverrides) {
+            delete state.interact.rectOverrides[selIdForDelete];
+          }
+          state.interact.selectedId = null;
+          clearOverlayCanvas();
+          ev.preventDefault();
+          return;
+        }
+      }
 
       const selId = state.interact.selectedId;
       // Use tight bbox only for corner-hit UX, but apply resize to draw-rect (container).
