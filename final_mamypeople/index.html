@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pose Dance Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar__title">
+          <h1>Pose Dance Test</h1>
+        </div>
+
+        <div class="topbar__controls">
+          <div class="topbar__controls-group topbar__controls-group--left">
+            <input
+              id="videoUrlInput"
+              class="topbar__url-input topbar__url-input--compact"
+              type="text"
+              placeholder="貼上 YouTube 網址"
+            />
+            <button id="loadVideoButton" class="btn btn-load" type="button">
+              載入影片
+            </button>
+            <button id="pickSongButton" class="btn btn-load" type="button">
+              挑選音樂
+            </button>
+            <button id="loadSkeletonButton" class="btn btn-load" type="button">
+              載入骨架
+            </button>
+            <button id="toggleMode1DemoButton" class="btn btn-load" type="button">
+              隱藏骨架
+            </button>
+            <button
+              id="loadMode2SkeletonButton"
+              class="btn btn-load"
+              type="button"
+              style="display: none"
+            >
+              載入骨架
+            </button>
+            <button
+              id="toggleMode2DemoABCButton"
+              class="btn btn-load"
+              type="button"
+              style="display: none"
+            >
+              關閉/顯示骨架
+            </button>
+            <input
+              id="skeletonFileInput"
+              class="topbar__file-input"
+              type="file"
+              accept="application/json,.json"
+              style="display: none"
+            />
+            <input
+              id="mode2SkeletonFileInput"
+              class="topbar__file-input"
+              type="file"
+              accept="application/json,.json"
+              multiple
+              style="display: none"
+            />
+          </div>
+          <div class="topbar__controls-group topbar__controls-group--right">
+            <select id="modeSelect" class="topbar__mode-select" aria-label="模式">
+              <option value="mode1" selected>Mode 1</option>
+              <option value="mode2">Mode 2</option>
+            </select>
+            <select id="detectorSelect" class="topbar__mode-select" aria-label="偵測器">
+              <option value="mp" selected>MP Detector</option>
+              <option value="coco">COCO-SSD</option>
+            </select>
+            <label class="small" style="display:flex;align-items:center;gap:6px;">
+              <input id="bboxSmoothToggle" type="checkbox" checked />
+              BBox平滑
+            </label>
+            <select id="hintModeSelect" class="topbar__mode-select">
+              <option value="easy" selected>Easy</option>
+              <option value="hard">Hard</option>
+              <option value="user">使用者</option>
+            </select>
+            <button id="startCameraButton" class="btn btn-camera" type="button">
+              啟動攝影機
+            </button>
+            <button id="recordButton" class="btn btn-record" type="button" disabled>
+              開始錄製
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="modal-backdrop" id="songModalBackdrop" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-label="挑選音樂">
+          <div class="modal__header">
+            <div class="modal__title">挑選音樂</div>
+            <button class="modal__close" id="songModalCloseButton" type="button">
+              關閉
+            </button>
+          </div>
+          <div class="modal__body">
+            <aside class="modal__sidebar">
+              <div class="modal__section-title">分類</div>
+              <div class="modal__categories" id="songCategories"></div>
+            </aside>
+            <section class="modal__content">
+              <div class="modal__search">
+                <input
+                  id="songSearchInput"
+                  class="topbar__url-input"
+                  type="text"
+                  placeholder="搜尋歌名/作曲者（q）"
+                />
+                <button id="songSearchButton" class="btn btn-load" type="button">
+                  搜尋
+                </button>
+              </div>
+              <div class="modal__list" id="songList"></div>
+              <div class="modal__footer">
+                <button id="songPrevPageButton" class="btn btn-load" type="button">
+                  上一頁
+                </button>
+                <div class="small" id="songPageText">—</div>
+                <button id="songNextPageButton" class="btn btn-load" type="button">
+                  下一頁
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <main class="main">
+        <section class="main__stage main__stage--user" aria-label="使用者骨架">
+          <div class="camera-wrapper camera-wrapper--full">
+            <video id="input_video" playsinline></video>
+            <canvas id="output_canvas"></canvas>
+            <canvas id="overlay_canvas"></canvas>
+
+            <!-- 畫布內側底部：示範骨架縮放（依序 L1 / L2 / R1 / R2，中間留空） -->
+            <div id="demoScaleBottom" class="demo-scale-bottom demo-scale-bottom--overlay" aria-label="示範骨架縮放">
+              <div class="demo-scale-bottom__left">
+                <input id="demoScaleL1" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
+                <input id="demoScaleL2" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
+              </div>
+              <div class="demo-scale-bottom__spacer" aria-hidden="true"></div>
+              <div class="demo-scale-bottom__right">
+                <input id="demoScaleR1" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
+                <input id="demoScaleR2" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
+              </div>
+            </div>
+          </div>
+          <div class="hud small" id="poseInfoText">尚未開始偵測</div>
+        </section>
+      </main>
+
+      <!-- 右下角：可拖曳/縮放的 YouTube 小視窗 -->
+      <div id="ytPlayerWrapper" class="yt-wrapper" aria-label="YouTube 播放器">
+        <div class="yt-wrapper__drag-handle" id="ytDragHandle">
+          <span class="small">YouTube</span>
+        </div>
+        <div id="player" class="yt-wrapper__player"></div>
+        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--tl" id="ytResizeHandleTL"></div>
+        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--tr" id="ytResizeHandleTR"></div>
+        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--bl" id="ytResizeHandleBL"></div>
+        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--br" id="ytResizeHandle"></div>
+      </div>
+
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "@mediapipe/tasks-vision": "https://esm.sh/@mediapipe/tasks-vision"
+        }
+      }
+    </script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,306 @@
+.camera-wrapper {
+  position: relative;
+  background: #000000;
+}
+
+.main,
+.main__stage {
+  background: #000000;
+}
+
+#input_video {
+  display: none;
+}
+
+.topbar__url-input--compact {
+  flex: 0 1 260px;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+
+.modal-backdrop.is-open {
+  display: flex;
+}
+
+.modal {
+  width: min(1040px, calc(100vw - 36px));
+  height: min(720px, calc(100vh - 36px));
+  background: #ffffff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.modal__title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modal__close {
+  border: none;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.modal__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 0;
+}
+
+.modal__sidebar {
+  border-right: 1px solid rgba(15, 23, 42, 0.10);
+  padding: 12px;
+  overflow: auto;
+}
+
+.modal__content {
+  padding: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.modal__section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.modal__categories {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal__cat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.modal__cat.is-active {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.modal__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal__list {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 12px;
+}
+
+.modal__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.modal__item:last-child {
+  border-bottom: none;
+}
+
+.modal__item-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modal__item-meta {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.modal__pick {
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .modal__body {
+    grid-template-columns: 1fr;
+  }
+  .modal__sidebar {
+    border-right: none;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+  }
+}
+
+#overlay_canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  /* 需要接收 pointer 事件以支援骨架拖曳/縮放 */
+  pointer-events: auto;
+  z-index: 10;
+  /* 與 input_video / output_canvas 一致：鏡像使用者畫面 */
+  transform: scaleX(-1);
+}
+
+/* 確保 output_canvas 在 overlay 下方（原本用來畫骨架/遮罩的那層） */
+#output_canvas {
+  z-index: 5;
+  /* 測試頁改用 overlay_canvas 畫提示與骨架，避免 MediaPipe 原生繪圖疊成多套 */
+  display: none;
+}
+
+.demo-scale-bottom {
+  z-index: 40;
+}
+
+/* 拖曳/縮放已取代底部縮放拉桿：先隱藏 UI（保留 JS 邏輯） */
+#demoScaleBottom {
+  display: none;
+}
+
+.demo-scale-bottom--overlay {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr minmax(24px, 22%) 1fr;
+  gap: 8px;
+}
+
+.demo-scale-bottom__left,
+.demo-scale-bottom__right {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.demo-scale-bottom__spacer {
+  pointer-events: none;
+}
+
+.demo-scale-bottom--overlay input[type="range"] {
+  width: 100%;
+  height: 7px;
+  accent-color: rgba(34, 197, 94, 0.95);
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+/* 更細的 track */
+.demo-scale-bottom--overlay input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.demo-scale-bottom--overlay input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 7px;
+  height: 7px;
+  margin-top: -2.5px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.95);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.demo-scale-bottom--overlay input[type="range"]::-moz-range-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.demo-scale-bottom--overlay input[type="range"]::-moz-range-thumb {
+  width: 7px;
+  height: 7px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.95);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.demo-scale-bottom--overlay input[type="range"]::-moz-range-progress {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.55);
+}
+
+@media (max-width: 900px) {
+  .demo-scale-bottom--overlay {
+    grid-template-columns: 1fr minmax(16px, 10%) 1fr;
+    padding: 8px 8px;
+    gap: 8px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+  }
+  .demo-scale-bottom__left,
+  .demo-scale-bottom__right {
+    gap: 8px;
+  }
+}
+
