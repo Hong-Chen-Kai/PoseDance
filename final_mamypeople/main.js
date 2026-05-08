@@ -41,6 +41,7 @@ const DEMO_POSE_CONNECTIONS = [
 ];
 
 const state = {
+  // YouTube 相關已移除：改用本機時間軸（performance.now）
   player: null,
   ready: false,
   ytInitStarted: false,
@@ -84,21 +85,7 @@ const state = {
     samples: [],
   },
 
-  music: {
-    open: false,
-    categories: [],
-    selectedCategory: null,
-    q: "",
-    page: 1,
-    limit: 20,
-    sort: "uploaded_at",
-    order: "desc",
-    items: [],
-    total: 0,
-    pages: 1,
-    loading: false,
-    error: null,
-  },
+  music: null,
 
   // Pose
   poseReady: false,
@@ -201,7 +188,6 @@ function initDomRefs() {
   els.overallHardText = $("overallHardText");
   els.overallLoadedText = $("overallLoadedText");
   els.modeText = $("modeText");
-  els.videoUrlInput = $("videoUrlInput");
   els.modeSelect = $("modeSelect");
   els.hintModeSelect = $("hintModeSelect");
   els.mode2WarnText = $("mode2WarnText");
@@ -210,8 +196,6 @@ function initDomRefs() {
   els.demoScaleR1 = $("demoScaleR1");
   els.demoScaleR2 = $("demoScaleR2");
   els.demoScaleBottom = $("demoScaleBottom");
-  els.loadVideoButton = $("loadVideoButton");
-  els.pickSongButton = $("pickSongButton");
   els.loadSkeletonButton = $("loadSkeletonButton");
   els.loadMode2SkeletonButton = $("loadMode2SkeletonButton");
   els.toggleMode2DemoABCButton = $("toggleMode2DemoABCButton");
@@ -227,23 +211,6 @@ function initDomRefs() {
   els.inputVideo = $("input_video");
   els.outputCanvas = $("output_canvas");
   els.overlayCanvas = $("overlay_canvas");
-
-  els.songModalBackdrop = $("songModalBackdrop");
-  els.songModalCloseButton = $("songModalCloseButton");
-  els.songCategories = $("songCategories");
-  els.songList = $("songList");
-  els.songSearchInput = $("songSearchInput");
-  els.songSearchButton = $("songSearchButton");
-  els.songPrevPageButton = $("songPrevPageButton");
-  els.songNextPageButton = $("songNextPageButton");
-  els.songPageText = $("songPageText");
-
-  els.ytWrapper = $("ytPlayerWrapper");
-  els.ytDragHandle = $("ytDragHandle");
-  els.ytResizeHandle = $("ytResizeHandle");
-  els.ytResizeHandleTL = $("ytResizeHandleTL");
-  els.ytResizeHandleTR = $("ytResizeHandleTR");
-  els.ytResizeHandleBL = $("ytResizeHandleBL");
 
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
 }
@@ -415,9 +382,6 @@ function stopCameraIfRunning() {
 
 function setControlsDisabled(disabled) {
   const dis = Boolean(disabled);
-  if (els.videoUrlInput) els.videoUrlInput.disabled = dis;
-  if (els.loadVideoButton) els.loadVideoButton.disabled = dis;
-  if (els.pickSongButton) els.pickSongButton.disabled = dis;
   if (els.loadSkeletonButton) els.loadSkeletonButton.disabled = dis;
   if (els.hintModeSelect) els.hintModeSelect.disabled = dis;
   if (els.startCameraButton) els.startCameraButton.disabled = dis;
@@ -530,23 +494,8 @@ function extractVideoId(input) {
 }
 
 function loadVideoByIdIfReady({ autoplay = true } = {}) {
-  if (
-    !state.ready ||
-    !state.player ||
-    !state.videoId ||
-    (typeof state.player.loadVideoById !== "function" &&
-      typeof state.player.cueVideoById !== "function")
-  ) {
-    return false;
-  }
-  if (state.lastLoadedVideoId === state.videoId) return true;
-  if (!autoplay && typeof state.player.cueVideoById === "function") {
-    state.player.cueVideoById(state.videoId);
-  } else {
-    state.player.loadVideoById(state.videoId);
-  }
-  state.lastLoadedVideoId = state.videoId;
-  return true;
+  void autoplay;
+  return false;
 }
 
 function getDefaultRectsMode1(w, h, videoAspect) {
@@ -844,218 +793,30 @@ function constrainRectBySkeletonBBox({ id, rect, w, h, tScore, padPx = 8, anchor
   return r;
 }
 
+// Music / YouTube UI 已移除
 const API_BASE = "https://imuse.ncnu.edu.tw/Midi-library";
 
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return await res.json();
-}
-
-function parseYoutubeUrlFromText(text) {
-  if (!text) return null;
-  const m = String(text).match(/https?:\/\/(?:www\.)?(?:youtu\.be\/[^\s]+|youtube\.com\/[^\s]+)/i);
-  return m ? m[0] : null;
-}
-
-function extractVideoIdFromAny(raw) {
-  const id = extractVideoId(raw);
-  if (id) return id;
-  const url = parseYoutubeUrlFromText(raw);
-  return url ? extractVideoId(url) : null;
-}
-
-function openSongModal() {
-  state.music.open = true;
-  if (els.songModalBackdrop) {
-    els.songModalBackdrop.classList.add("is-open");
-    els.songModalBackdrop.setAttribute("aria-hidden", "false");
-  }
-}
-
-function closeSongModal() {
-  state.music.open = false;
-  if (els.songModalBackdrop) {
-    els.songModalBackdrop.classList.remove("is-open");
-    els.songModalBackdrop.setAttribute("aria-hidden", "true");
-  }
-}
-
-function renderSongCategories() {
-  if (!els.songCategories) return;
-  const cats = Array.isArray(state.music.categories) ? state.music.categories : [];
-  const selected = state.music.selectedCategory;
-  const parts = [];
-  parts.push(
-    `<button class="modal__cat ${selected ? "" : "is-active"}" data-cat="">全部</button>`,
-  );
-  for (const c of cats) {
-    const safe = String(c);
-    const active = selected === safe;
-    parts.push(
-      `<button class="modal__cat ${active ? "is-active" : ""}" data-cat="${encodeURIComponent(safe)}">${safe}</button>`,
-    );
-  }
-  els.songCategories.innerHTML = parts.join("");
-  els.songCategories.querySelectorAll(".modal__cat").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const catEnc = btn.getAttribute("data-cat") || "";
-      state.music.selectedCategory = catEnc ? decodeURIComponent(catEnc) : null;
-      renderSongCategories();
-      renderSongList();
-    });
-  });
-}
-
-function renderSongList() {
-  if (!els.songList) return;
-  const m = state.music;
-  if (m.loading) {
-    els.songList.innerHTML = `<div class="modal__item"><div><div class="modal__item-title">載入中...</div></div></div>`;
-    return;
-  }
-  if (m.error) {
-    els.songList.innerHTML = `<div class="modal__item"><div><div class="modal__item-title">載入失敗</div><div class="modal__item-meta">${String(m.error)}</div></div></div>`;
-    return;
-  }
-
-  const selectedCat = m.selectedCategory;
-  const list = (Array.isArray(m.items) ? m.items : []).filter((it) => {
-    if (!selectedCat) return true;
-    const cats = Array.isArray(it?.categories) ? it.categories : [];
-    return cats.includes(selectedCat) || it?.categories_text === selectedCat;
-  });
-
-  if (!list.length) {
-    els.songList.innerHTML = `<div class="modal__item"><div><div class="modal__item-title">沒有資料</div><div class="modal__item-meta">請換分類或搜尋</div></div></div>`;
-  } else {
-    els.songList.innerHTML = list
-      .map((it) => {
-        const title = it?.title ? String(it.title) : "（無標題）";
-        const composer = it?.composer ? String(it.composer) : "";
-        const catText = it?.categories_text ? String(it.categories_text) : "";
-        const tags = it?.tags ? String(it.tags) : "";
-        const desc = it?.description ? String(it.description) : "";
-        const id = it?.id ? String(it.id) : "";
-        const meta = [composer, catText, tags].filter(Boolean).join(" · ");
-        return `
-          <div class="modal__item">
-            <div>
-              <div class="modal__item-title">${title}</div>
-              <div class="modal__item-meta">${meta}</div>
-              <div class="modal__item-meta">${desc}</div>
-            </div>
-            <button class="modal__pick" data-mid="${encodeURIComponent(id)}">選取</button>
-          </div>
-        `;
-      })
-      .join("");
-
-    els.songList.querySelectorAll(".modal__pick").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const midEnc = btn.getAttribute("data-mid") || "";
-        const mid = midEnc ? decodeURIComponent(midEnc) : "";
-        const it = (Array.isArray(m.items) ? m.items : []).find((x) => String(x?.id || "") === mid);
-        if (!it) return;
-        const url = parseYoutubeUrlFromText(it.description) || "";
-        const vid = extractVideoIdFromAny(url);
-        if (!vid) return;
-        if (els.videoUrlInput) els.videoUrlInput.value = vid;
-        state.videoId = vid;
-        state.lastLoadedVideoId = null;
-        loadVideoByIdIfReady({ autoplay: false });
-        closeSongModal();
-      });
-    });
-  }
-
-  if (els.songPageText) {
-    els.songPageText.textContent = `第 ${m.page}/${m.pages} 頁（共 ${m.total}）`;
-  }
-  if (els.songPrevPageButton) els.songPrevPageButton.disabled = m.page <= 1;
-  if (els.songNextPageButton) els.songNextPageButton.disabled = m.page >= m.pages;
-}
-
-async function loadCategories() {
-  const m = state.music;
-  try {
-    m.error = null;
-    const data = await fetchJson(`${API_BASE}/api/categories`);
-    m.categories = Array.isArray(data) ? data : [];
-    renderSongCategories();
-  } catch (err) {
-    m.categories = [];
-    m.error = err?.message || String(err);
-  }
-}
-
-async function loadMidisPage() {
-  const m = state.music;
-  m.loading = true;
-  m.error = null;
-  renderSongList();
-  const q = m.q ? `q=${encodeURIComponent(m.q)}` : "";
-  const url = `${API_BASE}/api/midis?${[
-    q,
-    `page=${encodeURIComponent(m.page)}`,
-    `limit=${encodeURIComponent(m.limit)}`,
-    `sort=${encodeURIComponent(m.sort)}`,
-    `order=${encodeURIComponent(m.order)}`,
-  ]
-    .filter(Boolean)
-    .join("&")}`;
-  try {
-    const data = await fetchJson(url);
-    m.items = Array.isArray(data?.items) ? data.items : [];
-    m.total = typeof data?.total === "number" ? data.total : 0;
-    m.page = typeof data?.page === "number" ? data.page : m.page;
-    m.pages = typeof data?.pages === "number" ? data.pages : 1;
-  } catch (err) {
-    m.items = [];
-    m.total = 0;
-    m.pages = 1;
-    m.error = err?.message || String(err);
-  } finally {
-    m.loading = false;
-    renderSongList();
-  }
-}
+// YouTube / 音樂挑選已移除（保留空函式避免舊呼叫噴錯）
+async function fetchJson() {}
+function parseYoutubeUrlFromText() { return null; }
+function extractVideoIdFromAny() { return null; }
+function openSongModal() {}
+function closeSongModal() {}
+function renderSongCategories() {}
+function renderSongList() {}
+async function loadCategories() {}
+async function loadMidisPage() {}
 
 function initYouTubePlayerIfPossible() {
-  if (state.ytInitStarted) return;
-  if (state.player) return;
-  const YTGlobal = typeof window !== "undefined" ? window.YT : null;
-  if (!YTGlobal || typeof YTGlobal.Player !== "function") return;
-
-  state.ytInitStarted = true;
-  state.player = new YT.Player("player", {
-    height: "180",
-    width: "320",
-    videoId: state.videoId || "dQw4w9WgXcQ",
-    playerVars: {
-      playsinline: 1,
-      enablejsapi: 1,
-      origin:
-        typeof window !== "undefined" ? window.location.origin : undefined,
-    },
-    events: {
-      onReady: () => {
-        state.ready = true;
-        // 避免一進頁面就自動播放：預設只 cue（或維持當前）
-        loadVideoByIdIfReady({ autoplay: false });
-      },
-      onError: (event) => {
-        console.error("[YouTube] errorCode =", event.data);
-      },
-    },
-  });
+  // YouTube 已移除
 }
 
-window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
-  initYouTubePlayerIfPossible();
-};
+// window.onYouTubeIframeAPIReady 已移除
 
 function setupYtFloatingWindow() {
+  // YouTube 已移除
+  return;
+  // eslint-disable-next-line no-unreachable
   if (!els.ytWrapper) return;
 
   const wrapper = els.ytWrapper;
@@ -2029,6 +1790,23 @@ function clamp(x, a, b) {
   return Math.max(a, Math.min(b, x));
 }
 
+function drawBBoxOnStage(ctx, bboxPx, videoW, videoH, stageRect, color) {
+  if (!bboxPx || !videoW || !videoH || !stageRect) return;
+  const nx = bboxPx.x / Math.max(1, videoW);
+  const ny = bboxPx.y / Math.max(1, videoH);
+  const nw = bboxPx.w / Math.max(1, videoW);
+  const nh = bboxPx.h / Math.max(1, videoH);
+  const x = stageRect.ox + nx * stageRect.dw;
+  const y = stageRect.oy + ny * stageRect.dh;
+  const w = nw * stageRect.dw;
+  const h = nh * stageRect.dh;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+  ctx.restore();
+}
+
 function bboxFromCoco(pred) {
   // coco-ssd: bbox = [x, y, width, height]
   const b = pred?.bbox;
@@ -2398,14 +2176,8 @@ async function initPose() {
 }
 
 function getPlayerTimeSafe() {
-  if (!state.player || typeof state.player.getCurrentTime !== "function")
-    return null;
-  try {
-    const t = state.player.getCurrentTime();
-    return typeof t === "number" && Number.isFinite(t) ? t : null;
-  } catch {
-    return null;
-  }
+  // YouTube 已移除：改用本機時間軸（秒）
+  return performance.now() / 1000;
 }
 
 function updateMode2VideoMismatchWarn() {
@@ -2473,6 +2245,18 @@ function drawMode2Overlay(tScore) {
     if (!rect || !lm) continue;
     drawPoseConnections(ctx, lm, getArrXYV, rect, () => demoColor, 5);
     drawPosePoints(ctx, lm, getArrXYV, rect, demoColor, 4.5);
+  }
+
+  // many-people debug: draw A/B bboxes
+  if (els.inputVideo?.videoWidth && els.inputVideo?.videoHeight && rectUser) {
+    const vw = els.inputVideo.videoWidth;
+    const vh = els.inputVideo.videoHeight;
+    if (state.many?.tracks?.a) {
+      drawBBoxOnStage(ctx, state.many.tracks.a, vw, vh, rectUser, "rgba(59,130,246,0.95)");
+    }
+    if (state.many?.tracks?.b) {
+      drawBBoxOnStage(ctx, state.many.tracks.b, vw, vh, rectUser, "rgba(168,85,247,0.95)");
+    }
   }
 
   if (state.latestUserLandmarks) {
@@ -2727,6 +2511,18 @@ function updateUiLoop() {
       const stageRect0 = getDrawRect(SKELETON_IDS.m1_user, defaultRects);
       const stageRect = stageRect0 || computeContainRect(w, h, videoAspect);
 
+      // many-people debug: draw A/B bboxes (for testing)
+      if (els.inputVideo?.videoWidth && els.inputVideo?.videoHeight) {
+        const vw = els.inputVideo.videoWidth;
+        const vh = els.inputVideo.videoHeight;
+        if (state.many?.tracks?.a) {
+          drawBBoxOnStage(ctx, state.many.tracks.a, vw, vh, stageRect, "rgba(59,130,246,0.95)");
+        }
+        if (state.many?.tracks?.b) {
+          drawBBoxOnStage(ctx, state.many.tracks.b, vw, vh, stageRect, "rgba(168,85,247,0.95)");
+        }
+      }
+
       // User skeleton (white / red hints / blue when good)
       const blueColor = "rgba(59,130,246,0.95)";
       const whiteColor = "rgba(255,255,255,0.92)";
@@ -2802,8 +2598,7 @@ async function main() {
   bindDemoScaleSlider(els.demoScaleL2, "l2");
   bindDemoScaleSlider(els.demoScaleR1, "r1");
   bindDemoScaleSlider(els.demoScaleR2, "r2");
-  setupYtFloatingWindow();
-  initYouTubePlayerIfPossible();
+  // YouTube 已移除
 
   try {
     const [easy, hard] = await Promise.all([
@@ -2826,12 +2621,7 @@ async function main() {
     computeDemoPartEnergyForTrace(state.demo.easy);
     computeDemoPartEnergyForTrace(state.demo.hard);
 
-    if (!state.videoId && typeof easy.videoId === "string" && easy.videoId) {
-      state.videoId = easy.videoId;
-      if (els.videoUrlInput) els.videoUrlInput.value = easy.videoId;
-    }
-    // 初始載入 demo 附帶的 videoId：只 cue 不自動播放
-    loadVideoByIdIfReady({ autoplay: false });
+    // YouTube 已移除：不處理 videoId
   } catch (err) {
     console.error("[DemoTrace] load failed:", err);
   }
@@ -2860,16 +2650,7 @@ async function main() {
     applyMode("mode1");
   }
 
-  if (els.loadVideoButton) {
-    els.loadVideoButton.addEventListener("click", () => {
-      const raw = els.videoUrlInput ? els.videoUrlInput.value : "";
-      const id = extractVideoId(raw);
-      if (!id) return;
-      state.videoId = id;
-      state.lastLoadedVideoId = null;
-      loadVideoByIdIfReady({ autoplay: true });
-    });
-  }
+  // YouTube 已移除：不綁定載入影片按鈕
 
   if (els.loadSkeletonButton && els.skeletonFileInput) {
     els.loadSkeletonButton.addEventListener("click", () => {
