@@ -2101,14 +2101,19 @@ async function initPose() {
           const p1t0 = performance.now();
           const cropA = mA ? cropToCanvas(frame, mA, 512, roiCanvasA) : null;
           if (cropA) roiCanvasA = cropA.canvas;
-          const lmAraw = cropA ? await PoseModel.detect(cropA.canvas, timestampUs) : null;
+          const tsA = timestampUs;
+          const lmAraw = cropA ? await PoseModel.detect(cropA.canvas, tsA) : null;
           const p1t1 = performance.now();
 
           const p2t0 = performance.now();
           const cropB = mB ? cropToCanvas(frame, mB, 512, roiCanvasB) : null;
           if (cropB) roiCanvasB = cropB.canvas;
-          const lmBraw = cropB ? await PoseModel.detect(cropB.canvas, timestampUs) : null;
+          const tsB = tsA + 1;
+          const lmBraw = cropB ? await PoseModel.detect(cropB.canvas, tsB) : null;
           const p2t1 = performance.now();
+
+          // ensure global monotonic for next frame
+          lastTimestamp = tsB;
 
           const lmA = cropA && lmAraw ? mapLandmarksToFullNorm(lmAraw, cropA.bbox, vw, vh) : null;
           const lmB = cropB && lmBraw ? mapLandmarksToFullNorm(lmBraw, cropB.bbox, vw, vh) : null;

@@ -449,8 +449,11 @@ export const PoseModel = {
       return null;
     }
 
+    // timestamp 必須嚴格遞增，否則 graph 會噴 Packet timestamp mismatch
+    let ts = typeof timestamp === "number" && Number.isFinite(timestamp) ? timestamp : 0;
+    if (ts <= (this.lastTimestampUs || 0)) ts = (this.lastTimestampUs || 0) + 1;
     // 保存時間戳供 onResults 的 landmarks 前處理使用
-    this.lastTimestampUs = timestamp;
+    this.lastTimestampUs = ts;
 
     // 確保輸入尺寸已準備好（video 或 canvas）
     const vw =
@@ -469,7 +472,7 @@ export const PoseModel = {
 
     try {
       // 使用 detectForVideo 處理視頻幀
-      const results = this.instance.detectForVideo(video, timestamp);
+      const results = this.instance.detectForVideo(video, ts);
       this.onResults(results);
       return results?.landmarks?.[0] || null;
     } catch (error) {
