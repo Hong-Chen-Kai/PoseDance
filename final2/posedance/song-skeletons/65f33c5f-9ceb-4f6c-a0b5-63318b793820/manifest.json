@@ -1,0 +1,21 @@
+{
+  "songId": "65f33c5f-9ceb-4f6c-a0b5-63318b793820",
+  "title": "Salut d'Amour 愛的禮讚",
+  "youtubeVideoId": "N5z3ZO0QfFE",
+  "mode2Only": true,
+  "offsetSec": 0,
+  "mode2": {
+    "traces": [
+      {
+        "id": "SalutdAmour1",
+        "name": "SalutdAmour1",
+        "url": "./mode2/SalutdAmour1.json"
+      },
+      {
+        "id": "SalutdAmour2",
+        "name": "SalutdAmour2",
+        "url": "./mode2/SalutdAmour2.json"
+      }
+    ]
+  }
+}
