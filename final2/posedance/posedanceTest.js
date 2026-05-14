@@ -226,6 +226,7 @@ function initDomRefs() {
   els.loadSkeletonButton = $("loadSkeletonButton");
   els.loadMode2SkeletonButton = $("loadMode2SkeletonButton");
   els.toggleMode2DemoABCButton = $("toggleMode2DemoABCButton");
+  els.restoreMode2BindingButton = $("restoreMode2BindingButton");
   els.skeletonFileInput = $("skeletonFileInput");
   els.mode2SkeletonFileInput = $("mode2SkeletonFileInput");
   els.startCameraButton = $("startCameraButton");
@@ -496,6 +497,8 @@ function applyMode(mode) {
     if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "";
+    if (els.restoreMode2BindingButton)
+      els.restoreMode2BindingButton.style.display = "";
     if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "none";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
@@ -516,6 +519,8 @@ function applyMode(mode) {
     if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "none";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "none";
+    if (els.restoreMode2BindingButton)
+      els.restoreMode2BindingButton.style.display = "none";
     if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
@@ -936,6 +941,49 @@ async function loadMode1TraceFromBinding(def, key, manifestUrl) {
   return await loadDemoTrace(traceUrl);
 }
 
+function getMode2TraceDefsFromManifest(manifest) {
+  return Array.isArray(manifest?.mode2?.traces) ? manifest.mode2.traces : [];
+}
+
+async function loadMode2TracesFromManifest(manifest, manifestUrl) {
+  const mode2Defs = getMode2TraceDefsFromManifest(manifest);
+  const loadedTraces = [];
+  for (let i = 0; i < mode2Defs.length; i += 1) {
+    const def = mode2Defs[i];
+    const urlRaw =
+      typeof def?.url === "string" && def.url ? def.url.trim() : "";
+    if (!urlRaw) {
+      throw new Error(`song binding 的 mode2.traces[${i}] 缺少 url`);
+    }
+    const traceUrl = resolveBindingAssetUrl(urlRaw, manifestUrl);
+    const data = await loadDemoTrace(traceUrl);
+    loadedTraces.push({
+      id:
+        typeof def?.id === "string" && def.id
+          ? def.id
+          : `bound_${i}`,
+      name:
+        typeof def?.name === "string" && def.name
+          ? def.name
+          : `bound_trace_${i + 1}`,
+      data,
+      enabled: def?.enabled !== false,
+    });
+  }
+  return cloneMode2Traces(loadedTraces);
+}
+
+function applyMode2Traces(traces) {
+  state.mode2.traces = cloneMode2Traces(traces);
+  if (state.mode2.traces.length > 0) {
+    state.interact.selectedId = mode2TraceSkeletonId(state.mode2.traces[0].id);
+  } else {
+    state.interact.selectedId = null;
+  }
+  updateMode2VideoMismatchWarn();
+  clearOverlayCanvas();
+}
+
 function resolveSongBindingTargetMode(manifest, hasMode1, hasMode2) {
   const targetMode = manifest?.targetMode;
   if (targetMode === "mode1" || targetMode === "mode2") return targetMode;
@@ -951,9 +999,7 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   const mode1Def = manifest?.mode1 && typeof manifest.mode1 === "object"
     ? manifest.mode1
     : null;
-  const mode2Defs = Array.isArray(manifest?.mode2?.traces)
-    ? manifest.mode2.traces
-    : [];
+  const mode2Defs = getMode2TraceDefsFromManifest(manifest);
   const hasMode1 = !!(mode1Def?.easy || mode1Def?.hard);
   const hasMode2 = mode2Defs.length > 0;
   if (!hasMode1 && !hasMode2) {
@@ -985,44 +1031,16 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   if (state.demo.hard) computeDemoPartEnergyForTrace(state.demo.hard);
 
   if (hasMode2) {
-    const loadedTraces = [];
-    for (let i = 0; i < mode2Defs.length; i += 1) {
-      const def = mode2Defs[i];
-      const urlRaw =
-        typeof def?.url === "string" && def.url ? def.url.trim() : "";
-      if (!urlRaw) {
-        throw new Error(`song binding 的 mode2.traces[${i}] 缺少 url`);
-      }
-      const traceUrl = resolveBindingAssetUrl(urlRaw, manifestUrl);
-      const data = await loadDemoTrace(traceUrl);
-      loadedTraces.push({
-        id:
-          typeof def?.id === "string" && def.id
-            ? def.id
-            : `bound_${i}`,
-        name:
-          typeof def?.name === "string" && def.name
-            ? def.name
-            : `bound_trace_${i + 1}`,
-        data,
-        enabled: def?.enabled !== false,
-      });
-    }
-    state.mode2.traces = cloneMode2Traces(loadedTraces);
+    const loadedTraces = await loadMode2TracesFromManifest(manifest, manifestUrl);
+    applyMode2Traces(loadedTraces);
   } else {
-    state.mode2.traces = cloneMode2Traces(state.mode2.defaultTraces);
+    applyMode2Traces(state.mode2.defaultTraces);
   }
   state.songBinding.activeSongId =
     typeof manifest?.songId === "string" && manifest.songId
       ? manifest.songId
       : null;
   state.songBinding.manifestUrl = manifestUrl;
-
-  if (state.mode2.traces.length > 0) {
-    state.interact.selectedId = mode2TraceSkeletonId(state.mode2.traces[0].id);
-  } else {
-    state.interact.selectedId = null;
-  }
 
   const targetMode = resolveSongBindingTargetMode(manifest, hasMode1, hasMode2);
   if (targetMode === "mode1" || targetMode === "mode2") {
@@ -1037,8 +1055,6 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   }
 
   resetSongBindingUiState();
-  updateMode2VideoMismatchWarn();
-  clearOverlayCanvas();
   console.log("[SongBinding] 套用成功", {
     songId: state.songBinding.activeSongId,
     title: manifest?.title,
@@ -1047,6 +1063,39 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
     traceCount: state.mode2.traces.length,
   });
   return setVideoIdAndLoad(youtubeVideoId, { autoplay });
+}
+
+async function restoreCurrentSongMode2Binding() {
+  const songId = state.songBinding.activeSongId;
+  if (!songId) {
+    console.warn("[SongBinding] 目前沒有可恢復的歌曲骨架綁定");
+    return false;
+  }
+
+  const binding = await loadSongBindingManifest(songId);
+  const mode2Defs = getMode2TraceDefsFromManifest(binding?.manifest);
+  if (!mode2Defs.length) {
+    console.warn("[SongBinding] 目前歌曲沒有 Mode 2 預設骨架可恢復", {
+      songId,
+      title: binding?.manifest?.title,
+    });
+    return false;
+  }
+
+  const restoredTraces = await loadMode2TracesFromManifest(
+    binding.manifest,
+    binding.manifestUrl,
+  );
+  applyMode2Traces(restoredTraces);
+  resetSongBindingUiState();
+  if (els.modeSelect) els.modeSelect.value = "mode2";
+  applyMode("mode2");
+  console.log("[SongBinding] 已恢復本首歌預設 Mode 2 骨架", {
+    songId,
+    title: binding?.manifest?.title,
+    traceCount: restoredTraces.length,
+  });
+  return true;
 }
 
 function parseYoutubeUrlFromText(text) {
@@ -2884,6 +2933,17 @@ async function main() {
         t.enabled = !anyEnabled;
       }
       clearOverlayCanvas();
+    });
+  }
+
+  if (els.restoreMode2BindingButton) {
+    els.restoreMode2BindingButton.addEventListener("click", async () => {
+      if (state.ui.mode !== "mode2") return;
+      try {
+        await restoreCurrentSongMode2Binding();
+      } catch (err) {
+        console.warn("[SongBinding] 恢復 Mode 2 預設骨架失敗", err);
+      }
     });
   }
 
