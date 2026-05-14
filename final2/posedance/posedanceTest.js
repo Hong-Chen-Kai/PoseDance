@@ -1144,11 +1144,12 @@ function renderSongCategories() {
   }
   els.songCategories.innerHTML = parts.join("");
   els.songCategories.querySelectorAll(".modal__cat").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const catEnc = btn.getAttribute("data-cat") || "";
       state.music.selectedCategory = catEnc ? decodeURIComponent(catEnc) : null;
+      state.music.page = 1;
       renderSongCategories();
-      renderSongList();
+      await loadMidisPage();
     });
   });
 }
@@ -1165,12 +1166,7 @@ function renderSongList() {
     return;
   }
 
-  const selectedCat = m.selectedCategory;
-  const list = (Array.isArray(m.items) ? m.items : []).filter((it) => {
-    if (!selectedCat) return true;
-    const cats = Array.isArray(it?.categories) ? it.categories : [];
-    return cats.includes(selectedCat) || it?.categories_text === selectedCat;
-  });
+  const list = Array.isArray(m.items) ? m.items : [];
 
   if (!list.length) {
     els.songList.innerHTML = `<div class="modal__item"><div><div class="modal__item-title">沒有資料</div><div class="modal__item-meta">請換分類或搜尋</div></div></div>`;
@@ -1267,8 +1263,12 @@ async function loadMidisPage() {
   m.error = null;
   renderSongList();
   const q = m.q ? `q=${encodeURIComponent(m.q)}` : "";
+  const category = m.selectedCategory
+    ? `category=${encodeURIComponent(m.selectedCategory)}`
+    : "";
   const url = `${API_BASE}/api/midis?${[
     q,
+    category,
     `page=${encodeURIComponent(m.page)}`,
     `limit=${encodeURIComponent(m.limit)}`,
     `sort=${encodeURIComponent(m.sort)}`,
