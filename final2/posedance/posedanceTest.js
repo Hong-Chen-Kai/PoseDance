@@ -63,6 +63,7 @@ const state = {
   ui: {
     mode: "mode1",
     hintMode: "easy",
+    avatarStyle: "classic",
     demoScale: { l1: 1, l2: 1, r1: 1, r2: 1 },
     mode1DemoEnabled: true,
   },
@@ -155,6 +156,13 @@ const state = {
   },
 };
 
+const AVATAR_STYLES = Object.freeze({
+  classic: "classic",
+  robot: "robot",
+  puppet: "puppet",
+  hatClothes: "hatClothes",
+});
+
 const els = {};
 function $(id) {
   return document.getElementById(id);
@@ -215,6 +223,7 @@ function initDomRefs() {
   els.videoUrlInput = $("videoUrlInput");
   els.modeSelect = $("modeSelect");
   els.hintModeSelect = $("hintModeSelect");
+  els.avatarStyleSelect = $("avatarStyleSelect");
   els.mode2WarnText = $("mode2WarnText");
   els.demoScaleL1 = $("demoScaleL1");
   els.demoScaleL2 = $("demoScaleL2");
@@ -1842,6 +1851,541 @@ function partOfConnection(a, b) {
   return PARTS.torso;
 }
 
+const ALL_AVATAR_PARTS = Object.freeze([
+  PARTS.leftArm,
+  PARTS.rightArm,
+  PARTS.leftLeg,
+  PARTS.rightLeg,
+  PARTS.torso,
+]);
+
+function normalizeAvatarStyle(value) {
+  if (value === AVATAR_STYLES.robot) return AVATAR_STYLES.robot;
+  if (value === AVATAR_STYLES.puppet) return AVATAR_STYLES.puppet;
+  if (value === AVATAR_STYLES.hatClothes) return AVATAR_STYLES.hatClothes;
+  return AVATAR_STYLES.classic;
+}
+
+function getPosePixelPoint(points, getXYV, rect, index, minVisibility = 0.5) {
+  const p = getXYV(points?.[index]);
+  if (!p) return null;
+  if (typeof p.v === "number" && p.v < minVisibility) return null;
+  return {
+    ...p,
+    px: rect.ox + p.x * rect.dw,
+    py: rect.oy + p.y * rect.dh,
+  };
+}
+
+function getPosePixelMap(points, getXYV, rect, minVisibility = 0.5) {
+  return Array.from({ length: 33 }, (_, index) =>
+    getPosePixelPoint(points, getXYV, rect, index, minVisibility),
+  );
+}
+
+function toCanvasPoint(point) {
+  if (!point) return null;
+  return { x: point.px, y: point.py };
+}
+
+function drawSegment(ctx, a, b, color, lineWidth, alpha = 1) {
+  const p1 = toCanvasPoint(a);
+  const p2 = toCanvasPoint(b);
+  if (!p1 || !p2) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawJoint(ctx, point, radius, fillStyle, strokeStyle = null, lineWidth = 1.5) {
+  if (!point) return;
+  ctx.save();
+  ctx.fillStyle = fillStyle;
+  ctx.beginPath();
+  ctx.arc(point.px, point.py, radius, 0, 2 * Math.PI);
+  ctx.fill();
+  if (strokeStyle) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPolygon(ctx, points, fillStyle, strokeStyle = null, lineWidth = 1.5, alpha = 1) {
+  const pts = (points || []).filter(Boolean);
+  if (pts.length < 3) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i += 1) {
+    ctx.lineTo(pts[i].x, pts[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+  if (strokeStyle) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawFaceCircle(ctx, center, radius, fillStyle, strokeStyle = null, lineWidth = 1.5) {
+  if (!center || !(radius > 0)) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+  if (strokeStyle) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function getAvatarMetrics(pixels) {
+  const leftShoulder = pixels[POSE_LANDMARKS.LEFT_SHOULDER];
+  const rightShoulder = pixels[POSE_LANDMARKS.RIGHT_SHOULDER];
+  const leftHip = pixels[POSE_LANDMARKS.LEFT_HIP];
+  const rightHip = pixels[POSE_LANDMARKS.RIGHT_HIP];
+  const nose = pixels[POSE_LANDMARKS.NOSE];
+  const leftEye = pixels[POSE_LANDMARKS.LEFT_EYE];
+  const rightEye = pixels[POSE_LANDMARKS.RIGHT_EYE];
+  const leftEar = pixels[POSE_LANDMARKS.LEFT_EAR];
+  const rightEar = pixels[POSE_LANDMARKS.RIGHT_EAR];
+
+  const shoulderCenter =
+    leftShoulder && rightShoulder
+      ? center2(toCanvasPoint(leftShoulder), toCanvasPoint(rightShoulder))
+      : null;
+  const hipCenter =
+    leftHip && rightHip ? center2(toCanvasPoint(leftHip), toCanvasPoint(rightHip)) : null;
+  const shoulderWidth =
+    leftShoulder && rightShoulder
+      ? dist2(toCanvasPoint(leftShoulder), toCanvasPoint(rightShoulder))
+      : null;
+  const torsoHeight =
+    shoulderCenter && hipCenter
+      ? dist2(shoulderCenter, hipCenter)
+      : shoulderWidth
+        ? shoulderWidth * 1.45
+        : 72;
+
+  let headCenter = null;
+  if (nose) {
+    headCenter = { x: nose.px, y: nose.py };
+  } else if (leftEye && rightEye) {
+    headCenter = center2(toCanvasPoint(leftEye), toCanvasPoint(rightEye));
+  } else if (leftEar && rightEar) {
+    headCenter = center2(toCanvasPoint(leftEar), toCanvasPoint(rightEar));
+  } else if (shoulderCenter) {
+    headCenter = { x: shoulderCenter.x, y: shoulderCenter.y - torsoHeight * 0.72 };
+  }
+
+  const earSpan =
+    leftEar && rightEar ? dist2(toCanvasPoint(leftEar), toCanvasPoint(rightEar)) : null;
+  const eyeSpan =
+    leftEye && rightEye ? dist2(toCanvasPoint(leftEye), toCanvasPoint(rightEye)) : null;
+  const headRadius =
+    earSpan && earSpan > 0
+      ? earSpan * 0.34
+      : eyeSpan && eyeSpan > 0
+        ? eyeSpan * 0.7
+        : shoulderWidth && shoulderWidth > 0
+          ? shoulderWidth * 0.22
+          : 22;
+
+  return {
+    leftShoulder,
+    rightShoulder,
+    leftHip,
+    rightHip,
+    leftEye,
+    rightEye,
+    leftEar,
+    rightEar,
+    nose,
+    shoulderCenter,
+    hipCenter,
+    shoulderWidth: shoulderWidth || 96,
+    torsoHeight,
+    headCenter,
+    headRadius,
+  };
+}
+
+function drawAvatarHighlights(
+  ctx,
+  points,
+  getXYV,
+  rect,
+  highlightParts,
+  color,
+  lineWidth = 7,
+) {
+  if (!(highlightParts instanceof Set) || highlightParts.size === 0) return;
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 14;
+  for (const [a, b] of DEMO_POSE_CONNECTIONS) {
+    const part = partOfConnection(a, b);
+    if (!highlightParts.has(part)) continue;
+    const pa = getXYV(points?.[a]);
+    const pb = getXYV(points?.[b]);
+    if (!pa || !pb) continue;
+    if ((typeof pa.v === "number" && pa.v < 0.5) || (typeof pb.v === "number" && pb.v < 0.5))
+      continue;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(rect.ox + pa.x * rect.dw, rect.oy + pa.y * rect.dh);
+    ctx.lineTo(rect.ox + pb.x * rect.dw, rect.oy + pb.y * rect.dh);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawClassicAvatar(ctx, points, getXYV, rect, options = {}) {
+  const baseColor = options.baseColor || "rgba(255,255,255,0.92)";
+  const colorByConnection =
+    typeof options.colorByConnection === "function"
+      ? options.colorByConnection
+      : () => baseColor;
+  drawPoseConnections(ctx, points, getXYV, rect, colorByConnection, options.lineWidth || 3);
+  drawPosePoints(ctx, points, getXYV, rect, baseColor, options.pointRadius || 3.5);
+}
+
+function drawRobotAvatar(ctx, points, getXYV, rect, options = {}) {
+  const px = getPosePixelMap(points, getXYV, rect);
+  const m = getAvatarMetrics(px);
+  const edge = "rgba(15,23,42,0.88)";
+  const metal = "rgba(148,163,184,0.95)";
+  const metalLight = "rgba(226,232,240,0.95)";
+  const accent = "rgba(34,211,238,0.95)";
+  const shoulderWidth = Math.max(44, m.shoulderWidth || 72);
+  const limbOuter = Math.max(10, shoulderWidth * 0.14);
+  const limbInner = Math.max(6, shoulderWidth * 0.09);
+
+  const robotSegments = [
+    [POSE_LANDMARKS.LEFT_SHOULDER, POSE_LANDMARKS.LEFT_ELBOW],
+    [POSE_LANDMARKS.LEFT_ELBOW, POSE_LANDMARKS.LEFT_WRIST],
+    [POSE_LANDMARKS.RIGHT_SHOULDER, POSE_LANDMARKS.RIGHT_ELBOW],
+    [POSE_LANDMARKS.RIGHT_ELBOW, POSE_LANDMARKS.RIGHT_WRIST],
+    [POSE_LANDMARKS.LEFT_HIP, POSE_LANDMARKS.LEFT_KNEE],
+    [POSE_LANDMARKS.LEFT_KNEE, POSE_LANDMARKS.LEFT_ANKLE],
+    [POSE_LANDMARKS.RIGHT_HIP, POSE_LANDMARKS.RIGHT_KNEE],
+    [POSE_LANDMARKS.RIGHT_KNEE, POSE_LANDMARKS.RIGHT_ANKLE],
+  ];
+
+  for (const [a, b] of robotSegments) {
+    drawSegment(ctx, px[a], px[b], edge, limbOuter + 4);
+    drawSegment(ctx, px[a], px[b], metal, limbOuter);
+    drawSegment(ctx, px[a], px[b], metalLight, limbInner, 0.9);
+    drawSegment(ctx, px[a], px[b], accent, Math.max(2, limbInner * 0.24), 0.8);
+  }
+
+  if (m.leftShoulder && m.rightShoulder && m.leftHip && m.rightHip) {
+    const pad = shoulderWidth * 0.12;
+    const torso = [
+      { x: m.leftShoulder.px - pad, y: m.leftShoulder.py + pad * 0.2 },
+      { x: m.rightShoulder.px + pad, y: m.rightShoulder.py + pad * 0.2 },
+      { x: m.rightHip.px + pad * 0.85, y: m.rightHip.py - pad * 0.2 },
+      { x: m.leftHip.px - pad * 0.85, y: m.leftHip.py - pad * 0.2 },
+    ];
+    drawPolygon(ctx, torso, "rgba(71,85,105,0.88)", edge, 2.5);
+    if (m.shoulderCenter && m.hipCenter) {
+      drawSegment(
+        ctx,
+        { px: m.shoulderCenter.x, py: m.shoulderCenter.y + pad * 0.25 },
+        { px: m.hipCenter.x, py: m.hipCenter.y - pad * 0.25 },
+        accent,
+        Math.max(3, shoulderWidth * 0.045),
+        0.85,
+      );
+    }
+  }
+
+  if (m.headCenter) {
+    const r = Math.max(16, m.headRadius * 1.1);
+    const left = m.headCenter.x - r;
+    const top = m.headCenter.y - r * 1.08;
+    const width = r * 2;
+    const height = r * 2.2;
+    ctx.save();
+    ctx.fillStyle = metal;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 2.5;
+    ctx.fillRect(left, top, width, height);
+    ctx.strokeRect(left, top, width, height);
+    ctx.fillStyle = accent;
+    ctx.fillRect(left + width * 0.22, top + height * 0.36, width * 0.18, height * 0.12);
+    ctx.fillRect(left + width * 0.6, top + height * 0.36, width * 0.18, height * 0.12);
+    ctx.fillStyle = "rgba(250,204,21,0.95)";
+    ctx.fillRect(left + width * 0.36, top + height * 0.72, width * 0.28, height * 0.08);
+    ctx.restore();
+  }
+
+  const jointIds = [
+    POSE_LANDMARKS.LEFT_SHOULDER,
+    POSE_LANDMARKS.RIGHT_SHOULDER,
+    POSE_LANDMARKS.LEFT_ELBOW,
+    POSE_LANDMARKS.RIGHT_ELBOW,
+    POSE_LANDMARKS.LEFT_WRIST,
+    POSE_LANDMARKS.RIGHT_WRIST,
+    POSE_LANDMARKS.LEFT_HIP,
+    POSE_LANDMARKS.RIGHT_HIP,
+    POSE_LANDMARKS.LEFT_KNEE,
+    POSE_LANDMARKS.RIGHT_KNEE,
+    POSE_LANDMARKS.LEFT_ANKLE,
+    POSE_LANDMARKS.RIGHT_ANKLE,
+  ];
+  const jointRadius = Math.max(5, shoulderWidth * 0.055);
+  for (const id of jointIds) {
+    const point = px[id];
+    drawJoint(ctx, point, jointRadius, metalLight, edge, 2);
+    drawJoint(ctx, point, Math.max(1.5, jointRadius * 0.28), accent);
+  }
+
+  if (options.highlightParts?.size) {
+    drawAvatarHighlights(ctx, points, getXYV, rect, options.highlightParts, options.highlightColor, 8);
+  }
+}
+
+function drawPuppetAvatar(ctx, points, getXYV, rect, options = {}) {
+  const px = getPosePixelMap(points, getXYV, rect);
+  const m = getAvatarMetrics(px);
+  const woodDark = "rgba(92,51,23,0.96)";
+  const wood = "rgba(180,121,66,0.96)";
+  const stringColor = "rgba(226,232,240,0.82)";
+  const shoulderWidth = Math.max(44, m.shoulderWidth || 72);
+  const limbWidth = Math.max(7, shoulderWidth * 0.09);
+
+  const shoulderBarY = m.headCenter
+    ? m.headCenter.y - Math.max(34, m.headRadius * 2.1)
+    : m.shoulderCenter
+      ? m.shoulderCenter.y - shoulderWidth * 0.9
+      : null;
+  if (m.shoulderCenter && shoulderBarY !== null) {
+    const barHalf = shoulderWidth * 0.9;
+    const leftBar = { px: m.shoulderCenter.x - barHalf, py: shoulderBarY };
+    const rightBar = { px: m.shoulderCenter.x + barHalf, py: shoulderBarY };
+    drawSegment(ctx, leftBar, rightBar, woodDark, Math.max(6, shoulderWidth * 0.07));
+    drawSegment(ctx, leftBar, rightBar, wood, Math.max(3, shoulderWidth * 0.04));
+
+    if (m.headCenter) {
+      drawSegment(
+        ctx,
+        { px: m.headCenter.x, py: shoulderBarY },
+        { px: m.headCenter.x, py: m.headCenter.y - Math.max(8, m.headRadius * 0.4) },
+        stringColor,
+        1.5,
+      );
+    }
+    const wristIds = [POSE_LANDMARKS.LEFT_WRIST, POSE_LANDMARKS.RIGHT_WRIST];
+    for (const wristId of wristIds) {
+      const wrist = px[wristId];
+      if (!wrist) continue;
+      drawSegment(
+        ctx,
+        { px: wrist.px, py: shoulderBarY },
+        wrist,
+        stringColor,
+        1.3,
+        0.9,
+      );
+    }
+  }
+
+  if (m.headCenter) {
+    drawFaceCircle(
+      ctx,
+      m.headCenter,
+      Math.max(14, m.headRadius * 0.95),
+      "rgba(214,170,112,0.98)",
+      woodDark,
+      2,
+    );
+  }
+
+  if (m.shoulderCenter && m.hipCenter) {
+    drawSegment(
+      ctx,
+      { px: m.shoulderCenter.x, py: m.shoulderCenter.y + 4 },
+      { px: m.hipCenter.x, py: m.hipCenter.y - 4 },
+      woodDark,
+      Math.max(10, shoulderWidth * 0.13),
+    );
+    drawSegment(
+      ctx,
+      { px: m.shoulderCenter.x, py: m.shoulderCenter.y + 4 },
+      { px: m.hipCenter.x, py: m.hipCenter.y - 4 },
+      wood,
+      Math.max(6, shoulderWidth * 0.08),
+    );
+  }
+
+  const puppetSegments = [
+    [POSE_LANDMARKS.LEFT_SHOULDER, POSE_LANDMARKS.LEFT_ELBOW],
+    [POSE_LANDMARKS.LEFT_ELBOW, POSE_LANDMARKS.LEFT_WRIST],
+    [POSE_LANDMARKS.RIGHT_SHOULDER, POSE_LANDMARKS.RIGHT_ELBOW],
+    [POSE_LANDMARKS.RIGHT_ELBOW, POSE_LANDMARKS.RIGHT_WRIST],
+    [POSE_LANDMARKS.LEFT_HIP, POSE_LANDMARKS.LEFT_KNEE],
+    [POSE_LANDMARKS.LEFT_KNEE, POSE_LANDMARKS.LEFT_ANKLE],
+    [POSE_LANDMARKS.RIGHT_HIP, POSE_LANDMARKS.RIGHT_KNEE],
+    [POSE_LANDMARKS.RIGHT_KNEE, POSE_LANDMARKS.RIGHT_ANKLE],
+  ];
+  for (const [a, b] of puppetSegments) {
+    drawSegment(ctx, px[a], px[b], woodDark, limbWidth + 3);
+    drawSegment(ctx, px[a], px[b], wood, limbWidth);
+  }
+
+  const jointIds = [
+    POSE_LANDMARKS.LEFT_SHOULDER,
+    POSE_LANDMARKS.RIGHT_SHOULDER,
+    POSE_LANDMARKS.LEFT_ELBOW,
+    POSE_LANDMARKS.RIGHT_ELBOW,
+    POSE_LANDMARKS.LEFT_WRIST,
+    POSE_LANDMARKS.RIGHT_WRIST,
+    POSE_LANDMARKS.LEFT_HIP,
+    POSE_LANDMARKS.RIGHT_HIP,
+    POSE_LANDMARKS.LEFT_KNEE,
+    POSE_LANDMARKS.RIGHT_KNEE,
+    POSE_LANDMARKS.LEFT_ANKLE,
+    POSE_LANDMARKS.RIGHT_ANKLE,
+  ];
+  const jointRadius = Math.max(4, shoulderWidth * 0.045);
+  for (const id of jointIds) {
+    drawJoint(ctx, px[id], jointRadius, "rgba(243,190,126,0.98)", woodDark, 1.5);
+  }
+
+  if (options.highlightParts?.size) {
+    drawAvatarHighlights(ctx, points, getXYV, rect, options.highlightParts, options.highlightColor, 7);
+  }
+}
+
+function drawHatClothesAvatar(ctx, points, getXYV, rect, options = {}) {
+  const px = getPosePixelMap(points, getXYV, rect);
+  const m = getAvatarMetrics(px);
+  const shoulderWidth = Math.max(44, m.shoulderWidth || 72);
+  const outfit = "rgba(139,92,246,0.9)";
+  const outfitDark = "rgba(76,29,149,0.92)";
+  const sleeve = "rgba(96,165,250,0.9)";
+  const skin = "rgba(254,215,170,0.96)";
+  const line = "rgba(226,232,240,0.72)";
+
+  drawPoseConnections(ctx, points, getXYV, rect, () => line, 2.5);
+
+  if (m.leftShoulder && m.rightShoulder && m.leftHip && m.rightHip) {
+    const shoulderPad = shoulderWidth * 0.18;
+    const hipPad = shoulderWidth * 0.12;
+    const shirt = [
+      { x: m.leftShoulder.px - shoulderPad, y: m.leftShoulder.py + shoulderPad * 0.15 },
+      { x: m.rightShoulder.px + shoulderPad, y: m.rightShoulder.py + shoulderPad * 0.15 },
+      { x: m.rightHip.px + hipPad, y: m.rightHip.py - hipPad * 0.25 },
+      { x: m.leftHip.px - hipPad, y: m.leftHip.py - hipPad * 0.25 },
+    ];
+    drawPolygon(ctx, shirt, outfit, outfitDark, 2);
+  }
+
+  const sleeveSegments = [
+    [POSE_LANDMARKS.LEFT_SHOULDER, POSE_LANDMARKS.LEFT_ELBOW],
+    [POSE_LANDMARKS.LEFT_ELBOW, POSE_LANDMARKS.LEFT_WRIST],
+    [POSE_LANDMARKS.RIGHT_SHOULDER, POSE_LANDMARKS.RIGHT_ELBOW],
+    [POSE_LANDMARKS.RIGHT_ELBOW, POSE_LANDMARKS.RIGHT_WRIST],
+  ];
+  const sleeveWidth = Math.max(8, shoulderWidth * 0.11);
+  for (const [a, b] of sleeveSegments) {
+    drawSegment(ctx, px[a], px[b], outfitDark, sleeveWidth + 3);
+    drawSegment(ctx, px[a], px[b], sleeve, sleeveWidth);
+  }
+
+  const legSegments = [
+    [POSE_LANDMARKS.LEFT_HIP, POSE_LANDMARKS.LEFT_KNEE],
+    [POSE_LANDMARKS.LEFT_KNEE, POSE_LANDMARKS.LEFT_ANKLE],
+    [POSE_LANDMARKS.RIGHT_HIP, POSE_LANDMARKS.RIGHT_KNEE],
+    [POSE_LANDMARKS.RIGHT_KNEE, POSE_LANDMARKS.RIGHT_ANKLE],
+  ];
+  for (const [a, b] of legSegments) {
+    drawSegment(ctx, px[a], px[b], "rgba(226,232,240,0.8)", Math.max(5, shoulderWidth * 0.05));
+  }
+
+  if (m.headCenter) {
+    drawFaceCircle(ctx, m.headCenter, Math.max(14, m.headRadius), skin, "rgba(120,53,15,0.7)", 1.5);
+  }
+
+  if (m.headCenter && (m.leftEar || m.rightEar || m.leftEye || m.rightEye || m.nose)) {
+    const brimHalf = Math.max(18, shoulderWidth * 0.3);
+    const brimY = m.headCenter.y - Math.max(18, m.headRadius * 0.9);
+    const crownTopY = brimY - Math.max(18, m.headRadius * 1.2);
+    drawSegment(
+      ctx,
+      { px: m.headCenter.x - brimHalf, py: brimY },
+      { px: m.headCenter.x + brimHalf, py: brimY },
+      "rgba(20,83,45,0.96)",
+      Math.max(8, m.headRadius * 0.55),
+    );
+    drawPolygon(
+      ctx,
+      [
+        { x: m.headCenter.x - brimHalf * 0.58, y: brimY + 2 },
+        { x: m.headCenter.x + brimHalf * 0.58, y: brimY + 2 },
+        { x: m.headCenter.x + brimHalf * 0.4, y: crownTopY },
+        { x: m.headCenter.x - brimHalf * 0.4, y: crownTopY },
+      ],
+      "rgba(21,128,61,0.94)",
+      "rgba(20,83,45,0.96)",
+      2,
+    );
+  }
+
+  const handFootIds = [
+    POSE_LANDMARKS.LEFT_WRIST,
+    POSE_LANDMARKS.RIGHT_WRIST,
+    POSE_LANDMARKS.LEFT_ANKLE,
+    POSE_LANDMARKS.RIGHT_ANKLE,
+  ];
+  for (const id of handFootIds) {
+    drawJoint(ctx, px[id], Math.max(4, shoulderWidth * 0.04), skin);
+  }
+
+  if (options.highlightParts?.size) {
+    drawAvatarHighlights(ctx, points, getXYV, rect, options.highlightParts, options.highlightColor, 8);
+  }
+}
+
+function drawUserAvatar(ctx, points, getXYV, rect, options = {}) {
+  if (!points || !rect) return;
+  const avatarStyle = normalizeAvatarStyle(options.avatarStyle);
+
+  if (avatarStyle === AVATAR_STYLES.classic) {
+    drawClassicAvatar(ctx, points, getXYV, rect, options);
+    return;
+  }
+
+  const renderer =
+    avatarStyle === AVATAR_STYLES.robot
+      ? drawRobotAvatar
+      : avatarStyle === AVATAR_STYLES.puppet
+        ? drawPuppetAvatar
+        : drawHatClothesAvatar;
+  renderer(ctx, points, getXYV, rect, options);
+}
+
 function normalizePose2D(getPoint, visTh) {
   const lHip = getPoint(POSE_LANDMARKS.LEFT_HIP);
   const rHip = getPoint(POSE_LANDMARKS.RIGHT_HIP);
@@ -2466,8 +3010,15 @@ function drawMode2Overlay(tScore) {
   }
 
   if (state.latestUserLandmarks) {
-    drawPoseConnections(ctx, state.latestUserLandmarks, getLmXYV, rectUser, () => userColor, 3);
-    drawPosePoints(ctx, state.latestUserLandmarks, getLmXYV, rectUser, userColor, 3.5);
+    drawUserAvatar(ctx, state.latestUserLandmarks, getLmXYV, rectUser, {
+      avatarStyle: state.ui.avatarStyle,
+      baseColor: userColor,
+      highlightColor: userColor,
+      highlightParts: new Set(),
+      colorByConnection: () => userColor,
+      lineWidth: 3,
+      pointRadius: 3.5,
+    });
   }
 
   // selection box
@@ -2717,6 +3268,11 @@ function updateUiLoop() {
       const whiteColor = "rgba(255,255,255,0.92)";
       const redColor = "rgba(239,68,68,0.95)";
       const baseColor = isOrange ? blueColor : whiteColor;
+      const highlightParts = isOrange
+        ? new Set(ALL_AVATAR_PARTS)
+        : isRecordingMode
+          ? new Set()
+          : activeParts;
       const colorByConn = (a, b) => {
         if (isOrange) return blueColor;
         const part = partOfConnection(a, b);
@@ -2724,8 +3280,15 @@ function updateUiLoop() {
         return activeParts.has(part) ? redColor : whiteColor;
       };
       if (userLm) {
-        drawPoseConnections(ctx, userLm, getLmXYV, stageRect, colorByConn, 3);
-        drawPosePoints(ctx, userLm, getLmXYV, stageRect, baseColor, 3.5);
+        drawUserAvatar(ctx, userLm, getLmXYV, stageRect, {
+          avatarStyle: state.ui.avatarStyle,
+          baseColor,
+          highlightColor: isOrange ? blueColor : redColor,
+          highlightParts,
+          colorByConnection: colorByConn,
+          lineWidth: 3,
+          pointRadius: 3.5,
+        });
       }
 
       // Demo overlay (green / blue) on top so it's always visible
@@ -2775,6 +3338,9 @@ async function main() {
   initDomRefs();
   // debug handle for DevTools
   window.__posedanceTestState = state;
+  if (els.avatarStyleSelect) {
+    state.ui.avatarStyle = normalizeAvatarStyle(els.avatarStyleSelect.value);
+  }
   setModeUiText();
   bindDemoScaleSlider(els.demoScaleL1, "l1");
   bindDemoScaleSlider(els.demoScaleL2, "l2");
@@ -2828,6 +3394,12 @@ async function main() {
       state.orange.exitBadSec = 0;
       state.orange.window = [];
       state.orange.lastT = null;
+    });
+  }
+
+  if (els.avatarStyleSelect) {
+    els.avatarStyleSelect.addEventListener("change", () => {
+      state.ui.avatarStyle = normalizeAvatarStyle(els.avatarStyleSelect.value);
     });
   }
 
