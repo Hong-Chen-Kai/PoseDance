@@ -3,8 +3,14 @@ import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
 const DEMO_SOURCE_ASPECT = 16 / 9;
 /** 以模組 URL 解析，避免部署子路徑或與 HTML 不同層級時 fetch 404 */
 const DEMO_TRACE_PATHS = {
-  easy: new URL("./demo/pose_trace_easy.json", import.meta.url).href,
-  hard: new URL("./demo/pose_trace_hard.json", import.meta.url).href,
+  easy: new URL(
+    "./song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_easy.json",
+    import.meta.url,
+  ).href,
+  hard: new URL(
+    "./song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_hard.json",
+    import.meta.url,
+  ).href,
 };
 
 const DEMO_POSE_CONNECTIONS = [
@@ -47,10 +53,11 @@ const state = {
   videoId: null,
   lastLoadedVideoId: null,
 
-  demo: { easy: null, hard: null, loaded: null },
+  demo: { easy: null, hard: null, loaded: null, defaultEasy: null, defaultHard: null },
 
   mode2: {
     traces: [], // Array<{ id, name, data, enabled }>
+    defaultTraces: [],
   },
 
   ui: {
@@ -98,6 +105,11 @@ const state = {
     pages: 1,
     loading: false,
     error: null,
+  },
+
+  songBinding: {
+    activeSongId: null,
+    manifestUrl: null,
   },
 
   // Pose
@@ -172,6 +184,24 @@ function mode2TraceSkeletonId(traceId) {
 
 function isMode2TraceSkeletonId(id) {
   return typeof id === "string" && id.startsWith("m2_trace_");
+}
+
+function cloneMode2Traces(traces) {
+  if (!Array.isArray(traces)) return [];
+  return traces
+    .filter((trace) => trace && trace.data)
+    .map((trace, index) => ({
+      id:
+        typeof trace.id === "string" && trace.id
+          ? trace.id
+          : `trace_${index}`,
+      name:
+        typeof trace.name === "string" && trace.name
+          ? trace.name
+          : `trace_${index}`,
+      data: trace.data,
+      enabled: trace.enabled !== false,
+    }));
 }
 
 function initDomRefs() {
@@ -831,6 +861,194 @@ async function fetchJson(url) {
   return await res.json();
 }
 
+function buildSongBindingManifestUrl(songId) {
+  if (!songId) return null;
+  return new URL(
+    `./song-skeletons/${encodeURIComponent(songId)}/manifest.json`,
+    import.meta.url,
+  ).href;
+}
+
+async function loadSongBindingManifest(songId) {
+  const manifestUrl = buildSongBindingManifestUrl(songId);
+  if (!manifestUrl) throw new Error("缺少 songId，無法載入 song binding");
+  const manifest = await fetchJson(manifestUrl);
+  return { manifestUrl, manifest };
+}
+
+function resetSongBindingUiState() {
+  state.overall.easy = [];
+  state.overall.hard = [];
+  state.overall.loaded = [];
+  setUi({
+    easy: "—",
+    hard: "—",
+    loaded: "—",
+    overallEasy: "—",
+    overallHard: "—",
+    overallLoaded: "—",
+  });
+}
+
+function restoreDefaultSongBinding() {
+  state.demo.easy = state.demo.defaultEasy;
+  state.demo.hard = state.demo.defaultHard;
+  state.mode2.traces = cloneMode2Traces(state.mode2.defaultTraces);
+  state.songBinding.activeSongId = null;
+  state.songBinding.manifestUrl = null;
+  resetSongBindingUiState();
+  if (
+    state.interact?.selectedId &&
+    isMode2TraceSkeletonId(state.interact.selectedId)
+  ) {
+    state.interact.selectedId = null;
+  }
+  updateMode2VideoMismatchWarn();
+  clearOverlayCanvas();
+}
+
+function setVideoIdAndLoad(videoId, { autoplay = false } = {}) {
+  if (!videoId) return false;
+  if (els.videoUrlInput) els.videoUrlInput.value = videoId;
+  state.videoId = videoId;
+  state.lastLoadedVideoId = null;
+  loadVideoByIdIfReady({ autoplay });
+  return true;
+}
+
+function loadVideoFromSongItem(item, { autoplay = false } = {}) {
+  const raw =
+    typeof item?.youtubeVideoId === "string" && item.youtubeVideoId
+      ? item.youtubeVideoId
+      : parseYoutubeUrlFromText(item?.description) || "";
+  const videoId = extractVideoIdFromAny(raw);
+  return setVideoIdAndLoad(videoId, { autoplay });
+}
+
+function resolveBindingAssetUrl(urlRaw, manifestUrl) {
+  return new URL(urlRaw, manifestUrl).href;
+}
+
+async function loadMode1TraceFromBinding(def, key, manifestUrl) {
+  const urlRaw = typeof def?.[key] === "string" ? def[key].trim() : "";
+  if (!urlRaw) return null;
+  const traceUrl = resolveBindingAssetUrl(urlRaw, manifestUrl);
+  return await loadDemoTrace(traceUrl);
+}
+
+function resolveSongBindingTargetMode(manifest, hasMode1, hasMode2) {
+  const targetMode = manifest?.targetMode;
+  if (targetMode === "mode1" || targetMode === "mode2") return targetMode;
+  if (manifest?.mode2Only) return "mode2";
+  if (hasMode1) return "mode1";
+  if (hasMode2) return "mode2";
+  return null;
+}
+
+async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
+  const manifest = manifestInfo?.manifest;
+  const manifestUrl = manifestInfo?.manifestUrl;
+  const mode1Def = manifest?.mode1 && typeof manifest.mode1 === "object"
+    ? manifest.mode1
+    : null;
+  const mode2Defs = Array.isArray(manifest?.mode2?.traces)
+    ? manifest.mode2.traces
+    : [];
+  const hasMode1 = !!(mode1Def?.easy || mode1Def?.hard);
+  const hasMode2 = mode2Defs.length > 0;
+  if (!hasMode1 && !hasMode2) {
+    throw new Error("song binding 缺少 mode1 或 mode2 設定");
+  }
+
+  const youtubeVideoId =
+    typeof manifest?.youtubeVideoId === "string" && manifest.youtubeVideoId
+      ? manifest.youtubeVideoId
+      : null;
+  if (!youtubeVideoId) {
+    throw new Error("song binding 缺少 youtubeVideoId");
+  }
+
+  let boundEasy = state.demo.defaultEasy;
+  let boundHard = state.demo.defaultHard;
+  if (hasMode1) {
+    const loadedEasy = await loadMode1TraceFromBinding(mode1Def, "easy", manifestUrl);
+    const loadedHard = await loadMode1TraceFromBinding(mode1Def, "hard", manifestUrl);
+    if (loadedEasy) boundEasy = loadedEasy;
+    if (loadedHard) boundHard = loadedHard;
+    else if (loadedEasy) boundHard = loadedEasy;
+  }
+  state.demo.easy = boundEasy;
+  state.demo.hard = boundHard;
+  if (state.demo.easy) computeDemoEnergyForTrace(state.demo.easy);
+  if (state.demo.hard) computeDemoEnergyForTrace(state.demo.hard);
+  if (state.demo.easy) computeDemoPartEnergyForTrace(state.demo.easy);
+  if (state.demo.hard) computeDemoPartEnergyForTrace(state.demo.hard);
+
+  if (hasMode2) {
+    const loadedTraces = [];
+    for (let i = 0; i < mode2Defs.length; i += 1) {
+      const def = mode2Defs[i];
+      const urlRaw =
+        typeof def?.url === "string" && def.url ? def.url.trim() : "";
+      if (!urlRaw) {
+        throw new Error(`song binding 的 mode2.traces[${i}] 缺少 url`);
+      }
+      const traceUrl = resolveBindingAssetUrl(urlRaw, manifestUrl);
+      const data = await loadDemoTrace(traceUrl);
+      loadedTraces.push({
+        id:
+          typeof def?.id === "string" && def.id
+            ? def.id
+            : `bound_${i}`,
+        name:
+          typeof def?.name === "string" && def.name
+            ? def.name
+            : `bound_trace_${i + 1}`,
+        data,
+        enabled: def?.enabled !== false,
+      });
+    }
+    state.mode2.traces = cloneMode2Traces(loadedTraces);
+  } else {
+    state.mode2.traces = cloneMode2Traces(state.mode2.defaultTraces);
+  }
+  state.songBinding.activeSongId =
+    typeof manifest?.songId === "string" && manifest.songId
+      ? manifest.songId
+      : null;
+  state.songBinding.manifestUrl = manifestUrl;
+
+  if (state.mode2.traces.length > 0) {
+    state.interact.selectedId = mode2TraceSkeletonId(state.mode2.traces[0].id);
+  } else {
+    state.interact.selectedId = null;
+  }
+
+  const targetMode = resolveSongBindingTargetMode(manifest, hasMode1, hasMode2);
+  if (targetMode === "mode1" || targetMode === "mode2") {
+    if (els.modeSelect) els.modeSelect.value = targetMode;
+    applyMode(targetMode);
+  }
+  if (targetMode === "mode1" && els.hintModeSelect) {
+    const hintMode =
+      mode1Def?.defaultHintMode === "hard" ? "hard" : "easy";
+    els.hintModeSelect.value = hintMode;
+    state.ui.hintMode = hintMode;
+  }
+
+  resetSongBindingUiState();
+  updateMode2VideoMismatchWarn();
+  clearOverlayCanvas();
+  console.log("[SongBinding] 套用成功", {
+    songId: state.songBinding.activeSongId,
+    title: manifest?.title,
+    videoId: youtubeVideoId,
+    targetMode,
+    traceCount: state.mode2.traces.length,
+  });
+  return setVideoIdAndLoad(youtubeVideoId, { autoplay });
+}
+
 function parseYoutubeUrlFromText(text) {
   if (!text) return null;
   const m = String(text).match(/https?:\/\/(?:www\.)?(?:youtu\.be\/[^\s]+|youtube\.com\/[^\s]+)/i);
@@ -931,18 +1149,44 @@ function renderSongList() {
       .join("");
 
     els.songList.querySelectorAll(".modal__pick").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const midEnc = btn.getAttribute("data-mid") || "";
         const mid = midEnc ? decodeURIComponent(midEnc) : "";
         const it = (Array.isArray(m.items) ? m.items : []).find((x) => String(x?.id || "") === mid);
         if (!it) return;
-        const url = parseYoutubeUrlFromText(it.description) || "";
-        const vid = extractVideoIdFromAny(url);
-        if (!vid) return;
-        if (els.videoUrlInput) els.videoUrlInput.value = vid;
-        state.videoId = vid;
-        state.lastLoadedVideoId = null;
-        loadVideoByIdIfReady({ autoplay: false });
+
+        let loadedByBinding = false;
+        try {
+          const binding = await loadSongBindingManifest(mid);
+          loadedByBinding = await applySongBinding(binding, { autoplay: false });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          restoreDefaultSongBinding();
+          if (msg.includes("HTTP 404")) {
+            console.log("[SongBinding] 此歌曲尚未綁定骨架，改走舊影片流程", {
+              songId: mid,
+              title: it?.title,
+            });
+          } else {
+            console.warn("[SongBinding] 載入失敗，改走舊影片流程", {
+              songId: mid,
+              title: it?.title,
+              error: msg,
+            });
+          }
+        }
+
+        if (!loadedByBinding) {
+          const ok = loadVideoFromSongItem(it, { autoplay: false });
+          if (!ok) {
+            console.warn("[YouTube] 此歌曲缺少可解析的 YouTube 影片資訊", {
+              songId: mid,
+              title: it?.title,
+            });
+            return;
+          }
+        }
+
         closeSongModal();
       });
     });
@@ -2497,6 +2741,8 @@ async function main() {
     ]);
     state.demo.easy = easy;
     state.demo.hard = hard;
+    state.demo.defaultEasy = easy;
+    state.demo.defaultHard = hard;
 
     // Mode2 預設：先放 3 支示範（你也可以再用「載入骨架」新增更多）
     state.mode2.traces = [
@@ -2504,6 +2750,7 @@ async function main() {
       { id: `demo_${formatTsForFilename()}_1`, name: "demo_hard", data: hard, enabled: true },
       { id: `demo_${formatTsForFilename()}_2`, name: "demo_easy2", data: easy, enabled: true },
     ];
+    state.mode2.defaultTraces = cloneMode2Traces(state.mode2.traces);
     updateMode2VideoMismatchWarn();
 
     computeDemoEnergyForTrace(state.demo.easy);

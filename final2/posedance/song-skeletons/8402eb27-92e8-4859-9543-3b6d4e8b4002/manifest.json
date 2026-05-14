@@ -1,0 +1,26 @@
+{
+  "songId": "8402eb27-92e8-4859-9543-3b6d4e8b4002",
+  "title": "妳是我的花朵",
+  "youtubeVideoId": "FXg4LXsg14s",
+  "mode2Only": true,
+  "offsetSec": 0,
+  "mode2": {
+    "traces": [
+      {
+        "id": "robot",
+        "name": "robot",
+        "url": "./mode2/robot.json"
+      },
+      {
+        "id": "chair",
+        "name": "chair",
+        "url": "./mode2/chair.json"
+      },
+      {
+        "id": "partydance",
+        "name": "partydance",
+        "url": "./mode2/partydance.json"
+      }
+    ]
+  }
+}

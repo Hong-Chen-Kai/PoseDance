@@ -1,0 +1,11 @@
+{
+  "songId": "3ce5b2d5-1358-402b-a1aa-ab9106a5bb45",
+  "title": "小蘋果舞蹈用版本",
+  "youtubeVideoId": "Gb8AZbpnzy4",
+  "targetMode": "mode1",
+  "mode1": {
+    "defaultHintMode": "easy",
+    "easy": "./model1/pose_trace_easy.json",
+    "hard": "./model1/pose_trace_hard.json"
+  }
+}

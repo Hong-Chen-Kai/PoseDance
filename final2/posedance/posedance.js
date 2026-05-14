@@ -56,8 +56,12 @@ function $(id) {
 
 const RECORD_SAMPLE_MIN_DT = 1 / 30; // 30fps 上限
 const DEMO_TRACE_PATHS_BY_MODE = {
-  easy: ["./demo/pose_trace_easy.json"],
-  hard: ["./demo/pose_trace_hard.json"],
+  easy: [
+    "./song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_easy.json",
+  ],
+  hard: [
+    "./song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_hard.json",
+  ],
 };
 const DEMO_SOURCE_ASPECT = 16 / 9;
 
