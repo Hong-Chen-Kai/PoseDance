@@ -105,6 +105,7 @@ const state = {
     total: 0,
     pages: 1,
     loading: false,
+    applying: false,
     error: null,
   },
 
@@ -248,6 +249,7 @@ function initDomRefs() {
   els.overlayCanvas = $("overlay_canvas");
 
   els.songModalBackdrop = $("songModalBackdrop");
+  els.songApplyingOverlay = $("songApplyingOverlay");
   els.songModalCloseButton = $("songModalCloseButton");
   els.songCategories = $("songCategories");
   els.songList = $("songList");
@@ -1129,11 +1131,46 @@ function openSongModal() {
 }
 
 function closeSongModal() {
+  if (state.music.applying) return;
   state.music.open = false;
   if (els.songModalBackdrop) {
     els.songModalBackdrop.classList.remove("is-open");
     els.songModalBackdrop.setAttribute("aria-hidden", "true");
   }
+}
+
+function updateSongModalInteractionLock() {
+  const locked = !!state.music.applying;
+  if (els.songApplyingOverlay) {
+    els.songApplyingOverlay.hidden = !locked;
+    els.songApplyingOverlay.setAttribute("aria-busy", locked ? "true" : "false");
+  }
+  if (els.songModalCloseButton) els.songModalCloseButton.disabled = locked;
+  if (els.songSearchButton) els.songSearchButton.disabled = locked;
+  if (els.songSearchInput) els.songSearchInput.disabled = locked;
+  if (els.songPrevPageButton) {
+    els.songPrevPageButton.disabled =
+      locked || state.music.page <= 1;
+  }
+  if (els.songNextPageButton) {
+    els.songNextPageButton.disabled =
+      locked || state.music.page >= state.music.pages;
+  }
+  if (els.songCategories) {
+    els.songCategories.querySelectorAll(".modal__cat").forEach((btn) => {
+      btn.disabled = locked;
+    });
+  }
+  if (els.songList) {
+    els.songList.querySelectorAll(".modal__pick").forEach((btn) => {
+      btn.disabled = locked;
+    });
+  }
+}
+
+function setSongApplying(active) {
+  state.music.applying = !!active;
+  updateSongModalInteractionLock();
 }
 
 function renderSongCategories() {
@@ -1204,44 +1241,52 @@ function renderSongList() {
 
     els.songList.querySelectorAll(".modal__pick").forEach((btn) => {
       btn.addEventListener("click", async () => {
+        if (state.music.applying) return;
         const midEnc = btn.getAttribute("data-mid") || "";
         const mid = midEnc ? decodeURIComponent(midEnc) : "";
         const it = (Array.isArray(m.items) ? m.items : []).find((x) => String(x?.id || "") === mid);
         if (!it) return;
 
+        setSongApplying(true);
         let loadedByBinding = false;
+        let shouldClose = false;
         try {
-          const binding = await loadSongBindingManifest(mid);
-          loadedByBinding = await applySongBinding(binding, { autoplay: false });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          restoreDefaultSongBinding();
-          if (msg.includes("HTTP 404")) {
-            console.log("[SongBinding] 此歌曲尚未綁定骨架，改走舊影片流程", {
-              songId: mid,
-              title: it?.title,
-            });
-          } else {
-            console.warn("[SongBinding] 載入失敗，改走舊影片流程", {
-              songId: mid,
-              title: it?.title,
-              error: msg,
-            });
+          try {
+            const binding = await loadSongBindingManifest(mid);
+            loadedByBinding = await applySongBinding(binding, { autoplay: false });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            restoreDefaultSongBinding();
+            if (msg.includes("HTTP 404")) {
+              console.log("[SongBinding] 此歌曲尚未綁定骨架，改走舊影片流程", {
+                songId: mid,
+                title: it?.title,
+              });
+            } else {
+              console.warn("[SongBinding] 載入失敗，改走舊影片流程", {
+                songId: mid,
+                title: it?.title,
+                error: msg,
+              });
+            }
           }
+
+          if (!loadedByBinding) {
+            const ok = loadVideoFromSongItem(it, { autoplay: false });
+            if (!ok) {
+              console.warn("[YouTube] 此歌曲缺少可解析的 YouTube 影片資訊", {
+                songId: mid,
+                title: it?.title,
+              });
+              return;
+            }
+          }
+          shouldClose = true;
+        } finally {
+          setSongApplying(false);
         }
 
-        if (!loadedByBinding) {
-          const ok = loadVideoFromSongItem(it, { autoplay: false });
-          if (!ok) {
-            console.warn("[YouTube] 此歌曲缺少可解析的 YouTube 影片資訊", {
-              songId: mid,
-              title: it?.title,
-            });
-            return;
-          }
-        }
-
-        closeSongModal();
+        if (shouldClose) closeSongModal();
       });
     });
   }
@@ -1249,8 +1294,13 @@ function renderSongList() {
   if (els.songPageText) {
     els.songPageText.textContent = `第 ${m.page}/${m.pages} 頁（共 ${m.total}）`;
   }
-  if (els.songPrevPageButton) els.songPrevPageButton.disabled = m.page <= 1;
-  if (els.songNextPageButton) els.songNextPageButton.disabled = m.page >= m.pages;
+  if (els.songPrevPageButton) {
+    els.songPrevPageButton.disabled = m.applying || m.page <= 1;
+  }
+  if (els.songNextPageButton) {
+    els.songNextPageButton.disabled = m.applying || m.page >= m.pages;
+  }
+  if (m.applying) updateSongModalInteractionLock();
 }
 
 async function loadCategories() {
