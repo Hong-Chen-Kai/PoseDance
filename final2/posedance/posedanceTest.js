@@ -1,5 +1,19 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
-import { createSyntheticTrace, getSyntheticLandmarksAtTime } from "./proceduralSkeleton.js";
+
+// 程序化骨架：動態載入，避免 404 導致整頁失效
+let _synthModule = null;
+const _synthReady = import("./proceduralSkeleton.js")
+  .then((m) => { _synthModule = m; console.log("[Synth] proceduralSkeleton.js 載入成功"); })
+  .catch((e) => { console.warn("[Synth] proceduralSkeleton.js 載入失敗（程序化舞者功能停用）", e); });
+
+function createSyntheticTrace(opts) {
+  if (!_synthModule) return null;
+  return _synthModule.createSyntheticTrace(opts);
+}
+function getSyntheticLandmarksAtTime(trace, t) {
+  if (!_synthModule) return null;
+  return _synthModule.getSyntheticLandmarksAtTime(trace, t);
+}
 
 const DEMO_SOURCE_ASPECT = 16 / 9;
 /** 以模組 URL 解析，避免部署子路徑或與 HTML 不同層級時 fetch 404 */
@@ -3056,8 +3070,13 @@ async function main() {
   if (els.addSynthTraceButton) {
     els.addSynthTraceButton.addEventListener("click", () => {
       if (state.ui.mode !== "mode2") return;
+      if (!_synthModule) {
+        console.warn("[Synth] proceduralSkeleton.js 尚未載入，無法生成");
+        return;
+      }
       const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
       const trace = createSyntheticTrace({ bpm });
+      if (!trace) return;
       state.mode2.traces.push(trace);
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
       clearOverlayCanvas();
