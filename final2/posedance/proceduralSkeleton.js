@@ -103,24 +103,28 @@ const FINGER_OFFSETS_R = [18, 20, 22].map(i => [
 // 盂肱關節主動活動範圍 100-120°，舞蹈允許舉到頭頂附近
 const UPPER_ARM_MIN = -60 * DEG;
 const UPPER_ARM_MAX = 110 * DEG;
-// 肘關節功能範圍 0-145°，舞蹈取 0-90° 避免過度折疊
+// 肘關節功能範圍 0-145°，設 140° 讓舉手時前臂能自然下垂
 const ELBOW_BEND_MIN = 0;
-const ELBOW_BEND_MAX = 90 * DEG;
+const ELBOW_BEND_MAX = 140 * DEG;
 
 // ─── 正向動力學（FK）─────────────────────────────────────────
 // side: +1 = 左臂, -1 = 右臂
-// 角度語義統一：90° = 下垂, <90° = 外展/上舉, >90° = 內收/後伸
-// 右臂通過 PI-theta 鏡像，使兩臂可共用相同角度值
-function fkArm(shoulder, L1, L2, thetaUpper, elbowBend, side) {
+// 角度語義統一：90° = 下垂, <90° = 外展/上舉, >90° = 內收/向後
+// 右臂通過 PI-theta 鏡像，使兩臂共用相同角度值
+// thetaForearm: 前臂的絕對目標方向（同語義），FK 內部計算所需肘彎並 clamp
+function fkArm(shoulder, L1, L2, thetaUpper, thetaForearm, side) {
   thetaUpper = clamp(thetaUpper, UPPER_ARM_MIN, UPPER_ARM_MAX);
-  elbowBend = clamp(elbowBend, ELBOW_BEND_MIN, ELBOW_BEND_MAX);
 
-  const actual = side > 0 ? thetaUpper : (Math.PI - thetaUpper);
+  const actualUpper = side > 0 ? thetaUpper : (Math.PI - thetaUpper);
 
-  const ex = shoulder[0] + L1 * Math.cos(actual);
-  const ey = shoulder[1] + L1 * Math.sin(actual);
+  const ex = shoulder[0] + L1 * Math.cos(actualUpper);
+  const ey = shoulder[1] + L1 * Math.sin(actualUpper);
 
-  const actualLower = actual + side * elbowBend;
+  const targetForearm = side > 0 ? thetaForearm : (Math.PI - thetaForearm);
+  let bendAngle = (targetForearm - actualUpper) * side;
+  bendAngle = clamp(bendAngle, ELBOW_BEND_MIN, ELBOW_BEND_MAX);
+
+  const actualLower = actualUpper + side * bendAngle;
   const wx = ex + L2 * Math.cos(actualLower);
   const wy = ey + L2 * Math.sin(actualLower);
 
@@ -129,72 +133,73 @@ function fkArm(shoulder, L1, L2, thetaUpper, elbowBend, side) {
 
 // ─── Pattern 定義 ────────────────────────────────────────────
 // 每個 pattern 是 8 拍的角度序列（度數）
-// 角度語義：90 = 自然下垂, <90 = 向外/上舉, >90 = 略向後
+// left_upper / right_upper: 上臂方向（90=下垂, <90=舉起, >90=後伸）
+// left_forearm / right_forearm: 前臂絕對方向（同語義）
 // 兩臂共用語義 — FK 內部自動鏡像右臂
 const PATTERNS = {
   sway: {
     name: "左右搖擺",
     beats: 8,
-    left_upper:  [90, 55, 20, 55, 90, 95, 100, 95],
-    left_elbow:  [20, 35, 55, 35, 20, 15, 10,  15],
-    right_upper: [90, 95, 100, 95, 90, 55, 20, 55],
-    right_elbow: [20, 15, 10,  15, 20, 35, 55, 35],
+    left_upper:    [90, 55, 20, 55, 90, 95, 100, 95],
+    left_forearm:  [100, 95, 90, 95, 100, 105, 108, 105],
+    right_upper:   [90, 95, 100, 95, 90, 55, 20, 55],
+    right_forearm: [100, 105, 108, 105, 100, 95, 90, 95],
   },
   raise: {
     name: "雙手舉起放下",
     beats: 8,
-    left_upper:  [90, 45, 0, -40, -40, 0, 45, 90],
-    left_elbow:  [10, 20, 35, 50, 50, 35, 20, 10],
-    right_upper: [90, 45, 0, -40, -40, 0, 45, 90],
-    right_elbow: [10, 20, 35, 50, 50, 35, 20, 10],
+    left_upper:    [90, 45, 0, -40, -40, 0, 45, 90],
+    left_forearm:  [100, 90, 80, 70, 70, 80, 90, 100],
+    right_upper:   [90, 45, 0, -40, -40, 0, 45, 90],
+    right_forearm: [100, 90, 80, 70, 70, 80, 90, 100],
   },
   wave: {
     name: "波浪擺手",
     beats: 8,
-    left_upper:  [90, 30, -20, 30, 90, 90, 90, 90],
-    left_elbow:  [10, 40, 65,  40, 10, 10, 10, 10],
-    right_upper: [90, 90, 90,  90, 90, 30, -20, 30],
-    right_elbow: [10, 10, 10,  10, 10, 40, 65,  40],
+    left_upper:    [90, 30, -20, 30, 90, 90, 90, 90],
+    left_forearm:  [100, 55, 25, 55, 100, 100, 100, 100],
+    right_upper:   [90, 90, 90, 90, 90, 30, -20, 30],
+    right_forearm: [100, 100, 100, 100, 100, 55, 25, 55],
   },
   clap: {
     name: "拍手",
     beats: 8,
-    left_upper:  [85, 65, 75, 85, 85, 65, 75, 85],
-    left_elbow:  [30, 80, 60, 30, 30, 80, 60, 30],
-    right_upper: [85, 65, 75, 85, 85, 65, 75, 85],
-    right_elbow: [30, 80, 60, 30, 30, 80, 60, 30],
+    left_upper:    [85, 60, 70, 85, 85, 60, 70, 85],
+    left_forearm:  [110, 145, 130, 110, 110, 145, 130, 110],
+    right_upper:   [85, 60, 70, 85, 85, 60, 70, 85],
+    right_forearm: [110, 145, 130, 110, 110, 145, 130, 110],
   },
   groove: {
     name: "律動搖擺",
     beats: 8,
-    left_upper:  [88, 75, 65, 75, 92, 100, 105, 100],
-    left_elbow:  [25, 40, 55, 40, 15, 10,  5,   10],
-    right_upper: [92, 100, 105, 100, 88, 75, 65, 75],
-    right_elbow: [15, 10,  5,   10,  25, 40, 55, 40],
+    left_upper:    [88, 75, 65, 75, 92, 100, 105, 100],
+    left_forearm:  [100, 105, 115, 105, 100, 108, 112, 108],
+    right_upper:   [92, 100, 105, 100, 88, 75, 65, 75],
+    right_forearm: [100, 108, 112, 108, 100, 105, 115, 105],
   },
   pump: {
     name: "上下泵動",
     beats: 8,
-    left_upper:  [90, 20, 90, 20, 90, 20, 90, 20],
-    left_elbow:  [15, 55, 15, 55, 15, 55, 15, 55],
-    right_upper: [20, 90, 20, 90, 20, 90, 20, 90],
-    right_elbow: [55, 15, 55, 15, 55, 15, 55, 15],
+    left_upper:    [90, 15, 90, 15, 90, 15, 90, 15],
+    left_forearm:  [100, 20, 100, 20, 100, 20, 100, 20],
+    right_upper:   [15, 90, 15, 90, 15, 90, 15, 90],
+    right_forearm: [20, 100, 20, 100, 20, 100, 20, 100],
   },
   reach: {
     name: "伸展收回",
     beats: 8,
-    left_upper:  [90, 30, 0,  0,  30, 90, 90, 90],
-    left_elbow:  [15, 8,  3,  3,  8,  15, 15, 15],
-    right_upper: [90, 90, 90, 30, 0,  0,  30, 90],
-    right_elbow: [15, 15, 15, 8,  3,  3,  8,  15],
+    left_upper:    [90, 30, 0, 0, 30, 90, 90, 90],
+    left_forearm:  [100, 30, 0, 0, 30, 100, 100, 100],
+    right_upper:   [90, 90, 90, 30, 0, 0, 30, 90],
+    right_forearm: [100, 100, 100, 30, 0, 0, 30, 100],
   },
   twist: {
     name: "扭轉交替",
     beats: 8,
-    left_upper:  [85, 40, 10, 40, 95, 105, 100, 95],
-    left_elbow:  [25, 50, 70, 50, 15, 10,  12,  15],
-    right_upper: [95, 105, 100, 95, 85, 40, 10, 40],
-    right_elbow: [15, 10,  12,  15, 25, 50, 70, 50],
+    left_upper:    [85, 40, 10, 40, 95, 105, 100, 95],
+    left_forearm:  [100, 85, 90, 85, 108, 118, 112, 108],
+    right_upper:   [95, 105, 100, 95, 85, 40, 10, 40],
+    right_forearm: [108, 118, 112, 108, 100, 85, 90, 85],
   },
 };
 
@@ -292,25 +297,25 @@ export class ProceduralSkeleton {
 
     const frac = cosEase(beatFloat - beatIndex);
 
-    // 插值原始角度
+    // 插值原始角度（上臂 + 前臂絕對方向）
     const luDegRaw = _lerp(pat.left_upper[localBeatClamped], pat.left_upper[nextBeat], frac);
-    const leDegRaw = _lerp(pat.left_elbow[localBeatClamped], pat.left_elbow[nextBeat], frac);
+    const lfDegRaw = _lerp(pat.left_forearm[localBeatClamped], pat.left_forearm[nextBeat], frac);
     const ruDegRaw = _lerp(pat.right_upper[localBeatClamped], pat.right_upper[nextBeat], frac);
-    const reDegRaw = _lerp(pat.right_elbow[localBeatClamped], pat.right_elbow[nextBeat], frac);
+    const rfDegRaw = _lerp(pat.right_forearm[localBeatClamped], pat.right_forearm[nextBeat], frac);
 
-    // 套用振幅縮放：偏離靜止值（90° 上臂 / 0° 肘）的部分乘以 amplitudeScale
+    // 振幅縮放：偏離靜止值 90°（下垂）的部分乘以 amplitudeScale
     const amp = this.amplitudeScale;
     const luDeg = 90 + (luDegRaw - 90) * amp;
     const ruDeg = 90 + (ruDegRaw - 90) * amp;
-    const leDeg = leDegRaw * amp;
-    const reDeg = reDegRaw * amp;
+    const lfDeg = 90 + (lfDegRaw - 90) * amp;
+    const rfDeg = 90 + (rfDegRaw - 90) * amp;
 
     // Perlin noise 微抖（±2°）
     const noiseScale = 2.0;
     const luRad = (luDeg + noiseScale * perlin1d(t * 1.7)) * DEG;
-    const leRad = (leDeg + noiseScale * perlin1d(t * 2.3 + 100)) * DEG;
+    const lfRad = (lfDeg + noiseScale * perlin1d(t * 2.3 + 100)) * DEG;
     const ruRad = (ruDeg + noiseScale * perlin1d(t * 1.9 + 200)) * DEG;
-    const reRad = (reDeg + noiseScale * perlin1d(t * 2.1 + 300)) * DEG;
+    const rfRad = (rfDeg + noiseScale * perlin1d(t * 2.1 + 300)) * DEG;
 
     // ── 身體律動（幅度隨 amplitudeScale 縮放）──
     const omega = (2 * Math.PI) / this.beatSec;
@@ -333,12 +338,12 @@ export class ProceduralSkeleton {
     lm[11][1] -= shoulderLift;
     lm[12][1] += shoulderLift;
 
-    // ── FK 計算手臂 ──
+    // ── FK 計算手臂（傳入上臂角度 + 前臂目標方向）──
     const leftArm = fkArm(
-      [lm[11][0], lm[11][1]], L_UPPER_L, L_LOWER_L, luRad, leRad, 1
+      [lm[11][0], lm[11][1]], L_UPPER_L, L_LOWER_L, luRad, lfRad, 1
     );
     const rightArm = fkArm(
-      [lm[12][0], lm[12][1]], L_UPPER_R, L_LOWER_R, ruRad, reRad, -1
+      [lm[12][0], lm[12][1]], L_UPPER_R, L_LOWER_R, ruRad, rfRad, -1
     );
 
     lm[13][0] = leftArm.elbow[0];  lm[13][1] = leftArm.elbow[1];
