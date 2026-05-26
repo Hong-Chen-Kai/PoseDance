@@ -1,4 +1,5 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
+import { createSyntheticTrace, getSyntheticLandmarksAtTime } from "./proceduralSkeleton.js";
 
 const DEMO_SOURCE_ASPECT = 16 / 9;
 /** 以模組 URL 解析，避免部署子路徑或與 HTML 不同層級時 fetch 404 */
@@ -234,6 +235,9 @@ function initDomRefs() {
   els.restoreMode2BindingButton = $("restoreMode2BindingButton");
   els.skeletonFileInput = $("skeletonFileInput");
   els.mode2SkeletonFileInput = $("mode2SkeletonFileInput");
+  els.synthControls = $("synthControls");
+  els.synthBpmInput = $("synthBpmInput");
+  els.addSynthTraceButton = $("addSynthTraceButton");
   els.startCameraButton = $("startCameraButton");
   els.toggleMode1DemoButton = $("toggleMode1DemoButton");
   els.recordButton = $("recordButton");
@@ -508,6 +512,7 @@ function applyMode(mode) {
     if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "none";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
+    if (els.synthControls) els.synthControls.style.display = "";
 
     state.recorder.armed = false;
     state.recorder.active = false;
@@ -530,6 +535,7 @@ function applyMode(mode) {
     if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "";
     if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
+    if (els.synthControls) els.synthControls.style.display = "none";
   }
 }
 
@@ -810,6 +816,10 @@ function getSkeletonLandmarksForIdAtTime(id, tScore) {
     if (isMode2TraceSkeletonId(id)) {
       const traceId = id.slice("m2_trace_".length);
       const tr = (state.mode2?.traces || []).find((t) => String(t.id) === traceId);
+      if (tr?.synthetic) {
+        const lm = getSyntheticLandmarksAtTime(tr, tScore);
+        return { lm, getter: getArrXYV };
+      }
       const samples = tr?.data?.samples;
       const lm = Array.isArray(samples) ? getDemoLandmarksAtTime(samples, tScore) : null;
       return { lm, getter: getArrXYV };
@@ -2535,10 +2545,13 @@ function drawMode2Overlay(tScore) {
     if (!tr || tr.enabled === false) continue;
     const id = mode2TraceSkeletonId(tr.id);
     const rect = getDrawRect(id, defaultRects);
-    const lm = tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, tScore) : null;
+    const lm = tr.synthetic
+      ? getSyntheticLandmarksAtTime(tr, tScore)
+      : (tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, tScore) : null);
     if (!rect || !lm) continue;
-    drawPoseConnections(ctx, lm, getArrXYV, rect, () => demoColor, 5);
-    drawPosePoints(ctx, lm, getArrXYV, rect, demoColor, 4.5);
+    const trColor = tr.synthetic ? "rgba(0,180,255,0.95)" : demoColor;
+    drawPoseConnections(ctx, lm, getArrXYV, rect, () => trColor, 5);
+    drawPosePoints(ctx, lm, getArrXYV, rect, trColor, 4.5);
   }
 
   if (state.latestUserLandmarks) {
@@ -3036,6 +3049,19 @@ async function main() {
       } catch (err) {
         console.warn("[SongBinding] 恢復 Mode 2 預設骨架失敗", err);
       }
+    });
+  }
+
+  // Mode2：生成程序化舞者
+  if (els.addSynthTraceButton) {
+    els.addSynthTraceButton.addEventListener("click", () => {
+      if (state.ui.mode !== "mode2") return;
+      const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
+      const trace = createSyntheticTrace({ bpm });
+      state.mode2.traces.push(trace);
+      state.interact.selectedId = mode2TraceSkeletonId(trace.id);
+      clearOverlayCanvas();
+      console.log("[Synth] 已新增程序化舞者", { id: trace.id, bpm });
     });
   }
 
