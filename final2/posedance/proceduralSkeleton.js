@@ -100,8 +100,8 @@ const FINGER_OFFSETS_R = [18, 20, 22].map(i => [
 
 // ─── 關節角度限制（基於生物力學文獻）───────────────────────────
 // 角度語義：90° = 自然下垂, <90° = 向外/向上舉, >90° = 向內/向後
-// 盂肱關節主動活動範圍 100-120°，我們取保守子集
-const UPPER_ARM_MIN = 20 * DEG;
+// 盂肱關節主動活動範圍 100-120°，舞蹈允許舉到頭頂附近
+const UPPER_ARM_MIN = -60 * DEG;
 const UPPER_ARM_MAX = 110 * DEG;
 // 肘關節功能範圍 0-145°，舞蹈取 0-90° 避免過度折疊
 const ELBOW_BEND_MIN = 0;
@@ -124,7 +124,7 @@ function fkArm(shoulder, L1, L2, thetaUpper, elbowBend, side) {
   const wx = ex + L2 * Math.cos(actualLower);
   const wy = ey + L2 * Math.sin(actualLower);
 
-  return { elbow: [ex, ey], wrist: [wx, wy] };
+  return { elbow: [ex, ey], wrist: [wx, wy], forearmAngle: actualLower };
 }
 
 // ─── Pattern 定義 ────────────────────────────────────────────
@@ -135,26 +135,26 @@ const PATTERNS = {
   sway: {
     name: "左右搖擺",
     beats: 8,
-    left_upper:  [90, 70, 50, 70, 90, 95, 100, 95],
-    left_elbow:  [20, 35, 50, 35, 20, 15, 10,  15],
-    right_upper: [90, 95, 100, 95, 90, 70, 50, 70],
-    right_elbow: [20, 15, 10,  15, 20, 35, 50, 35],
+    left_upper:  [90, 55, 20, 55, 90, 95, 100, 95],
+    left_elbow:  [20, 35, 55, 35, 20, 15, 10,  15],
+    right_upper: [90, 95, 100, 95, 90, 55, 20, 55],
+    right_elbow: [20, 15, 10,  15, 20, 35, 55, 35],
   },
   raise: {
     name: "雙手舉起放下",
     beats: 8,
-    left_upper:  [90, 65, 40, 25, 25, 40, 65, 90],
-    left_elbow:  [15, 25, 40, 55, 55, 40, 25, 15],
-    right_upper: [90, 65, 40, 25, 25, 40, 65, 90],
-    right_elbow: [15, 25, 40, 55, 55, 40, 25, 15],
+    left_upper:  [90, 45, 0, -40, -40, 0, 45, 90],
+    left_elbow:  [10, 20, 35, 50, 50, 35, 20, 10],
+    right_upper: [90, 45, 0, -40, -40, 0, 45, 90],
+    right_elbow: [10, 20, 35, 50, 50, 35, 20, 10],
   },
   wave: {
     name: "波浪擺手",
     beats: 8,
-    left_upper:  [90, 55, 30, 55, 90, 90, 90, 90],
-    left_elbow:  [15, 45, 70, 45, 15, 15, 15, 15],
-    right_upper: [90, 90, 90, 90, 90, 55, 30, 55],
-    right_elbow: [15, 15, 15, 15, 15, 45, 70, 45],
+    left_upper:  [90, 30, -20, 30, 90, 90, 90, 90],
+    left_elbow:  [10, 40, 65,  40, 10, 10, 10, 10],
+    right_upper: [90, 90, 90,  90, 90, 30, -20, 30],
+    right_elbow: [10, 10, 10,  10, 10, 40, 65,  40],
   },
   clap: {
     name: "拍手",
@@ -175,26 +175,26 @@ const PATTERNS = {
   pump: {
     name: "上下泵動",
     beats: 8,
-    left_upper:  [90, 50, 90, 50, 90, 50, 90, 50],
-    left_elbow:  [20, 60, 20, 60, 20, 60, 20, 60],
-    right_upper: [50, 90, 50, 90, 50, 90, 50, 90],
-    right_elbow: [60, 20, 60, 20, 60, 20, 60, 20],
+    left_upper:  [90, 20, 90, 20, 90, 20, 90, 20],
+    left_elbow:  [15, 55, 15, 55, 15, 55, 15, 55],
+    right_upper: [20, 90, 20, 90, 20, 90, 20, 90],
+    right_elbow: [55, 15, 55, 15, 55, 15, 55, 15],
   },
   reach: {
     name: "伸展收回",
     beats: 8,
-    left_upper:  [90, 55, 35, 35, 55, 90, 90, 90],
-    left_elbow:  [20, 10, 5,  5,  10, 20, 20, 20],
-    right_upper: [90, 90, 90, 55, 35, 35, 55, 90],
-    right_elbow: [20, 20, 20, 10, 5,  5,  10, 20],
+    left_upper:  [90, 30, 0,  0,  30, 90, 90, 90],
+    left_elbow:  [15, 8,  3,  3,  8,  15, 15, 15],
+    right_upper: [90, 90, 90, 30, 0,  0,  30, 90],
+    right_elbow: [15, 15, 15, 8,  3,  3,  8,  15],
   },
   twist: {
     name: "扭轉交替",
     beats: 8,
-    left_upper:  [85, 55, 40, 55, 95, 105, 100, 95],
-    left_elbow:  [30, 55, 75, 55, 20, 10,  15,  20],
-    right_upper: [95, 105, 100, 95, 85, 55, 40, 55],
-    right_elbow: [20, 10,  15,  20, 30, 55, 75, 55],
+    left_upper:  [85, 40, 10, 40, 95, 105, 100, 95],
+    left_elbow:  [25, 50, 70, 50, 15, 10,  12,  15],
+    right_upper: [95, 105, 100, 95, 85, 40, 10, 40],
+    right_elbow: [15, 10,  12,  15, 25, 50, 70, 50],
   },
 };
 
@@ -346,16 +346,23 @@ export class ProceduralSkeleton {
     lm[15][0] = leftArm.wrist[0];  lm[15][1] = leftArm.wrist[1];
     lm[16][0] = rightArm.wrist[0]; lm[16][1] = rightArm.wrist[1];
 
-    // 手指跟著手腕
+    // 手指跟著前臂方向旋轉（BASE_POSE 中前臂約 90° = 朝下）
+    const BASE_FOREARM_ANGLE = Math.PI / 2;
     const leftFingerIdx = [17, 19, 21];
+    const lRot = leftArm.forearmAngle - BASE_FOREARM_ANGLE;
+    const lCos = Math.cos(lRot), lSin = Math.sin(lRot);
     for (let i = 0; i < 3; i++) {
-      lm[leftFingerIdx[i]][0] = lm[15][0] + FINGER_OFFSETS_L[i][0];
-      lm[leftFingerIdx[i]][1] = lm[15][1] + FINGER_OFFSETS_L[i][1];
+      const ox = FINGER_OFFSETS_L[i][0], oy = FINGER_OFFSETS_L[i][1];
+      lm[leftFingerIdx[i]][0] = lm[15][0] + ox * lCos - oy * lSin;
+      lm[leftFingerIdx[i]][1] = lm[15][1] + ox * lSin + oy * lCos;
     }
     const rightFingerIdx = [18, 20, 22];
+    const rRot = rightArm.forearmAngle - BASE_FOREARM_ANGLE;
+    const rCos = Math.cos(rRot), rSin = Math.sin(rRot);
     for (let i = 0; i < 3; i++) {
-      lm[rightFingerIdx[i]][0] = lm[16][0] + FINGER_OFFSETS_R[i][0];
-      lm[rightFingerIdx[i]][1] = lm[16][1] + FINGER_OFFSETS_R[i][1];
+      const ox = FINGER_OFFSETS_R[i][0], oy = FINGER_OFFSETS_R[i][1];
+      lm[rightFingerIdx[i]][0] = lm[16][0] + ox * rCos - oy * rSin;
+      lm[rightFingerIdx[i]][1] = lm[16][1] + ox * rSin + oy * rCos;
     }
 
     // 頭保持在肩上方（安全約束）
