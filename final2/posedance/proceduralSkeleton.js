@@ -45,98 +45,35 @@ function smootherstep(t) {
   return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
-// ─── 調參預設（第一版寫死，不暴露 UI 滑桿）────────────────────
+// ─── 調參預設 ────────────────────────────────────────────────
 const BLEND_WINDOW_BEATS = 0.75;
-const SOFT_IK_RATIO = 0.08;
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
-const NOISE_SCALE_DEG = 1.2;
+const NOISE_SCALE_DEG = 1.0;
 
-// 盂肱關節：外旋約 0–90°、內旋約 0–70°（主動，依文獻近似）
-const HUMERAL_ROT_NEUTRAL = 15;
-const HUMERAL_ROT_MIN = -55;
-const HUMERAL_ROT_MAX = 75;
+// 盂肱：外展 0=垂下、90=水平、165=過頭；內/外旋（度）
+const HUMERAL_ROT_NEUTRAL = 18;
+const HUMERAL_ROT_MIN = -60;
+const HUMERAL_ROT_MAX = 85;
 const ELBOW_FLEX_MIN = 12;
-const ELBOW_FLEX_MAX = 140;
-const CARRYING_ANGLE_BASE = 32;
-
-function softIKDistance(d, L1, L2, softness) {
-  const maxReach = L1 + L2 - 1e-4;
-  const minReach = Math.abs(L1 - L2) + 1e-4;
-  d = clamp(d, minReach, maxReach);
-  if (softness <= 0 || d <= maxReach - softness) return d;
-  const t = (d - (maxReach - softness)) / softness;
-  return maxReach - softness * Math.exp(-3 * t);
-}
-
-function pickElbowSolution(elbow1, elbow2, shoulder, pole, prevElbow) {
-  const score = (elbow) => {
-    const dx = elbow[0] - shoulder[0];
-    const dy = elbow[1] - shoulder[1];
-    const px = pole[0] - shoulder[0];
-    const py = pole[1] - shoulder[1];
-    let s = dx * px + dy * py;
-    if (prevElbow) s -= dist2d(elbow, prevElbow) * 80;
-    return s;
-  };
-  return score(elbow1) >= score(elbow2) ? elbow1 : elbow2;
-}
-
-function solveTwoBoneIK2D(shoulder, target, L1, L2, pole, prevElbow) {
-  let dx = target[0] - shoulder[0];
-  let dy = target[1] - shoulder[1];
-  let dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist < 1e-6) {
-    dist = 1e-6;
-    dx = 0;
-    dy = 1e-6;
-  }
-
-  const softness = SOFT_IK_RATIO * (L1 + L2);
-  dist = softIKDistance(dist, L1, L2, softness);
-
-  const minReach = Math.abs(L1 - L2) + 1e-5;
-  const maxReach = L1 + L2 - 1e-5;
-  dist = clamp(dist, minReach, maxReach);
-
-  const baseAngle = Math.atan2(dy, dx);
-  const cosOffset = clamp((L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist), -1, 1);
-  const offset = Math.acos(cosOffset);
-
-  const elbow1 = [
-    shoulder[0] + L1 * Math.cos(baseAngle + offset),
-    shoulder[1] + L1 * Math.sin(baseAngle + offset),
-  ];
-  const elbow2 = [
-    shoulder[0] + L1 * Math.cos(baseAngle - offset),
-    shoulder[1] + L1 * Math.sin(baseAngle - offset),
-  ];
-  const elbow = pickElbowSolution(elbow1, elbow2, shoulder, pole, prevElbow);
-
-  const toWristAngle = Math.atan2(
-    shoulder[1] + dist * Math.sin(baseAngle) - elbow[1],
-    shoulder[0] + dist * Math.cos(baseAngle) - elbow[0],
-  );
-  const wrist = [
-    elbow[0] + L2 * Math.cos(toWristAngle),
-    elbow[1] + L2 * Math.sin(toWristAngle),
-  ];
-  const forearmAngle = Math.atan2(wrist[1] - elbow[1], wrist[0] - elbow[0]);
-  return { elbow, wrist, forearmAngle };
-}
+const ELBOW_FLEX_MAX = 145;
+const CARRYING_ANGLE_BASE = 28;
+// 靜止站姿上臂略外展（對齊 BASE_POSE）
+const REST_ABDUCTION_DEG = 12;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
-  if (elevationDeg > 120) maxFlex = 118;
-  else if (elevationDeg > 95) maxFlex = 128;
+  if (elevationDeg > 125) maxFlex = 132;
+  else if (elevationDeg > 95) maxFlex = 138;
   else if (elevationDeg < 15) maxFlex = 132;
   const minFlex = elevationDeg < 20 ? 18 : ELBOW_FLEX_MIN;
   return clamp(flexDeg, minFlex, maxFlex);
 }
 
 /**
- * 從 pattern 的 upper/forearm 角轉成解剖意圖：
- * elevation 抬舉、sweep 前後掃掠、elbowFlex 肘屈、humeralRot 肱骨內/外旋
+ * 從 pattern 角轉解剖意圖：
+ * elevation 0=垂下、90=水平外展、165=過頭
+ * sweep 前(+)/後(-) 掃掠；elbowFlex 肘屈；humeralRot 內/外旋
  */
 function patternToArmIntent(upperDeg, forearmDeg) {
   const elevation = clamp(90 - upperDeg, 0, 165);
@@ -144,7 +81,11 @@ function patternToArmIntent(upperDeg, forearmDeg) {
   if (elbowFlex > 170) elbowFlex = 360 - elbowFlex;
   elbowFlex = clampElbowFlexForElevation(elbowFlex, elevation);
 
-  const sweep = clamp((forearmDeg - 90) * 0.55 + (upperDeg - 90) * 0.2, -72, 72);
+  const sweep = clamp(
+    (forearmDeg - 90) * 0.5 + (upperDeg - 90) * 0.35,
+    -80,
+    80,
+  );
   const humeralRot = computeHumeralRotationDeg(elevation, elbowFlex, sweep);
   return { elevation, sweep, elbowFlex, humeralRot };
 }
@@ -152,69 +93,89 @@ function patternToArmIntent(upperDeg, forearmDeg) {
 function computeHumeralRotationDeg(elevation, elbowFlex, sweep) {
   let rot = HUMERAL_ROT_NEUTRAL;
 
-  // 側舉 / 律動：外旋增加，肘窩朝外
-  rot += clamp(elevation * 0.22, 0, 28) * (1 - Math.abs(sweep) / 85);
+  // 側舉 / 過頭投降：外旋（肘窩朝外、前臂可朝上）
+  rot += clamp(elevation * 0.28, 0, 38) * (1 - Math.abs(sweep) / 90);
+  if (elevation > 78 && elevation < 130 && elbowFlex > 55) {
+    rot += 28 * clamp((elevation - 70) / 45, 0, 1) * clamp((elbowFlex - 50) / 70, 0, 1);
+  }
 
   // 前伸直臂：略內旋
-  if (sweep < -22 && elbowFlex < 45) {
-    rot -= 18 * clamp(-sweep / 55, 0, 1);
+  if (sweep < -20 && elbowFlex < 45) {
+    rot -= 20 * clamp(-sweep / 55, 0, 1);
   }
 
-  // 胸前彎肘（拍手、抱胸）：內旋
-  if (sweep < -12 && elbowFlex > 65) {
-    rot -= 38 * clamp((elbowFlex - 55) / 75, 0, 1) * clamp(-sweep / 45, 0.4, 1);
+  // 胸前彎肘（拍手）：內旋
+  if (sweep < -10 && elbowFlex > 60) {
+    rot -= 42 * clamp((elbowFlex - 55) / 75, 0, 1) * clamp(-sweep / 40, 0.35, 1);
   }
 
-  // 過頭直臂：中性略外旋
-  if (elevation > 105 && elbowFlex < 40) rot += 8;
+  // 過頭直臂：略外旋
+  if (elevation > 115 && elbowFlex < 35) rot += 12;
 
   // 過頭彎肘（手靠頭）：內旋
-  if (elevation > 95 && elbowFlex > 58) {
-    rot -= 42 * clamp((elevation - 85) / 70, 0, 1) * clamp((elbowFlex - 50) / 80, 0, 1);
+  if (elevation > 100 && elbowFlex > 55) {
+    rot -= 35 * clamp((elevation - 90) / 65, 0, 1) * clamp((elbowFlex - 45) / 85, 0, 1);
   }
 
   // 後方動作：外旋
-  if (sweep > 24) rot += 22 * clamp(sweep / 55, 0, 1);
+  if (sweep > 22) rot += 24 * clamp(sweep / 55, 0, 1);
 
   return clamp(rot, HUMERAL_ROT_MIN, HUMERAL_ROT_MAX);
 }
 
+/**
+ * 上臂方向：pitch=elevation（0 垂下 → 165 過頭），y 向上為負（螢幕座標）
+ */
 function solveUpperArmDir(elevationDeg, sweepDeg, humeralRotDeg, side) {
-  const e = elevationDeg * DEG;
-  const s = sweepDeg * DEG;
+  const pitch = (REST_ABDUCTION_DEG + elevationDeg * 0.96) * DEG;
+  const yaw = sweepDeg * DEG;
   const rot = humeralRotDeg * DEG;
-  const cosE = Math.cos(e);
-  const sinE = Math.sin(e);
-  const cosS = Math.cos(s);
-  const sinS = Math.sin(s);
+  const spread = 1 + clamp(elevationDeg / 100, 0, 0.35);
 
-  const y = cosE * Math.max(0.25, cosS);
-  const x = side * (sinE * 0.82 + cosE * sinS * 0.28 + Math.sin(rot) * 0.12);
-  const z = -sinE * sinS * 0.5 - Math.sin(rot) * 0.18;
+  const x = side * spread * (Math.sin(pitch) * Math.cos(yaw * 0.55) + Math.sin(rot) * 0.1);
+  const y = Math.cos(pitch) * Math.cos(yaw * 0.38);
+  const z = -Math.sin(yaw) * Math.sin(pitch) * 0.55 - Math.sin(rot) * 0.22;
 
   const len = Math.sqrt(x * x + y * y + z * z) || 1;
   return { x: x / len, y: y / len, z: z / len };
 }
 
-function computeAnatomicalPole(shoulder, upperDir, humeralRotDeg, side) {
-  const rot = humeralRotDeg * DEG;
-  const ext = side * (0.038 + Math.sin(rot) * 0.028);
-  const down = 0.055 + Math.cos(rot) * 0.018;
-  const perpX = -upperDir.y * side * 0.04;
-  const perpY = upperDir.x * side * 0.04;
-  return [shoulder[0] + ext + perpX, shoulder[1] + down + perpY];
+function pickForearmAngle(upperAngle, elbowFlex, humeralRot, side, elevation, prevForearmAngle) {
+  const carrying = (CARRYING_ANGLE_BASE + humeralRot * 0.42) * DEG * side;
+  const flexRad = elbowFlex * DEG;
+  const candA = upperAngle + carrying + side * flexRad;
+  const candB = upperAngle + carrying - side * flexRad;
+
+  let picked;
+  if (prevForearmAngle != null) {
+    const da = Math.abs(Math.atan2(Math.sin(candA - prevForearmAngle), Math.cos(candA - prevForearmAngle)));
+    const db = Math.abs(Math.atan2(Math.sin(candB - prevForearmAngle), Math.cos(candB - prevForearmAngle)));
+    picked = da <= db ? candA : candB;
+  } else if (elevation > 70 && elbowFlex > 45) {
+    picked = Math.sin(candA) < Math.sin(candB) ? candA : candB;
+  } else {
+    picked = candA;
+  }
+
+  // 投降 / 過頭彎肘：前臂朝上方收（螢幕 y 更小）
+  if (elevation > 72 && elbowFlex > 68) {
+    const upAngle = -Math.PI / 2 + side * (0.12 + humeralRot * 0.004 * DEG);
+    const blend = clamp((elevation - 72) / 48, 0, 1) * clamp((elbowFlex - 68) / 55, 0, 1);
+    const d = Math.atan2(Math.sin(picked - upAngle), Math.cos(picked - upAngle));
+    picked = picked - d * blend * 0.82;
+  }
+
+  return picked;
 }
 
-function solveArmAnatomical(shoulder, L1, L2, intent, side, prevElbow) {
+/** 純 FK：固定 L1/L2，避免 IK 二次解算造成骨長伸縮 */
+function solveArmAnatomical(shoulder, L1, L2, intent, side, prevForearmAngle) {
   const { elevation, sweep, elbowFlex, humeralRot } = intent;
   const upperDir = solveUpperArmDir(elevation, sweep, humeralRot, side);
-  const pole = computeAnatomicalPole(shoulder, upperDir, humeralRot, side);
-
   const upperAngle = Math.atan2(upperDir.y, upperDir.x);
-  const carrying = (CARRYING_ANGLE_BASE + humeralRot * 0.55) * DEG * side;
-  const sweepDamp = 1 - 0.28 * Math.abs(Math.sin(sweep * DEG));
-  const flexRad = elbowFlex * DEG * sweepDamp;
-  const forearmAngle = upperAngle + carrying + side * flexRad;
+  const forearmAngle = pickForearmAngle(
+    upperAngle, elbowFlex, humeralRot, side, elevation, prevForearmAngle,
+  );
 
   const elbow = [
     shoulder[0] + L1 * upperDir.x,
@@ -225,8 +186,7 @@ function solveArmAnatomical(shoulder, L1, L2, intent, side, prevElbow) {
     elbow[1] + L2 * Math.sin(forearmAngle),
   ];
 
-  const ik = solveTwoBoneIK2D(shoulder, wrist, L1, L2, pole, prevElbow);
-  return { ...ik, upperDir, humeralRot, elbowFlex };
+  return { elbow, wrist, forearmAngle, upperDir, humeralRot, elbowFlex };
 }
 
 function criticalDampedSpring1D(state, key, vKey, target, halfLife, dt) {
@@ -345,71 +305,87 @@ function applySimpleZ(lm, elbowIdx, wristIdx, fingerIdxs, shoulder, wrist, L1, L
 }
 
 // ─── Pattern 定義 ────────────────────────────────────────────
-// upper: 90=下垂, 越小越抬舉；forearm: 與 upper 差值≈肘屈（經 anatomy 轉換）
+// upper: 90=垂下, 越小越舉高；forearm 與 upper 差≈肘屈
 const PATTERNS = {
   sway: {
     name: "左右搖擺",
     beats: 8,
-    left_upper:    [90, 62, 42, 62, 90, 98, 102, 98],
-    left_forearm:  [105, 108, 112, 108, 105, 112, 118, 112],
-    right_upper:   [90, 98, 102, 98, 90, 62, 42, 62],
-    right_forearm: [105, 112, 118, 112, 105, 108, 112, 108],
+    left_upper:    [90, 55, 35, 55, 90, 105, 115, 105],
+    left_forearm:  [108, 118, 128, 118, 108, 125, 135, 125],
+    right_upper:   [90, 105, 115, 105, 90, 55, 35, 55],
+    right_forearm: [108, 125, 135, 125, 108, 118, 128, 118],
   },
   raise: {
-    name: "雙手舉起放下",
+    name: "雙手舉起",
     beats: 8,
-    left_upper:    [90, 55, 25, 5, 5, 25, 55, 90],
-    left_forearm:  [105, 115, 125, 130, 130, 125, 115, 105],
-    right_upper:   [90, 55, 25, 5, 5, 25, 55, 90],
-    right_forearm: [105, 115, 125, 130, 130, 125, 115, 105],
+    left_upper:    [90, 45, 10, -25, -25, 10, 45, 90],
+    left_forearm:  [112, 135, 160, 175, 175, 160, 135, 112],
+    right_upper:   [90, 45, 10, -25, -25, 10, 45, 90],
+    right_forearm: [112, 135, 160, 175, 175, 160, 135, 112],
+  },
+  surrender: {
+    name: "投降舉手",
+    beats: 8,
+    left_upper:    [90, 35, 5, -20, -20, 5, 35, 90],
+    left_forearm:  [120, 155, 185, 195, 195, 185, 155, 120],
+    right_upper:   [90, 35, 5, -20, -20, 5, 35, 90],
+    right_forearm: [120, 155, 185, 195, 195, 185, 155, 120],
   },
   wave: {
     name: "波浪擺手",
     beats: 8,
-    left_upper:    [90, 45, 20, 45, 90, 90, 90, 90],
-    left_forearm:  [108, 125, 135, 125, 108, 108, 108, 108],
-    right_upper:   [90, 90, 90, 90, 90, 45, 20, 45],
-    right_forearm: [108, 108, 108, 108, 108, 125, 135, 125],
+    left_upper:    [90, 35, 5, 35, 90, 90, 90, 90],
+    left_forearm:  [112, 140, 160, 140, 112, 112, 112, 112],
+    right_upper:   [90, 90, 90, 90, 90, 35, 5, 35],
+    right_forearm: [112, 112, 112, 112, 112, 140, 160, 140],
   },
   clap: {
     name: "拍手",
     beats: 8,
-    left_upper:    [88, 68, 72, 88, 88, 68, 72, 88],
-    left_forearm:  [118, 145, 138, 118, 118, 145, 138, 118],
-    right_upper:   [88, 68, 72, 88, 88, 68, 72, 88],
-    right_forearm: [118, 145, 138, 118, 118, 145, 138, 118],
+    left_upper:    [88, 55, 62, 88, 88, 55, 62, 88],
+    left_forearm:  [125, 155, 148, 125, 125, 155, 148, 125],
+    right_upper:   [88, 55, 62, 88, 88, 55, 62, 88],
+    right_forearm: [125, 155, 148, 125, 125, 155, 148, 125],
   },
   groove: {
     name: "律動搖擺",
     beats: 8,
-    left_upper:    [90, 78, 68, 78, 92, 100, 104, 100],
-    left_forearm:  [108, 118, 128, 118, 108, 115, 120, 115],
-    right_upper:   [92, 100, 104, 100, 90, 78, 68, 78],
-    right_forearm: [108, 115, 120, 115, 108, 118, 128, 118],
+    left_upper:    [90, 70, 50, 70, 95, 110, 120, 110],
+    left_forearm:  [112, 125, 138, 125, 112, 120, 128, 120],
+    right_upper:   [95, 110, 120, 110, 90, 70, 50, 70],
+    right_forearm: [112, 120, 128, 120, 112, 125, 138, 125],
   },
   pump: {
     name: "上下泵動",
     beats: 8,
-    left_upper:    [90, 35, 90, 35, 90, 35, 90, 35],
-    left_forearm:  [108, 115, 108, 115, 108, 115, 108, 115],
-    right_upper:   [35, 90, 35, 90, 35, 90, 35, 90],
-    right_forearm: [115, 108, 115, 108, 115, 108, 115, 108],
+    left_upper:    [90, 20, 90, 20, 90, 20, 90, 20],
+    left_forearm:  [112, 125, 112, 125, 112, 125, 112, 125],
+    right_upper:   [20, 90, 20, 90, 20, 90, 20, 90],
+    right_forearm: [125, 112, 125, 112, 125, 112, 125, 112],
   },
   reach: {
     name: "伸展收回",
     beats: 8,
-    left_upper:    [90, 40, 15, 15, 40, 90, 90, 90],
-    left_forearm:  [108, 108, 105, 105, 108, 108, 108, 108],
-    right_upper:   [90, 90, 90, 40, 15, 15, 40, 90],
-    right_forearm: [108, 108, 108, 108, 105, 105, 108, 108],
+    left_upper:    [90, 30, 0, 0, 30, 90, 90, 90],
+    left_forearm:  [108, 105, 102, 102, 105, 108, 108, 108],
+    right_upper:   [90, 90, 90, 30, 0, 0, 30, 90],
+    right_forearm: [108, 108, 108, 105, 102, 102, 105, 108],
   },
   twist: {
     name: "扭轉交替",
     beats: 8,
-    left_upper:    [88, 52, 28, 52, 96, 104, 100, 96],
-    left_forearm:  [108, 118, 125, 118, 115, 125, 122, 115],
-    right_upper:   [96, 104, 100, 96, 88, 52, 28, 52],
-    right_forearm: [115, 125, 122, 115, 108, 118, 125, 118],
+    left_upper:    [88, 45, 15, 45, 100, 115, 108, 100],
+    left_forearm:  [112, 128, 140, 128, 118, 135, 130, 118],
+    right_upper:   [100, 115, 108, 100, 88, 45, 15, 45],
+    right_forearm: [118, 135, 130, 118, 112, 128, 140, 128],
+  },
+  disco: {
+    name: "迪斯科指向",
+    beats: 8,
+    left_upper:    [90, 25, 5, 25, 90, 60, 30, 90],
+    left_forearm:  [112, 130, 145, 130, 112, 125, 140, 112],
+    right_upper:   [90, 60, 30, 90, 90, 25, 5, 25],
+    right_forearm: [112, 125, 140, 112, 112, 130, 145, 130],
   },
 };
 
@@ -417,8 +393,8 @@ const PATTERN_KEYS = Object.keys(PATTERNS);
 
 // ─── 風格子集 ────────────────────────────────────────────────
 const STYLE_POOLS = {
-  energetic: ["raise", "wave", "pump", "reach"],
-  chill:     ["sway", "groove", "twist"],
+  energetic: ["raise", "surrender", "wave", "pump", "disco", "reach"],
+  chill:     ["sway", "groove", "twist", "surrender"],
   mixed:     PATTERN_KEYS,
 };
 
@@ -449,7 +425,7 @@ export class ProceduralSkeleton {
       L: createArmIntentState(),
       R: createArmIntentState(),
     };
-    this._prevElbow = { L: null, R: null };
+    this._prevForearmAngle = { L: null, R: null };
     this._prevT = null;
   }
 
@@ -538,8 +514,8 @@ export class ProceduralSkeleton {
   _resetArmDynamics() {
     this._armState.L = createArmIntentState();
     this._armState.R = createArmIntentState();
-    this._prevElbow.L = null;
-    this._prevElbow.R = null;
+    this._prevForearmAngle.L = null;
+    this._prevForearmAngle.R = null;
   }
 
   /**
@@ -597,14 +573,14 @@ export class ProceduralSkeleton {
     const smoothR = springArmIntent(this._armState.R, intentR, halfLife, dt);
 
     const leftArm = solveArmAnatomical(
-      leftShoulder, L_UPPER_L, L_LOWER_L, smoothL, 1, this._prevElbow.L,
+      leftShoulder, L_UPPER_L, L_LOWER_L, smoothL, 1, this._prevForearmAngle.L,
     );
     const rightArm = solveArmAnatomical(
-      rightShoulder, L_UPPER_R, L_LOWER_R, smoothR, -1, this._prevElbow.R,
+      rightShoulder, L_UPPER_R, L_LOWER_R, smoothR, -1, this._prevForearmAngle.R,
     );
 
-    this._prevElbow.L = leftArm.elbow;
-    this._prevElbow.R = rightArm.elbow;
+    this._prevForearmAngle.L = leftArm.forearmAngle;
+    this._prevForearmAngle.R = rightArm.forearmAngle;
 
     lm[13][0] = leftArm.elbow[0];  lm[13][1] = leftArm.elbow[1];
     lm[14][0] = rightArm.elbow[0]; lm[14][1] = rightArm.elbow[1];
