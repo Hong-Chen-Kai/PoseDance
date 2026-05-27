@@ -1,16 +1,10 @@
 /**
  * proceduralSkeleton.js
  *
- * 程序化骨架動畫生成器 — FK + 角度驅動 + Pattern 隨機排程 + 差異化機制
+ * 程序化骨架動畫生成器 — 角度驅動 + Pattern blend + 2D IK + Spring 平滑
  *
  * 輸出格式與 MediaPipe Pose 33 點完全相同：lm[33] = [[x,y,z,visibility], ...]
  * 可直接餵入 posedanceTest.js 的 drawPoseConnections / drawPosePoints。
- *
- * 技術參考：
- * - Ken Perlin, GDC 2002 "Procedural Emotion Shaders" — 角度層修改 + FK
- * - Morrey et al. 1981 / Sardelli 2011 — 肘關節功能範圍 30°-130°
- * - StatPearls NCBI — 盂肱關節屈曲 100°-120°
- * - DanceAnyWay (arXiv 2303.03870) — beat-level + repletion-level 多樣性
  */
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
@@ -44,6 +38,123 @@ function cosEase(t) { return 0.5 * (1 - Math.cos(Math.PI * t)); }
 
 function dist2d(a, b) {
   return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2);
+}
+
+function smootherstep(t) {
+  t = clamp(t, 0, 1);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+// ─── 調參預設（第一版寫死，不暴露 UI 滑桿）────────────────────
+const BLEND_WINDOW_BEATS = 0.75;
+const SOFT_IK_RATIO = 0.08;
+const SPRING_HALF_LIFE_MAX = 0.18;
+const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
+const NOISE_SCALE_DEG = 2.0;
+
+function softIKDistance(d, L1, L2, softness) {
+  const maxReach = L1 + L2 - 1e-4;
+  const minReach = Math.abs(L1 - L2) + 1e-4;
+  d = clamp(d, minReach, maxReach);
+  if (softness <= 0 || d <= maxReach - softness) return d;
+  const t = (d - (maxReach - softness)) / softness;
+  return maxReach - softness * Math.exp(-3 * t);
+}
+
+function pickElbowSolution(elbow1, elbow2, shoulder, pole, prevElbow) {
+  const score = (elbow) => {
+    const dx = elbow[0] - shoulder[0];
+    const dy = elbow[1] - shoulder[1];
+    const px = pole[0] - shoulder[0];
+    const py = pole[1] - shoulder[1];
+    let s = dx * px + dy * py;
+    if (prevElbow) s -= dist2d(elbow, prevElbow) * 80;
+    return s;
+  };
+  return score(elbow1) >= score(elbow2) ? elbow1 : elbow2;
+}
+
+function solveTwoBoneIK2D(shoulder, target, L1, L2, pole, prevElbow) {
+  let dx = target[0] - shoulder[0];
+  let dy = target[1] - shoulder[1];
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1e-6) {
+    dist = 1e-6;
+    dx = 0;
+    dy = 1e-6;
+  }
+
+  const softness = SOFT_IK_RATIO * (L1 + L2);
+  dist = softIKDistance(dist, L1, L2, softness);
+
+  const minReach = Math.abs(L1 - L2) + 1e-5;
+  const maxReach = L1 + L2 - 1e-5;
+  dist = clamp(dist, minReach, maxReach);
+
+  const baseAngle = Math.atan2(dy, dx);
+  const cosOffset = clamp((L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist), -1, 1);
+  const offset = Math.acos(cosOffset);
+
+  const elbow1 = [
+    shoulder[0] + L1 * Math.cos(baseAngle + offset),
+    shoulder[1] + L1 * Math.sin(baseAngle + offset),
+  ];
+  const elbow2 = [
+    shoulder[0] + L1 * Math.cos(baseAngle - offset),
+    shoulder[1] + L1 * Math.sin(baseAngle - offset),
+  ];
+  const elbow = pickElbowSolution(elbow1, elbow2, shoulder, pole, prevElbow);
+
+  const toWristAngle = Math.atan2(
+    shoulder[1] + dist * Math.sin(baseAngle) - elbow[1],
+    shoulder[0] + dist * Math.cos(baseAngle) - elbow[0],
+  );
+  const wrist = [
+    elbow[0] + L2 * Math.cos(toWristAngle),
+    elbow[1] + L2 * Math.sin(toWristAngle),
+  ];
+  const forearmAngle = Math.atan2(wrist[1] - elbow[1], wrist[0] - elbow[0]);
+  return { elbow, wrist, forearmAngle };
+}
+
+function criticalDampedSpring2D(state, target, halfLife, dt) {
+  if (halfLife <= 1e-6 || dt <= 0) {
+    state.x = target[0];
+    state.y = target[1];
+    state.vx = 0;
+    state.vy = 0;
+    return state;
+  }
+  const omega = 0.6931471805599453 / halfLife;
+  const x = omega * dt;
+  const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const changeX = state.x - target[0];
+  const changeY = state.y - target[1];
+  const tempX = (state.vx + omega * changeX) * dt;
+  const tempY = (state.vy + omega * changeY) * dt;
+  state.vx = (state.vx - omega * tempX) * exp;
+  state.vy = (state.vy - omega * tempY) * exp;
+  state.x = target[0] + (changeX + tempX) * exp;
+  state.y = target[1] + (changeY + tempY) * exp;
+  return state;
+}
+
+function computePole(shoulder, side, liftNorm) {
+  const out = 0.04 + liftNorm * 0.02;
+  const down = 0.07 + liftNorm * 0.02;
+  return side > 0
+    ? [shoulder[0] + out, shoulder[1] + down]
+    : [shoulder[0] - out, shoulder[1] + down];
+}
+
+function applyShoulderDrive(lm, luRad, ruRad, amp) {
+  const liftL = clamp((Math.PI / 2 - luRad) / (Math.PI / 2), 0, 1) * 0.014 * amp;
+  const liftR = clamp((Math.PI / 2 - ruRad) / (Math.PI / 2), 0, 1) * 0.014 * amp;
+  lm[11][0] += liftL * 0.35;
+  lm[11][1] -= liftL;
+  lm[12][0] -= liftR * 0.35;
+  lm[12][1] -= liftR;
+  return { liftL, liftR, liftNormL: liftL / (0.014 * amp + 1e-6), liftNormR: liftR / (0.014 * amp + 1e-6) };
 }
 
 // ─── 基準站姿（從真實 pose_trace_easy.json 第一幀提取）──────────
@@ -98,37 +209,28 @@ const FINGER_OFFSETS_R = [18, 20, 22].map(i => [
   BASE_POSE[i][1] - BASE_POSE[16][1],
 ]);
 
-// ─── 關節角度限制（基於生物力學文獻）───────────────────────────
-// 角度語義：90° = 自然下垂, <90° = 向外/向上舉, >90° = 向內/向後
-// 盂肱關節主動活動範圍 100-120°，舞蹈允許舉到頭頂附近
 const UPPER_ARM_MIN = -60 * DEG;
 const UPPER_ARM_MAX = 110 * DEG;
-// 肘關節功能範圍 0-145°，設 140° 讓舉手時前臂能自然下垂
-const ELBOW_BEND_MIN = 0;
-const ELBOW_BEND_MAX = 140 * DEG;
 
-// ─── 正向動力學（FK）─────────────────────────────────────────
-// side: +1 = 左臂, -1 = 右臂
-// 角度語義統一：90° = 下垂, <90° = 外展/上舉, >90° = 內收/向後
-// 右臂通過 PI-theta 鏡像，使兩臂共用相同角度值
-// thetaForearm: 前臂的絕對目標方向（同語義），FK 內部計算所需肘彎並 clamp
-function fkArm(shoulder, L1, L2, thetaUpper, thetaForearm, side) {
+function wristTargetFromAngles(shoulder, L1, L2, thetaUpper, thetaForearm, side) {
   thetaUpper = clamp(thetaUpper, UPPER_ARM_MIN, UPPER_ARM_MAX);
-
   const actualUpper = side > 0 ? thetaUpper : (Math.PI - thetaUpper);
-
   const ex = shoulder[0] + L1 * Math.cos(actualUpper);
   const ey = shoulder[1] + L1 * Math.sin(actualUpper);
-
   const targetForearm = side > 0 ? thetaForearm : (Math.PI - thetaForearm);
-  let bendAngle = (targetForearm - actualUpper) * side;
-  bendAngle = clamp(bendAngle, ELBOW_BEND_MIN, ELBOW_BEND_MAX);
+  return [
+    ex + L2 * Math.cos(targetForearm),
+    ey + L2 * Math.sin(targetForearm),
+  ];
+}
 
-  const actualLower = actualUpper + side * bendAngle;
-  const wx = ex + L2 * Math.cos(actualLower);
-  const wy = ey + L2 * Math.sin(actualLower);
-
-  return { elbow: [ex, ey], wrist: [wx, wy], forearmAngle: actualLower };
+function applySimpleZ(lm, wristIdx, fingerIdxs, shoulder, wrist, L1, L2, sideSign) {
+  const reachNorm = clamp(dist2d(shoulder, wrist) / (L1 + L2), 0, 1);
+  const zOffset = -0.07 * reachNorm * sideSign;
+  lm[wristIdx][2] = BASE_POSE[wristIdx][2] + zOffset;
+  for (const fi of fingerIdxs) {
+    lm[fi][2] = BASE_POSE[fi][2] + zOffset * 0.85;
+  }
 }
 
 // ─── Pattern 定義 ────────────────────────────────────────────
@@ -234,6 +336,13 @@ export class ProceduralSkeleton {
     this._schedule = [];
     this._scheduleBuiltUpToBeat = -1;
     this._rng = this._makeRng(seed);
+
+    this._armState = {
+      L: { x: BASE_POSE[15][0], y: BASE_POSE[15][1], vx: 0, vy: 0 },
+      R: { x: BASE_POSE[16][0], y: BASE_POSE[16][1], vx: 0, vy: 0 },
+    };
+    this._prevElbow = { L: null, R: null };
+    this._prevT = null;
   }
 
   _makeRng(seed) {
@@ -281,6 +390,52 @@ export class ProceduralSkeleton {
     return this._schedule[0];
   }
 
+  _sampleAnglesForPattern(pat, localBeatFloat) {
+    const beats = pat.beats;
+    const idx = Math.floor(localBeatFloat) % beats;
+    const next = (idx + 1) % beats;
+    const frac = cosEase(localBeatFloat - Math.floor(localBeatFloat));
+    return {
+      lu: _lerp(pat.left_upper[idx], pat.left_upper[next], frac),
+      lf: _lerp(pat.left_forearm[idx], pat.left_forearm[next], frac),
+      ru: _lerp(pat.right_upper[idx], pat.right_upper[next], frac),
+      rf: _lerp(pat.right_forearm[idx], pat.right_forearm[next], frac),
+    };
+  }
+
+  _sampleArmAngles(beatFloat, entry) {
+    const pat = PATTERNS[entry.pattern];
+    const localBeatFloat = beatFloat - entry.beatStart;
+    let angles = this._sampleAnglesForPattern(pat, localBeatFloat);
+
+    if (localBeatFloat >= pat.beats - BLEND_WINDOW_BEATS) {
+      const w = smootherstep((localBeatFloat - (pat.beats - BLEND_WINDOW_BEATS)) / BLEND_WINDOW_BEATS);
+      const nextBeatStart = entry.beatStart + pat.beats;
+      this._ensureSchedule(nextBeatStart);
+      const nextEntry = this._getPatternAtBeat(nextBeatStart);
+      const nextPat = PATTERNS[nextEntry.pattern];
+      const nextLocal = localBeatFloat - (pat.beats - BLEND_WINDOW_BEATS);
+      const nextAngles = this._sampleAnglesForPattern(nextPat, nextLocal);
+      angles = {
+        lu: _lerp(angles.lu, nextAngles.lu, w),
+        lf: _lerp(angles.lf, nextAngles.lf, w),
+        ru: _lerp(angles.ru, nextAngles.ru, w),
+        rf: _lerp(angles.rf, nextAngles.rf, w),
+      };
+    }
+
+    return angles;
+  }
+
+  _resetArmDynamics() {
+    this._armState.L.vx = 0;
+    this._armState.L.vy = 0;
+    this._armState.R.vx = 0;
+    this._armState.R.vy = 0;
+    this._prevElbow.L = null;
+    this._prevElbow.R = null;
+  }
+
   /**
    * 主要方法：給定時間 t（秒），回傳 lm[33] 格式的骨架
    */
@@ -290,68 +445,79 @@ export class ProceduralSkeleton {
     const beatIndex = Math.floor(beatFloat);
 
     const entry = this._getPatternAtBeat(beatIndex);
-    const pat = PATTERNS[entry.pattern];
-    const localBeat = beatIndex - entry.beatStart;
-    const localBeatClamped = clamp(localBeat, 0, pat.beats - 1);
-    const nextBeat = (localBeatClamped + 1) % pat.beats;
+    const raw = this._sampleArmAngles(beatFloat, entry);
 
-    const frac = cosEase(beatFloat - beatIndex);
-
-    // 插值原始角度（上臂 + 前臂絕對方向）
-    const luDegRaw = _lerp(pat.left_upper[localBeatClamped], pat.left_upper[nextBeat], frac);
-    const lfDegRaw = _lerp(pat.left_forearm[localBeatClamped], pat.left_forearm[nextBeat], frac);
-    const ruDegRaw = _lerp(pat.right_upper[localBeatClamped], pat.right_upper[nextBeat], frac);
-    const rfDegRaw = _lerp(pat.right_forearm[localBeatClamped], pat.right_forearm[nextBeat], frac);
-
-    // 振幅縮放：偏離靜止值 90°（下垂）的部分乘以 amplitudeScale
     const amp = this.amplitudeScale;
-    const luDeg = 90 + (luDegRaw - 90) * amp;
-    const ruDeg = 90 + (ruDegRaw - 90) * amp;
-    const lfDeg = 90 + (lfDegRaw - 90) * amp;
-    const rfDeg = 90 + (rfDegRaw - 90) * amp;
+    const luDeg = 90 + (raw.lu - 90) * amp;
+    const ruDeg = 90 + (raw.ru - 90) * amp;
+    const lfDeg = 90 + (raw.lf - 90) * amp;
+    const rfDeg = 90 + (raw.rf - 90) * amp;
 
-    // Perlin noise 微抖（±2°）
-    const noiseScale = 2.0;
-    const luRad = (luDeg + noiseScale * perlin1d(t * 1.7)) * DEG;
-    const lfRad = (lfDeg + noiseScale * perlin1d(t * 2.3 + 100)) * DEG;
-    const ruRad = (ruDeg + noiseScale * perlin1d(t * 1.9 + 200)) * DEG;
-    const rfRad = (rfDeg + noiseScale * perlin1d(t * 2.1 + 300)) * DEG;
+    const luRad = (luDeg + NOISE_SCALE_DEG * perlin1d(t * 1.7)) * DEG;
+    const lfRad = (lfDeg + NOISE_SCALE_DEG * perlin1d(t * 2.3 + 100)) * DEG;
+    const ruRad = (ruDeg + NOISE_SCALE_DEG * perlin1d(t * 1.9 + 200)) * DEG;
+    const rfRad = (rfDeg + NOISE_SCALE_DEG * perlin1d(t * 2.1 + 300)) * DEG;
 
-    // ── 身體律動（幅度隨 amplitudeScale 縮放）──
+    let dt = this._prevT == null ? 1 / 60 : clamp(t - this._prevT, 1 / 240, 0.05);
+    if (this._prevT != null && (t < this._prevT - 1e-4 || t - this._prevT > 0.2)) {
+      this._resetArmDynamics();
+      dt = 1 / 60;
+    }
+    this._prevT = t;
+
+    const halfLife = Math.min(SPRING_HALF_LIFE_MAX, this.beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
+
     const omega = (2 * Math.PI) / this.beatSec;
     const bodyBob = 0.008 * amp * Math.sin(omega * elapsed);
     const headTilt = 0.006 * amp * Math.sin(omega * elapsed * 0.5);
     const shoulderLift = 0.004 * amp * Math.sin(omega * elapsed);
 
-    // ── deep copy BASE ──
     const lm = BASE_POSE.map(p => [p[0], p[1], p[2], p[3]]);
 
-    // 身體上下 bob
-    for (let i = 0; i <= 24; i++) {
-      lm[i][1] += bodyBob;
-    }
-    // 頭部左右微晃
-    for (let i = 0; i <= 10; i++) {
-      lm[i][0] += headTilt;
-    }
-    // 肩膀 y 軸微幅上提（左右交替）
+    for (let i = 0; i <= 24; i++) lm[i][1] += bodyBob;
+    for (let i = 0; i <= 10; i++) lm[i][0] += headTilt;
     lm[11][1] -= shoulderLift;
     lm[12][1] += shoulderLift;
 
-    // ── FK 計算手臂（傳入上臂角度 + 前臂目標方向）──
-    const leftArm = fkArm(
-      [lm[11][0], lm[11][1]], L_UPPER_L, L_LOWER_L, luRad, lfRad, 1
+    const { liftNormL, liftNormR } = applyShoulderDrive(lm, luRad, ruRad, amp);
+
+    const leftShoulder = [lm[11][0], lm[11][1]];
+    const rightShoulder = [lm[12][0], lm[12][1]];
+
+    const wristTargetL = wristTargetFromAngles(leftShoulder, L_UPPER_L, L_LOWER_L, luRad, lfRad, 1);
+    const wristTargetR = wristTargetFromAngles(rightShoulder, L_UPPER_R, L_LOWER_R, ruRad, rfRad, -1);
+
+    criticalDampedSpring2D(this._armState.L, wristTargetL, halfLife, dt);
+    criticalDampedSpring2D(this._armState.R, wristTargetR, halfLife, dt);
+
+    const poleL = computePole(leftShoulder, 1, liftNormL);
+    const poleR = computePole(rightShoulder, -1, liftNormR);
+
+    const leftArm = solveTwoBoneIK2D(
+      leftShoulder,
+      [this._armState.L.x, this._armState.L.y],
+      L_UPPER_L,
+      L_LOWER_L,
+      poleL,
+      this._prevElbow.L,
     );
-    const rightArm = fkArm(
-      [lm[12][0], lm[12][1]], L_UPPER_R, L_LOWER_R, ruRad, rfRad, -1
+    const rightArm = solveTwoBoneIK2D(
+      rightShoulder,
+      [this._armState.R.x, this._armState.R.y],
+      L_UPPER_R,
+      L_LOWER_R,
+      poleR,
+      this._prevElbow.R,
     );
+
+    this._prevElbow.L = leftArm.elbow;
+    this._prevElbow.R = rightArm.elbow;
 
     lm[13][0] = leftArm.elbow[0];  lm[13][1] = leftArm.elbow[1];
     lm[14][0] = rightArm.elbow[0]; lm[14][1] = rightArm.elbow[1];
     lm[15][0] = leftArm.wrist[0];  lm[15][1] = leftArm.wrist[1];
     lm[16][0] = rightArm.wrist[0]; lm[16][1] = rightArm.wrist[1];
 
-    // 手指跟著前臂方向旋轉（BASE_POSE 中前臂約 90° = 朝下）
     const BASE_FOREARM_ANGLE = Math.PI / 2;
     const leftFingerIdx = [17, 19, 21];
     const lRot = leftArm.forearmAngle - BASE_FOREARM_ANGLE;
@@ -370,7 +536,9 @@ export class ProceduralSkeleton {
       lm[rightFingerIdx[i]][1] = lm[16][1] + ox * rSin + oy * rCos;
     }
 
-    // 頭保持在肩上方（安全約束）
+    applySimpleZ(lm, 15, leftFingerIdx, leftShoulder, leftArm.wrist, L_UPPER_L, L_LOWER_L, 1);
+    applySimpleZ(lm, 16, rightFingerIdx, rightShoulder, rightArm.wrist, L_UPPER_R, L_LOWER_R, -1);
+
     const avgShoulderY = (lm[11][1] + lm[12][1]) / 2;
     if (lm[0][1] > avgShoulderY - 0.03) {
       const fix = avgShoulderY - 0.03 - lm[0][1];
