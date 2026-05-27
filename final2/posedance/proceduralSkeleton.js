@@ -40,6 +40,24 @@ function dist2d(a, b) {
   return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2);
 }
 
+function normalize2d(x, y) {
+  const len = Math.hypot(x, y);
+  if (len < 1e-8) return [0, 1];
+  return [x / len, y / len];
+}
+
+/** 將 joint 固定在 from 起算 length 的位置（方向沿用 to→from） */
+function placeAtLength(from, toward, length) {
+  const [nx, ny] = normalize2d(toward[0] - from[0], toward[1] - from[1]);
+  return [from[0] + nx * length, from[1] + ny * length];
+}
+
+function enforceArmGeometry(shoulder, elbow, wrist, L1, L2) {
+  const elbow2 = placeAtLength(shoulder, elbow, L1);
+  const wrist2 = placeAtLength(elbow2, wrist, L2);
+  return { elbow: elbow2, wrist: wrist2 };
+}
+
 function smootherstep(t) {
   t = clamp(t, 0, 1);
   return t * t * t * (t * (t * 6 - 15) + 10);
@@ -189,6 +207,36 @@ function solveArmAnatomical(shoulder, L1, L2, intent, side, prevForearmAngle) {
   return { elbow, wrist, forearmAngle, upperDir, humeralRot, elbowFlex };
 }
 
+function springHalfLifeForPattern(patternName, beatSec) {
+  const base = Math.min(SPRING_HALF_LIFE_MAX, beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
+  if (patternName === "toyman") return Math.min(0.07, base);
+  if (patternName === "armwave") return Math.min(0.11, base);
+  if (patternName === "pump" || patternName === "disco") return Math.min(0.13, base);
+  return base;
+}
+
+function modulateToymanIntent(intent) {
+  const snap = (v, step) => Math.round(v / step) * step;
+  return {
+    elevation: clamp(snap(intent.elevation, 45), 0, 165),
+    sweep: clamp(snap(intent.sweep, 30), -80, 80),
+    elbowFlex: clamp(snap(intent.elbowFlex, 45), 30, 135),
+    humeralRot: clamp(snap(intent.humeralRot, 20), HUMERAL_ROT_MIN, HUMERAL_ROT_MAX),
+  };
+}
+
+function modulateArmWaveIntent(intent, localBeatFloat, side) {
+  const phase = (localBeatFloat / 8) * Math.PI * 2;
+  const ripple = Math.sin(phase + (side > 0 ? 0 : 0.4));
+  const ripple2 = Math.sin(phase * 2 - 1.2 + side * 0.3);
+  return {
+    elevation: clamp(intent.elevation + 14 * ripple + 6 * ripple2, 0, 165),
+    sweep: clamp(intent.sweep + 18 * Math.sin(phase - 0.9), -80, 80),
+    elbowFlex: clamp(intent.elbowFlex + 22 * Math.sin(phase - 1.8), ELBOW_FLEX_MIN, ELBOW_FLEX_MAX),
+    humeralRot: clamp(intent.humeralRot + 12 * Math.sin(phase - 2.4), HUMERAL_ROT_MIN, HUMERAL_ROT_MAX),
+  };
+}
+
 function criticalDampedSpring1D(state, key, vKey, target, halfLife, dt) {
   if (halfLife <= 1e-6 || dt <= 0) {
     state[key] = target;
@@ -332,12 +380,29 @@ const PATTERNS = {
     right_forearm: [120, 155, 185, 195, 195, 185, 155, 120],
   },
   wave: {
-    name: "波浪擺手",
+    name: "側向擺手",
     beats: 8,
     left_upper:    [90, 35, 5, 35, 90, 90, 90, 90],
     left_forearm:  [112, 140, 160, 140, 112, 112, 112, 112],
     right_upper:   [90, 90, 90, 90, 90, 35, 5, 35],
     right_forearm: [112, 112, 112, 112, 112, 140, 160, 140],
+  },
+  armwave: {
+    name: "手臂波浪",
+    beats: 8,
+    // 肩→肘→腕 相位差：upper 先動、forearm 延遲，製造 wave 傳遞
+    left_upper:    [90, 75, 45, 20, 10, 25, 55, 90],
+    left_forearm:  [100, 95, 85, 70, 45, 25, 15, 40],
+    right_upper:   [90, 55, 25, 10, 20, 45, 75, 90],
+    right_forearm: [100, 85, 55, 30, 15, 25, 45, 70],
+  },
+  toyman: {
+    name: "Toyman機械",
+    beats: 8,
+    left_upper:    [90, 0, 0, 90, 0, 0, 90, 20],
+    left_forearm:  [105, 90, 90, 105, 90, 90, 105, 110],
+    right_upper:   [90, 90, 0, 0, 90, 90, 0, 20],
+    right_forearm: [105, 105, 90, 90, 105, 105, 90, 110],
   },
   clap: {
     name: "拍手",
@@ -393,8 +458,9 @@ const PATTERN_KEYS = Object.keys(PATTERNS);
 
 // ─── 風格子集 ────────────────────────────────────────────────
 const STYLE_POOLS = {
-  energetic: ["raise", "surrender", "wave", "pump", "disco", "reach"],
-  chill:     ["sway", "groove", "twist", "surrender"],
+  energetic: ["raise", "surrender", "armwave", "toyman", "pump", "disco", "reach"],
+  chill:     ["sway", "groove", "twist", "surrender", "wave"],
+  popping:   ["toyman", "armwave", "pump", "disco"],
   mixed:     PATTERN_KEYS,
 };
 
@@ -528,6 +594,8 @@ export class ProceduralSkeleton {
 
     const entry = this._getPatternAtBeat(beatIndex);
     const raw = this._sampleArmAngles(beatFloat, entry);
+    const patName = entry.pattern;
+    const localBeatFloat = beatFloat - entry.beatStart;
 
     const amp = this.amplitudeScale;
     const luDeg = 90 + (raw.lu - 90) * amp;
@@ -540,8 +608,15 @@ export class ProceduralSkeleton {
     const noiseRu = NOISE_SCALE_DEG * perlin1d(t * 1.9 + 200);
     const noiseRf = NOISE_SCALE_DEG * perlin1d(t * 2.1 + 300);
 
-    const intentL = patternToArmIntent(luDeg + noiseLu, lfDeg + noiseLf);
-    const intentR = patternToArmIntent(ruDeg + noiseRu, rfDeg + noiseRf);
+    let intentL = patternToArmIntent(luDeg + noiseLu, lfDeg + noiseLf);
+    let intentR = patternToArmIntent(ruDeg + noiseRu, rfDeg + noiseRf);
+    if (patName === "armwave") {
+      intentL = modulateArmWaveIntent(intentL, localBeatFloat, 1);
+      intentR = modulateArmWaveIntent(intentR, localBeatFloat + 2.5, -1);
+    } else if (patName === "toyman") {
+      intentL = modulateToymanIntent(intentL);
+      intentR = modulateToymanIntent(intentR);
+    }
 
     let dt = this._prevT == null ? 1 / 60 : clamp(t - this._prevT, 1 / 240, 0.05);
     if (this._prevT != null && (t < this._prevT - 1e-4 || t - this._prevT > 0.2)) {
@@ -550,7 +625,7 @@ export class ProceduralSkeleton {
     }
     this._prevT = t;
 
-    const halfLife = Math.min(SPRING_HALF_LIFE_MAX, this.beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
+    const halfLife = springHalfLifeForPattern(patName, this.beatSec);
 
     const omega = (2 * Math.PI) / this.beatSec;
     const bodyBob = 0.008 * amp * Math.sin(omega * elapsed);
@@ -564,20 +639,35 @@ export class ProceduralSkeleton {
     lm[11][1] -= shoulderLift;
     lm[12][1] += shoulderLift;
 
-    applyShoulderDrive(lm, intentL, intentR, amp);
+    const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
+    const smoothR = springArmIntent(this._armState.R, intentR, halfLife, dt);
+
+    applyShoulderDrive(lm, smoothL, smoothR, amp);
 
     const leftShoulder = [lm[11][0], lm[11][1]];
     const rightShoulder = [lm[12][0], lm[12][1]];
 
-    const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
-    const smoothR = springArmIntent(this._armState.R, intentR, halfLife, dt);
-
-    const leftArm = solveArmAnatomical(
+    let leftArm = solveArmAnatomical(
       leftShoulder, L_UPPER_L, L_LOWER_L, smoothL, 1, this._prevForearmAngle.L,
     );
-    const rightArm = solveArmAnatomical(
+    let rightArm = solveArmAnatomical(
       rightShoulder, L_UPPER_R, L_LOWER_R, smoothR, -1, this._prevForearmAngle.R,
     );
+
+    const leftGeo = enforceArmGeometry(leftShoulder, leftArm.elbow, leftArm.wrist, L_UPPER_L, L_LOWER_L);
+    leftArm = {
+      ...leftArm,
+      elbow: leftGeo.elbow,
+      wrist: leftGeo.wrist,
+      forearmAngle: Math.atan2(leftGeo.wrist[1] - leftGeo.elbow[1], leftGeo.wrist[0] - leftGeo.elbow[0]),
+    };
+    const rightGeo = enforceArmGeometry(rightShoulder, rightArm.elbow, rightArm.wrist, L_UPPER_R, L_LOWER_R);
+    rightArm = {
+      ...rightArm,
+      elbow: rightGeo.elbow,
+      wrist: rightGeo.wrist,
+      forearmAngle: Math.atan2(rightGeo.wrist[1] - rightGeo.elbow[1], rightGeo.wrist[0] - rightGeo.elbow[0]),
+    };
 
     this._prevForearmAngle.L = leftArm.forearmAngle;
     this._prevForearmAngle.R = rightArm.forearmAngle;
@@ -623,6 +713,7 @@ const VARIATION_PRESETS = [
   { amplitudeScale: 1.0, phaseOffsetBeats: 0,   style: "mixed",     rhythmMul: 1.0 },
   { amplitudeScale: 0.7, phaseOffsetBeats: 1.5, style: "chill",     rhythmMul: 1.0 },
   { amplitudeScale: 1.3, phaseOffsetBeats: 0.5, style: "energetic", rhythmMul: 1.0 },
+  { amplitudeScale: 1.2, phaseOffsetBeats: 0.25, style: "popping",  rhythmMul: 1.0 },
   { amplitudeScale: 0.9, phaseOffsetBeats: 2.0, style: "chill",     rhythmMul: 2.0 },
   { amplitudeScale: 1.1, phaseOffsetBeats: 1.0, style: "energetic", rhythmMul: 0.5 },
 ];
@@ -640,7 +731,7 @@ export function createSyntheticTrace({ bpm = 120, name = null, seed = null } = {
     preset = {
       amplitudeScale: 0.6 + Math.random() * 0.8,
       phaseOffsetBeats: Math.random() * 3,
-      style: ["mixed", "energetic", "chill"][Math.floor(Math.random() * 3)],
+      style: ["mixed", "energetic", "chill", "popping"][Math.floor(Math.random() * 4)],
       rhythmMul: [0.5, 1.0, 1.0, 2.0][Math.floor(Math.random() * 4)],
     };
   }
