@@ -3066,7 +3066,7 @@ async function main() {
     });
   }
 
-  // Mode2：生成程序化舞者
+  // Mode2：生成舞者
   if (els.addSynthTraceButton) {
     els.addSynthTraceButton.addEventListener("click", () => {
       if (state.ui.mode !== "mode2") return;
@@ -3080,7 +3080,7 @@ async function main() {
       state.mode2.traces.push(trace);
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
       clearOverlayCanvas();
-      console.log("[Synth] 已新增程序化舞者", { id: trace.id, bpm });
+      console.log("[Synth] 已新增舞者", { id: trace.id, bpm });
     });
   }
 
