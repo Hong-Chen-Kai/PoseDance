@@ -15,6 +15,9 @@ function getSyntheticLandmarksAtTime(trace, t) {
   return _synthModule.getSyntheticLandmarksAtTime(trace, t);
 }
 
+/** 生成舞者時的律動：'swing' | 'bounce' | 'both'（預覽 Bounce 時改為 'bounce'） */
+const SYNTH_GROOVE_MODE = "bounce";
+
 const DEMO_SOURCE_ASPECT = 16 / 9;
 /** 以模組 URL 解析，避免部署子路徑或與 HTML 不同層級時 fetch 404 */
 const DEMO_TRACE_PATHS = {
@@ -3523,13 +3526,13 @@ async function main() {
         return;
       }
       const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
-      const trace = createSyntheticTrace({ bpm });
+      const trace = createSyntheticTrace({ bpm, grooveMode: SYNTH_GROOVE_MODE });
       if (!trace) return;
       state.mode2.traces.push(trace);
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
       autoLayoutMode2({ animate: true });
       clearOverlayCanvas();
-      console.log("[Synth] 已新增舞者", { id: trace.id, bpm });
+      console.log("[Synth] 已新增舞者", { id: trace.id, bpm, grooveMode: SYNTH_GROOVE_MODE });
     });
   }
 
