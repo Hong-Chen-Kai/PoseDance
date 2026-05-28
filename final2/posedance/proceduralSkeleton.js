@@ -7,6 +7,9 @@
  * 可直接餵入 posedanceTest.js 的 drawPoseConnections / drawPosePoints。
  */
 
+/** 版本標記（主控台可確認是否載入最新檔） */
+export const PROCEDURAL_SKELETON_BUILD = "planted-feet-3";
+
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
   const p = [];
@@ -425,8 +428,6 @@ function applyBounce(lm, beatSin, amp) {
   lm[27][1] = leftLeg.ankle[1];
   lm[28][0] = rightLeg.ankle[0];
   lm[28][1] = rightLeg.ankle[1];
-
-  applyPlantedFeet(lm);
 }
 
 function grooveEnablesSwing(mode) {
@@ -498,7 +499,7 @@ const BASE_PELVIS_CENTER_X = (BASE_POSE[23][0] + BASE_POSE[24][0]) / 2;
 
 /** 左：29 腳跟–31 腳尖；右：30 腳跟–32 腳尖（貼地橫線，不隨律動旋轉） */
 function buildPlantedFootPose(ankleIdx, heelIdx, toeIdx, toeDirX) {
-  const groundY = BASE_POSE[ankleIdx][1] + FOOT_GROUND_Y_OFFSET;
+  const groundY = Math.max(BASE_POSE[ankleIdx][1], BASE_POSE[heelIdx][1]) + FOOT_GROUND_Y_OFFSET;
   const heelX = BASE_POSE[heelIdx][0];
   return {
     heel: [heelX, groundY, BASE_POSE[heelIdx][2], BASE_POSE[heelIdx][3]],
@@ -509,19 +510,38 @@ function buildPlantedFootPose(ankleIdx, heelIdx, toeIdx, toeDirX) {
 const PLANTED_FOOT_L = buildPlantedFootPose(27, 29, 31, -1);
 const PLANTED_FOOT_R = buildPlantedFootPose(28, 30, 32, 1);
 
-function applyPlantedFeet(lm) {
+/**
+ * 腳底釘地（所有 groove 模式、每一幀必跑）：
+ * - 踝 27/28 固定基線
+ * - 左 29(跟)–31(尖)、右 30(跟)–32(尖) 同一 y 橫線，略外八
+ */
+function applyFeetPlantedOnGround(lm) {
+  lm[27][0] = BASE_POSE[27][0];
+  lm[27][1] = BASE_POSE[27][1];
+  lm[27][2] = BASE_POSE[27][2];
+  lm[27][3] = BASE_POSE[27][3];
+  lm[28][0] = BASE_POSE[28][0];
+  lm[28][1] = BASE_POSE[28][1];
+  lm[28][2] = BASE_POSE[28][2];
+  lm[28][3] = BASE_POSE[28][3];
+
   lm[29][0] = PLANTED_FOOT_L.heel[0];
   lm[29][1] = PLANTED_FOOT_L.heel[1];
   lm[29][2] = PLANTED_FOOT_L.heel[2];
+  lm[29][3] = PLANTED_FOOT_L.heel[3];
   lm[31][0] = PLANTED_FOOT_L.toe[0];
   lm[31][1] = PLANTED_FOOT_L.toe[1];
   lm[31][2] = PLANTED_FOOT_L.toe[2];
+  lm[31][3] = PLANTED_FOOT_L.toe[3];
+
   lm[30][0] = PLANTED_FOOT_R.heel[0];
   lm[30][1] = PLANTED_FOOT_R.heel[1];
   lm[30][2] = PLANTED_FOOT_R.heel[2];
+  lm[30][3] = PLANTED_FOOT_R.heel[3];
   lm[32][0] = PLANTED_FOOT_R.toe[0];
   lm[32][1] = PLANTED_FOOT_R.toe[1];
   lm[32][2] = PLANTED_FOOT_R.toe[2];
+  lm[32][3] = PLANTED_FOOT_R.toe[3];
 }
 
 function measureLegRest(hipIdx, kneeIdx, ankleIdx, L1, L2) {
@@ -923,6 +943,9 @@ export class ProceduralSkeleton {
       applyBounce(lm, beatSin, amp);
     }
 
+    // 腳底每幀覆寫，避免 BASE 複製的垂直腳尖或 bounce 拉動腳跟
+    applyFeetPlantedOnGround(lm);
+
     const avgShoulderY = (lm[11][1] + lm[12][1]) / 2;
     if (lm[0][1] > avgShoulderY - 0.03) {
       const fix = avgShoulderY - 0.03 - lm[0][1];
@@ -966,7 +989,7 @@ export function createSyntheticTrace({
     };
   }
 
-  const skeleton = new ProceduralSkeleton({ bpm, seed, grooveMode, ...preset });
+  const skeleton = new ProceduralSkeleton({ bpm, seed, ...preset, grooveMode });
   const styleTag = preset.style === "mixed" ? "" : ` [${preset.style}]`;
   const grooveTag = grooveMode === GROOVE_MODES.SWING ? "" : ` ·${grooveMode}`;
   return {

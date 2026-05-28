@@ -1,9 +1,14 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
 
-// 程序化骨架：動態載入，避免 404 導致整頁失效
+// 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
+const PROCEDURAL_IMPORT_BUILD = "planted-feet-3";
 let _synthModule = null;
-const _synthReady = import("./proceduralSkeleton.js")
-  .then((m) => { _synthModule = m; console.log("[Synth] proceduralSkeleton.js 載入成功"); })
+const _synthReady = import(`./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`)
+  .then((m) => {
+    _synthModule = m;
+    const build = m.PROCEDURAL_SKELETON_BUILD || "?";
+    console.log("[Synth] proceduralSkeleton.js 載入成功", { build, importBuild: PROCEDURAL_IMPORT_BUILD });
+  })
   .catch((e) => { console.warn("[Synth] proceduralSkeleton.js 載入失敗（程序化舞者功能停用）", e); });
 
 function createSyntheticTrace(opts) {
@@ -3532,7 +3537,12 @@ async function main() {
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
       autoLayoutMode2({ animate: true });
       clearOverlayCanvas();
-      console.log("[Synth] 已新增舞者", { id: trace.id, bpm, grooveMode });
+      console.log("[Synth] 已新增舞者", {
+        id: trace.id,
+        bpm,
+        grooveMode,
+        build: _synthModule?.PROCEDURAL_SKELETON_BUILD,
+      });
     });
   }
 
