@@ -62,14 +62,22 @@
             <span id="synthControls" style="display: none">
               <input
                 id="synthBpmInput"
-                class="topbar__url-input"
+                class="topbar__url-input topbar__bpm-input"
                 type="number"
                 min="40"
                 max="300"
                 value="120"
-                style="width: 52px; min-width: 0; flex: 0 0 auto"
                 title="BPM"
               />
+              <select
+                id="synthGrooveSelect"
+                class="topbar__url-input topbar__groove-select"
+                title="律動類型"
+              >
+                <option value="swing">Swing（上身）</option>
+                <option value="bounce" selected>Bounce（下身）</option>
+                <option value="both">Swing + Bounce</option>
+              </select>
               <button id="addSynthTraceButton" class="btn btn-load" type="button">
                 生成舞者
               </button>

@@ -350,3 +350,24 @@
   }
 }
 
+#synthControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.topbar__bpm-input {
+  width: 72px;
+  min-width: 72px;
+  flex: 0 0 auto;
+}
+
+.topbar__groove-select {
+  width: auto;
+  min-width: 9.5em;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+

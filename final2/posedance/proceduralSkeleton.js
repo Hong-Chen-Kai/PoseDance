@@ -98,11 +98,9 @@ const BODY_BOB_AMP = 0.008;
 const HEAD_TILT_AMP = 0.006;
 // Swing：左右肩一上一下（街舞上身，不作用於腿）
 const SWING_AMP = 0.004;
-// Bounce：下沉時開膝、骨盆下沉（僅 23–32）
-const BOUNCE_HIP_DROP = 0.012;
-const BOUNCE_KNEE_SPREAD = 0.014;
-const BOUNCE_ANKLE_SPREAD = 0.010;
-const BOUNCE_HIP_SPREAD = 0.006;
+// Bounce：骨盆/膝隨拍下沉（與 bodyBob 同量級）；踝/膝僅小幅外開
+const BOUNCE_HIP_DROP = 0.008;
+const BOUNCE_ANKLE_SPREAD = 0.0035;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
@@ -379,19 +377,17 @@ function solveLegFromPlantedFoot(hip, ankle, baseKnee, L1, L2) {
 }
 
 /**
- * Bounce（街舞下身）：下沉時膝微開向外、骨盆下沉；踝貼地略外移；骨長鎖定。
+ * Bounce（街舞下身）：骨盆僅 y 下沉（x 維持基線）；踝/膝小幅外開（左+右−，加寬不內夾）。
  */
 function applyBounce(lm, beatSin, amp) {
   const down = bounceDown01(beatSin);
-  const spreadA = BOUNCE_ANKLE_SPREAD * amp * down;
-  const spreadH = BOUNCE_HIP_SPREAD * amp * down;
-  const spreadK = BOUNCE_KNEE_SPREAD * amp * down;
   const hipDrop = BOUNCE_HIP_DROP * amp * down;
+  const spreadA = BOUNCE_ANKLE_SPREAD * amp * down;
 
-  const leftHip = [BASE_POSE[23][0] - spreadH - spreadK * 0.15, BASE_POSE[23][1] + hipDrop];
-  const rightHip = [BASE_POSE[24][0] + spreadH + spreadK * 0.15, BASE_POSE[24][1] + hipDrop];
-  const leftAnkle = [BASE_POSE[27][0] - spreadA, BASE_POSE[27][1]];
-  const rightAnkle = [BASE_POSE[28][0] + spreadA, BASE_POSE[28][1]];
+  const leftHip = [BASE_POSE[23][0], BASE_POSE[23][1] + hipDrop];
+  const rightHip = [BASE_POSE[24][0], BASE_POSE[24][1] + hipDrop];
+  const leftAnkle = [BASE_POSE[27][0] + spreadA, BASE_POSE[27][1]];
+  const rightAnkle = [BASE_POSE[28][0] - spreadA, BASE_POSE[28][1]];
 
   const leftLeg = solveLegFromPlantedFoot(
     leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L,

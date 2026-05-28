@@ -15,8 +15,6 @@ function getSyntheticLandmarksAtTime(trace, t) {
   return _synthModule.getSyntheticLandmarksAtTime(trace, t);
 }
 
-/** 生成舞者時的律動：'swing' | 'bounce' | 'both'（預覽 Bounce 時改為 'bounce'） */
-const SYNTH_GROOVE_MODE = "bounce";
 
 const DEMO_SOURCE_ASPECT = 16 / 9;
 /** 以模組 URL 解析，避免部署子路徑或與 HTML 不同層級時 fetch 404 */
@@ -258,6 +256,7 @@ function initDomRefs() {
   els.mode2SkeletonFileInput = $("mode2SkeletonFileInput");
   els.synthControls = $("synthControls");
   els.synthBpmInput = $("synthBpmInput");
+  els.synthGrooveSelect = $("synthGrooveSelect");
   els.addSynthTraceButton = $("addSynthTraceButton");
   els.startCameraButton = $("startCameraButton");
   els.toggleMode1DemoButton = $("toggleMode1DemoButton");
@@ -3526,13 +3525,14 @@ async function main() {
         return;
       }
       const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
-      const trace = createSyntheticTrace({ bpm, grooveMode: SYNTH_GROOVE_MODE });
+      const grooveMode = els.synthGrooveSelect?.value || "swing";
+      const trace = createSyntheticTrace({ bpm, grooveMode });
       if (!trace) return;
       state.mode2.traces.push(trace);
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
       autoLayoutMode2({ animate: true });
       clearOverlayCanvas();
-      console.log("[Synth] 已新增舞者", { id: trace.id, bpm, grooveMode: SYNTH_GROOVE_MODE });
+      console.log("[Synth] 已新增舞者", { id: trace.id, bpm, grooveMode });
     });
   }
 
