@@ -58,6 +58,12 @@ function enforceArmGeometry(shoulder, elbow, wrist, L1, L2) {
   return { elbow: elbow2, wrist: wrist2 };
 }
 
+function enforceLegGeometry(hip, knee, ankle, L1, L2) {
+  const knee2 = placeAtLength(hip, knee, L1);
+  const ankle2 = placeAtLength(knee2, ankle, L2);
+  return { knee: knee2, ankle: ankle2 };
+}
+
 function smootherstep(t) {
   t = clamp(t, 0, 1);
   return t * t * t * (t * (t * 6 - 15) + 10);
@@ -78,6 +84,18 @@ const ELBOW_FLEX_MAX = 145;
 const CARRYING_ANGLE_BASE = 28;
 // 靜止站姿上臂略外展（對齊 BASE_POSE）
 const REST_ABDUCTION_DEG = 12;
+
+// ─── 下肢原地律動（站姿 groove，非踏步）──────────────────────
+const ENABLE_LEG_GROOVE = true;
+// 膝屈：在靜止基線上增加的蹲彈（度）；全屈約 135°，groove 僅用小幅
+const KNEE_FLEX_GROOVE_PEAK_DEG = 18;
+const KNEE_FLEX_GROOVE_MAX_DEG = 32;
+const HIP_SWAY_MAX = 0.012;
+const HIP_DROP_MAX = 0.009;
+const LEG_SPRING_HALF_LIFE_BEAT_RATIO = 0.35;
+const LEG_SPRING_HALF_LIFE_MAX = 0.28;
+const KNEE_LEAD_BEAT_FRAC = 0.125;
+const KNEE_FLEX_HIP_DROP_COUP = 0.00045;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
@@ -296,6 +314,140 @@ function createArmIntentState() {
   };
 }
 
+function legSpringHalfLife(beatSec) {
+  return Math.min(LEG_SPRING_HALF_LIFE_MAX, beatSec * LEG_SPRING_HALF_LIFE_BEAT_RATIO);
+}
+
+function createLegGrooveState() {
+  return {
+    kneeFlexAdd: 0,
+    hipDrop: 0,
+    vKnee: 0,
+    vDrop: 0,
+  };
+}
+
+function computeLegGrooveTargets(elapsed, beatSec, amp) {
+  const omega = (2 * Math.PI) / beatSec;
+  const kneePhase = omega * elapsed - beatSec * KNEE_LEAD_BEAT_FRAC;
+  const bob = 0.5 + 0.5 * Math.sin(omega * elapsed);
+  const kneeBob = 0.5 + 0.5 * Math.sin(kneePhase);
+  const kneeFlexAdd = clamp(
+    KNEE_FLEX_GROOVE_PEAK_DEG * amp * kneeBob,
+    0,
+    KNEE_FLEX_GROOVE_MAX_DEG - Math.max(LEG_REST_L.kneeFlexRestDeg, LEG_REST_R.kneeFlexRestDeg),
+  );
+  const hipDrop = HIP_DROP_MAX * amp * bob;
+  const hipSway = HIP_SWAY_MAX * amp * Math.sin(2 * omega * elapsed);
+  return { kneeFlexAdd, hipSway, hipDrop };
+}
+
+function springLegGroove(state, target, halfLife, dt) {
+  criticalDampedSpring1D(state, "kneeFlexAdd", "vKnee", target.kneeFlexAdd, halfLife, dt);
+  criticalDampedSpring1D(state, "hipDrop", "vDrop", target.hipDrop, halfLife, dt);
+  // 半拍左右搖不經 spring，避免高頻目標被過度衰減
+  return {
+    kneeFlexAdd: state.kneeFlexAdd,
+    hipSway: target.hipSway,
+    hipDrop: state.hipDrop,
+  };
+}
+
+/** 髖–踝固定段長時求膝（選離 baseKnee 較近的一支） */
+function solveKneeFromHipAnkle(hip, ankle, L1, L2, preferKnee) {
+  const dx = ankle[0] - hip[0];
+  const dy = ankle[1] - hip[1];
+  let d = Math.hypot(dx, dy);
+  if (d < 1e-8) return [preferKnee[0], preferKnee[1]];
+  const maxD = L1 + L2 - 1e-5;
+  const minD = Math.abs(L1 - L2) + 1e-5;
+  d = clamp(d, minD, maxD);
+  const ux = dx / d;
+  const uy = dy / d;
+  const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d);
+  const h2 = L1 * L1 - a * a;
+  const h = h2 > 0 ? Math.sqrt(h2) : 0;
+  const midX = hip[0] + ux * a;
+  const midY = hip[1] + uy * a;
+  const px = -uy;
+  const py = ux;
+  const k1 = [midX + px * h, midY + py * h];
+  const k2 = [midX - px * h, midY - py * h];
+  if (h < 1e-6) return [midX, midY];
+  const d1 = (k1[0] - preferKnee[0]) ** 2 + (k1[1] - preferKnee[1]) ** 2;
+  const d2 = (k2[0] - preferKnee[0]) ** 2 + (k2[1] - preferKnee[1]) ** 2;
+  return d1 <= d2 ? k1 : k2;
+}
+
+/**
+ * 踝貼地 IK：髖隨律動下沉/搖擺，踝 x 小幅跟隨，y 保持基線（蹲彈時由髖–踝距離自然屈膝）
+ */
+function solveLegPlanted(hip, baseAnkle, baseKnee, kneeFlexAdd, L1, L2, pelvisDx, amp) {
+  const ankleX = baseAnkle[0] + pelvisDx * 0.25 * amp;
+  const ankleY = baseAnkle[1] + kneeFlexAdd * 0.00012;
+  const ankle = [ankleX, ankleY];
+  const knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee);
+  const geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
+  const shinAngle = Math.atan2(
+    geo.ankle[1] - geo.knee[1],
+    geo.ankle[0] - geo.knee[0],
+  );
+  return { knee: geo.knee, ankle: geo.ankle, shinAngle };
+}
+
+function applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle) {
+  const rot = shinAngle - baseShinAngle;
+  const c = Math.cos(rot);
+  const s = Math.sin(rot);
+  const ax = lm[ankleIdx][0];
+  const ay = lm[ankleIdx][1];
+  for (const { idx, ox, oy } of footOffsets) {
+    lm[idx][0] = ax + ox * c - oy * s;
+    lm[idx][1] = ay + ox * s + oy * c;
+  }
+}
+
+function applyLegGroove(lm, groove, amp) {
+  const hipDrop = groove.hipDrop + groove.kneeFlexAdd * KNEE_FLEX_HIP_DROP_COUP;
+  const sway = groove.hipSway;
+  const kneeFlexAdd = groove.kneeFlexAdd;
+
+  const leftHip = [
+    BASE_POSE[23][0] + sway,
+    BASE_POSE[23][1] + hipDrop,
+  ];
+  const rightHip = [
+    BASE_POSE[24][0] - sway,
+    BASE_POSE[24][1] + hipDrop,
+  ];
+
+  const pelvisCx = (leftHip[0] + rightHip[0]) / 2;
+  const pelvisDx = pelvisCx - BASE_PELVIS_CENTER_X;
+
+  const leftLeg = solveLegPlanted(
+    leftHip, BASE_POSE[27], BASE_POSE[25], kneeFlexAdd, L_THIGH_L, L_SHIN_L, pelvisDx, amp,
+  );
+  const rightLeg = solveLegPlanted(
+    rightHip, BASE_POSE[28], BASE_POSE[26], kneeFlexAdd, L_THIGH_R, L_SHIN_R, pelvisDx, amp,
+  );
+
+  lm[23][0] = leftHip[0];
+  lm[23][1] = leftHip[1];
+  lm[24][0] = rightHip[0];
+  lm[24][1] = rightHip[1];
+  lm[25][0] = leftLeg.knee[0];
+  lm[25][1] = leftLeg.knee[1];
+  lm[26][0] = rightLeg.knee[0];
+  lm[26][1] = rightLeg.knee[1];
+  lm[27][0] = leftLeg.ankle[0];
+  lm[27][1] = leftLeg.ankle[1];
+  lm[28][0] = rightLeg.ankle[0];
+  lm[28][1] = rightLeg.ankle[1];
+
+  applyFootFromAnkle(lm, 27, FOOT_OFFSETS_L, leftLeg.shinAngle, LEG_REST_L.shinAngle);
+  applyFootFromAnkle(lm, 28, FOOT_OFFSETS_R, rightLeg.shinAngle, LEG_REST_R.shinAngle);
+}
+
 function applyShoulderDrive(lm, intentL, intentR, amp) {
   const liftL = clamp(intentL.elevation / 90, 0, 1) * 0.014 * amp;
   const liftR = clamp(intentR.elevation / 90, 0, 1) * 0.014 * amp;
@@ -347,6 +499,39 @@ const L_UPPER_L = dist2d(BASE_POSE[11], BASE_POSE[13]);
 const L_LOWER_L = dist2d(BASE_POSE[13], BASE_POSE[15]);
 const L_UPPER_R = dist2d(BASE_POSE[12], BASE_POSE[14]);
 const L_LOWER_R = dist2d(BASE_POSE[14], BASE_POSE[16]);
+
+const L_THIGH_L = dist2d(BASE_POSE[23], BASE_POSE[25]);
+const L_SHIN_L = dist2d(BASE_POSE[25], BASE_POSE[27]);
+const L_THIGH_R = dist2d(BASE_POSE[24], BASE_POSE[26]);
+const L_SHIN_R = dist2d(BASE_POSE[26], BASE_POSE[28]);
+
+const BASE_PELVIS_CENTER_X = (BASE_POSE[23][0] + BASE_POSE[24][0]) / 2;
+
+const FOOT_OFFSETS_L = [
+  { idx: 29, ox: BASE_POSE[29][0] - BASE_POSE[27][0], oy: BASE_POSE[29][1] - BASE_POSE[27][1] },
+  { idx: 31, ox: BASE_POSE[31][0] - BASE_POSE[27][0], oy: BASE_POSE[31][1] - BASE_POSE[27][1] },
+];
+const FOOT_OFFSETS_R = [
+  { idx: 30, ox: BASE_POSE[30][0] - BASE_POSE[28][0], oy: BASE_POSE[30][1] - BASE_POSE[28][1] },
+  { idx: 32, ox: BASE_POSE[32][0] - BASE_POSE[28][0], oy: BASE_POSE[32][1] - BASE_POSE[28][1] },
+];
+
+function measureLegRest(hipIdx, kneeIdx, ankleIdx, L1, L2) {
+  const hip = BASE_POSE[hipIdx];
+  const knee = BASE_POSE[kneeIdx];
+  const ankle = BASE_POSE[ankleIdx];
+  const thighAngle = Math.atan2(knee[1] - hip[1], knee[0] - hip[0]);
+  const shinAngle = Math.atan2(ankle[1] - knee[1], ankle[0] - knee[0]);
+  const vUp = [hip[0] - knee[0], hip[1] - knee[1]];
+  const vDown = [ankle[0] - knee[0], ankle[1] - knee[1]];
+  const dot = vUp[0] * vDown[0] + vUp[1] * vDown[1];
+  const interior = Math.acos(clamp(dot / (L1 * L2), -1, 1));
+  const kneeFlexRestDeg = (Math.PI - interior) / DEG;
+  return { thighAngle, shinAngle, interior, kneeFlexRestDeg };
+}
+
+const LEG_REST_L = measureLegRest(23, 25, 27, L_THIGH_L, L_SHIN_L);
+const LEG_REST_R = measureLegRest(24, 26, 28, L_THIGH_R, L_SHIN_R);
 
 const FINGER_OFFSETS_L = [17, 19, 21].map(i => [
   BASE_POSE[i][0] - BASE_POSE[15][0],
@@ -510,6 +695,7 @@ export class ProceduralSkeleton {
     };
     this._prevForearmAngle = { L: null, R: null };
     this._prevT = null;
+    this._legGrooveState = createLegGrooveState();
   }
 
   _makeRng(seed) {
@@ -599,6 +785,7 @@ export class ProceduralSkeleton {
     this._armState.R = createArmIntentState();
     this._prevForearmAngle.L = null;
     this._prevForearmAngle.R = null;
+    this._legGrooveState = createLegGrooveState();
   }
 
   /**
@@ -652,7 +839,7 @@ export class ProceduralSkeleton {
 
     const lm = BASE_POSE.map(p => [p[0], p[1], p[2], p[3]]);
 
-    for (let i = 0; i <= 24; i++) lm[i][1] += bodyBob;
+    for (let i = 0; i <= 22; i++) lm[i][1] += bodyBob;
     for (let i = 0; i <= 10; i++) lm[i][0] += headTilt;
     lm[11][1] -= shoulderLift;
     lm[12][1] += shoulderLift;
@@ -720,6 +907,13 @@ export class ProceduralSkeleton {
 
     applySimpleZ(lm, 13, 15, leftFingerIdx, leftShoulder, leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
     applySimpleZ(lm, 14, 16, rightFingerIdx, rightShoulder, rightArm.wrist, L_UPPER_R, L_LOWER_R, rightArm, -1);
+
+    if (ENABLE_LEG_GROOVE) {
+      const legTargets = computeLegGrooveTargets(elapsed, this.beatSec, amp);
+      const legHalfLife = legSpringHalfLife(this.beatSec);
+      const smoothLeg = springLegGroove(this._legGrooveState, legTargets, legHalfLife, dt);
+      applyLegGroove(lm, smoothLeg, amp);
+    }
 
     const avgShoulderY = (lm[11][1] + lm[12][1]) / 2;
     if (lm[0][1] > avgShoulderY - 0.03) {
