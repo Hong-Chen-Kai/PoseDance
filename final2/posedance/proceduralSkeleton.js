@@ -337,8 +337,11 @@ function applySwing(lm, beatSin, amp) {
   lm[12][1] += swing;
 }
 
-/** 髖–踝固定段長求膝：優先向下蹲且 x 勿偏離站姿過多 */
-function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee) {
+/**
+ * 髖–踝固定段長求膝。
+ * side 'L'|'R'：左膝 x 應 ≥ 基線、右膝 x 應 ≤ 基線（外開，避免內扣）。
+ */
+function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, side) {
   const dx = ankle[0] - hip[0];
   const dy = ankle[1] - hip[1];
   let d = Math.hypot(dx, dy);
@@ -359,15 +362,20 @@ function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee) {
   const k2 = [midX - px * h, midY - py * h];
   if (h < 1e-6) return [midX, midY];
   const scoreKnee = (k) => {
-    const dxBase = k[0] - baseKnee[0];
     const dyDown = k[1] - baseKnee[1];
-    return dxBase * dxBase * 80 - dyDown * 5;
+    const inward = side === "L"
+      ? Math.max(0, baseKnee[0] - k[0])
+      : Math.max(0, k[0] - baseKnee[0]);
+    const outward = side === "L"
+      ? Math.max(0, k[0] - baseKnee[0])
+      : Math.max(0, baseKnee[0] - k[0]);
+    return inward * 200 - outward * 25 - dyDown * 8;
   };
   return scoreKnee(k1) <= scoreKnee(k2) ? k1 : k2;
 }
 
-function solveLegFromPlantedFoot(hip, ankle, baseKnee, L1, L2) {
-  const knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee);
+function solveLegFromPlantedFoot(hip, ankle, baseKnee, L1, L2, side) {
+  const knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, side);
   const geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
   const shinAngle = Math.atan2(
     geo.ankle[1] - geo.knee[1],
@@ -390,10 +398,10 @@ function applyBounce(lm, beatSin, amp) {
   const rightAnkle = [BASE_POSE[28][0] - spreadA, BASE_POSE[28][1]];
 
   const leftLeg = solveLegFromPlantedFoot(
-    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L,
+    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L",
   );
   const rightLeg = solveLegFromPlantedFoot(
-    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R,
+    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R",
   );
 
   lm[23][0] = leftHip[0];
