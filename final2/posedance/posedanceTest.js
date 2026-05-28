@@ -365,22 +365,25 @@ function getCanvasCssSizeSafe() {
 function computeLayoutCandidates(w, h, baseRect) {
   // Candidate centers (normalized) with small offsets to avoid perfect overlap.
   const centers = [
-    [0.5, 0.22],
-    [0.5, 0.78],
-    [0.22, 0.5],
-    [0.78, 0.5],
-    [0.22, 0.22],
-    [0.78, 0.22],
-    [0.22, 0.78],
-    [0.78, 0.78],
-    [0.5, 0.5],
+    // Push further towards edges to increase spacing.
+    [0.5, 0.16],
+    [0.5, 0.84],
+    [0.16, 0.5],
+    [0.84, 0.5],
+    [0.18, 0.18],
+    [0.82, 0.18],
+    [0.18, 0.82],
+    [0.82, 0.82],
+    // Keep a couple of mid candidates as fallback.
+    [0.5, 0.28],
+    [0.5, 0.72],
   ];
   const jitter = [
     [0, 0],
-    [0.03, 0.02],
-    [-0.03, 0.02],
-    [0.03, -0.02],
-    [-0.03, -0.02],
+    [0.05, 0.03],
+    [-0.05, 0.03],
+    [0.05, -0.03],
+    [-0.05, -0.03],
   ];
 
   const rects = [];
@@ -547,8 +550,8 @@ function scoreCandidateRect(r, w, h, occupied, avoidRect) {
   for (const o of occupied) overlap += rectIntersectionArea(rr, o);
 
   const avoidOverlap = avoidRect ? rectIntersectionArea(rr, avoidRect) : 0;
-  // weights tuned for UI feel
-  return overlap * 6 + avoidOverlap * 12 + dist2 * 0.002;
+  // weights tuned for UI feel (slightly stronger separation)
+  return overlap * 9 + avoidOverlap * 14 + dist2 * 0.0016;
 }
 
 function autoLayoutMode2({ animate = true } = {}) {
