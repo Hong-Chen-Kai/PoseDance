@@ -98,9 +98,10 @@ const BODY_BOB_AMP = 0.008;
 const HEAD_TILT_AMP = 0.006;
 // Swing：左右肩一上一下（街舞上身，不作用於腿）
 const SWING_AMP = 0.004;
-// Bounce：骨盆/膝隨拍下沉（與 bodyBob 同量級）；踝/膝僅小幅外開
+// Bounce：骨盆/膝隨拍下沉；膝小幅外開；踝/腳跟貼地不橫移；腳掌外八僅旋轉趾跟
 const BOUNCE_HIP_DROP = 0.008;
-const BOUNCE_ANKLE_SPREAD = 0.0035;
+const BOUNCE_KNEE_OUT_MAX = 0.0045;
+const BOUNCE_FOOT_TURNOUT_DEG = 9;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
@@ -369,39 +370,50 @@ function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, side) {
     const outward = side === "L"
       ? Math.max(0, k[0] - baseKnee[0])
       : Math.max(0, baseKnee[0] - k[0]);
-    return inward * 200 - outward * 25 - dyDown * 8;
+    return inward * 200 - outward * 10 - dyDown * 8;
   };
   return scoreKnee(k1) <= scoreKnee(k2) ? k1 : k2;
 }
 
-function solveLegFromPlantedFoot(hip, ankle, baseKnee, L1, L2, side) {
-  const knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, side);
-  const geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
+/** 踝釘在地面；只調膝彎與大腿長，不把踝拉離基線（避免墊腳尖感） */
+function solveLegFromPlantedFoot(hip, ankleFixed, baseKnee, L1, L2, side, kneeOutMax) {
+  let knee = solveKneeFromHipAnkle(hip, ankleFixed, L1, L2, baseKnee, side);
+  knee = placeAtLength(hip, knee, L1);
+  if (side === "L") {
+    knee[0] = clamp(knee[0], baseKnee[0], baseKnee[0] + kneeOutMax);
+  } else {
+    knee[0] = clamp(knee[0], baseKnee[0] - kneeOutMax, baseKnee[0]);
+  }
   const shinAngle = Math.atan2(
-    geo.ankle[1] - geo.knee[1],
-    geo.ankle[0] - geo.knee[0],
+    ankleFixed[1] - knee[1],
+    ankleFixed[0] - knee[0],
   );
-  return { knee: geo.knee, ankle: geo.ankle, shinAngle };
+  return { knee, ankle: [ankleFixed[0], ankleFixed[1]], shinAngle };
+}
+
+function applyFootFromAnkleWithTurnout(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle, turnoutRad) {
+  applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle + turnoutRad, baseShinAngle);
 }
 
 /**
- * Bounce（街舞下身）：骨盆僅 y 下沉（x 維持基線）；踝/膝小幅外開（左+右−，加寬不內夾）。
+ * Bounce：骨盆 y 下沉；膝微外；踝/腳跟固定貼地；腳趾外八旋轉以看見腳面。
  */
 function applyBounce(lm, beatSin, amp) {
   const down = bounceDown01(beatSin);
   const hipDrop = BOUNCE_HIP_DROP * amp * down;
-  const spreadA = BOUNCE_ANKLE_SPREAD * amp * down;
+  const kneeOut = BOUNCE_KNEE_OUT_MAX * amp * down;
+  const turnout = BOUNCE_FOOT_TURNOUT_DEG * DEG * down * amp;
 
   const leftHip = [BASE_POSE[23][0], BASE_POSE[23][1] + hipDrop];
   const rightHip = [BASE_POSE[24][0], BASE_POSE[24][1] + hipDrop];
-  const leftAnkle = [BASE_POSE[27][0] + spreadA, BASE_POSE[27][1]];
-  const rightAnkle = [BASE_POSE[28][0] - spreadA, BASE_POSE[28][1]];
+  const leftAnkle = [BASE_POSE[27][0], BASE_POSE[27][1]];
+  const rightAnkle = [BASE_POSE[28][0], BASE_POSE[28][1]];
 
   const leftLeg = solveLegFromPlantedFoot(
-    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L",
+    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L", kneeOut,
   );
   const rightLeg = solveLegFromPlantedFoot(
-    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R",
+    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R", kneeOut,
   );
 
   lm[23][0] = leftHip[0];
@@ -417,8 +429,12 @@ function applyBounce(lm, beatSin, amp) {
   lm[28][0] = rightLeg.ankle[0];
   lm[28][1] = rightLeg.ankle[1];
 
-  applyFootFromAnkle(lm, 27, FOOT_OFFSETS_L, leftLeg.shinAngle, LEG_REST_L.shinAngle);
-  applyFootFromAnkle(lm, 28, FOOT_OFFSETS_R, rightLeg.shinAngle, LEG_REST_R.shinAngle);
+  applyFootFromAnkleWithTurnout(
+    lm, 27, FOOT_OFFSETS_L, leftLeg.shinAngle, LEG_REST_L.shinAngle, turnout,
+  );
+  applyFootFromAnkleWithTurnout(
+    lm, 28, FOOT_OFFSETS_R, rightLeg.shinAngle, LEG_REST_R.shinAngle, -turnout,
+  );
 }
 
 function applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle) {
