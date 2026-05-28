@@ -358,6 +358,30 @@ function pointInRect(r, x, y) {
   return Boolean(r) && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
 
+function isEditableTarget(el) {
+  if (!el) return false;
+  const tag = String(el.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  return Boolean(el.isContentEditable);
+}
+
+function centerRectOnBBox(rect, bbox) {
+  if (!rect || !bbox) return rect;
+  const rcx = rect.ox + rect.dw / 2;
+  const rcy = rect.oy + rect.dh / 2;
+  const bcx = bbox.ox + bbox.dw / 2;
+  const bcy = bbox.oy + bbox.dh / 2;
+  return { ox: rect.ox + (rcx - bcx), oy: rect.oy + (rcy - bcy), dw: rect.dw, dh: rect.dh };
+}
+
+function shrinkRectX(rect, insetPx) {
+  if (!rect) return rect;
+  const inset = Math.max(0, insetPx || 0);
+  const ox = rect.ox + inset;
+  const dw = Math.max(0, rect.dw - inset * 2);
+  return { ox, oy: rect.oy, dw, dh: rect.dh };
+}
+
 function getDeleteButtonRectForBBox(bbox) {
   if (!bbox) return null;
   const size = 18;
@@ -2584,15 +2608,16 @@ function drawMode2Overlay(tScore) {
   if (sel) {
     // Use the container draw-rect for selection UI so the box stays stable
     // even when the skeleton's tight bbox changes frame-by-frame.
-    const rSel = getDrawRect(sel, defaultRects);
+    const rSel0 = getDrawRect(sel, defaultRects);
+    const rSel = rSel0 ? shrinkRectX(rSel0, Math.max(6, rSel0.dw * 0.08)) : null;
     if (rSel) {
-      ctx.strokeStyle = "rgba(255,255,255,0.85)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.5;
       ctx.setLineDash([6, 4]);
       ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
       ctx.setLineDash([]);
       const hs = 4;
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
       ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
@@ -2874,15 +2899,16 @@ function updateUiLoop() {
       if (sel) {
         // Use the container draw-rect for selection UI so the box stays stable
         // even when the skeleton's tight bbox changes frame-by-frame.
-        const rSel = getDrawRect(sel, defaultRects);
+        const rSel0 = getDrawRect(sel, defaultRects);
+        const rSel = rSel0 ? shrinkRectX(rSel0, Math.max(6, rSel0.dw * 0.08)) : null;
         if (rSel) {
-          ctx.strokeStyle = "rgba(255,255,255,0.85)";
-          ctx.lineWidth = 2;
+          ctx.strokeStyle = "rgba(255,255,255,0.55)";
+          ctx.lineWidth = 1.5;
           ctx.setLineDash([6, 4]);
           ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
           ctx.setLineDash([]);
           const hs = 4;
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.fillStyle = "rgba(255,255,255,0.65)";
           ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
           ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
           ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
@@ -3190,8 +3216,30 @@ async function main() {
       if (!picked) return;
 
       // Move should operate on draw-rect (container), not tight bbox.
-      const pickedRect = getDrawRect(picked, defaults);
+      let pickedRect = getDrawRect(picked, defaults);
       if (!pickedRect) return;
+
+      // Auto-center on first select (before user manually adjusts it).
+      if (!state.interact?.rectOverrides?.[picked]) {
+        const bbox =
+          typeof tScore === "number" && Number.isFinite(tScore)
+            ? getSkeletonBBoxRectForId(picked, defaults, tScore, 8)
+            : null;
+        if (bbox) {
+          const centered = centerRectOnBBox(pickedRect, bbox);
+          const constrained = constrainRectBySkeletonBBox({
+            id: picked,
+            rect: centered,
+            w,
+            h,
+            tScore,
+            padPx: 8,
+            anchor: null,
+          });
+          state.interact.rectOverrides[picked] = constrained;
+          pickedRect = constrained;
+        }
+      }
       state.interact.drag = {
         active: true,
         id: picked,
@@ -3361,6 +3409,30 @@ async function main() {
   }
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && state.music.open) closeSongModal();
+  });
+
+  const deleteSelectedMode2Trace = () => {
+    if (state.ui.mode !== "mode2") return false;
+    const sel = state.interact?.selectedId;
+    if (!sel || !isMode2TraceSkeletonId(sel)) return false;
+    const traceId = sel.slice("m2_trace_".length);
+    state.mode2.traces = (state.mode2.traces || []).filter(
+      (t) => String(t.id) !== traceId,
+    );
+    if (state.interact?.rectOverrides) {
+      delete state.interact.rectOverrides[sel];
+    }
+    state.interact.selectedId = null;
+    clearOverlayCanvas();
+    return true;
+  };
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Delete" && e.key !== "Backspace") return;
+    if (isEditableTarget(e.target)) return;
+    if (deleteSelectedMode2Trace()) {
+      e.preventDefault();
+    }
   });
 
   if (els.songSearchButton) {
