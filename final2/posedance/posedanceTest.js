@@ -2942,6 +2942,7 @@ function updateUiLoop() {
       };
       if (userLm) {
         drawUserAvatar(ctx, userLm, getLmXYV, stageRect, {
+          skeletonId: SKELETON_IDS.m1_user,
           baseColor,
           highlightColor: isOrange ? USER_SKELETON_COLOR_GOOD : redColor,
           highlightParts,
@@ -2964,8 +2965,10 @@ function updateUiLoop() {
         for (let i = 0; i < rectIds.length; i += 1) {
           const id = rectIds[i];
           const r = getDrawRect(id, defaultRects) || stageRect;
-          drawPoseConnections(ctx, demoLm, getArrXYV, r, () => demoColor, 5);
-          drawPosePoints(ctx, demoLm, getArrXYV, r, demoColor, 4.5);
+          const off = state.interact?.poseOffsets?.[id] ?? null;
+          const getter2 = makeOffsetGetter(getArrXYV, off);
+          drawPoseConnections(ctx, demoLm, getter2, r, () => demoColor, 5);
+          drawPosePoints(ctx, demoLm, getter2, r, demoColor, 4.5);
         }
       }
 
