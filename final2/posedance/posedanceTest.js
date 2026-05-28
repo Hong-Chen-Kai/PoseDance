@@ -382,6 +382,21 @@ function shrinkRectX(rect, insetPx) {
   return { ox, oy: rect.oy, dw, dh: rect.dh };
 }
 
+function getCenterTimeForSkeletonId(id) {
+  // Prefer the current player time; otherwise fall back to a deterministic time
+  // so traces can still be centered even when YouTube isn't ready.
+  const tNow = getPlayerTimeSafe();
+  if (typeof tNow === "number" && Number.isFinite(tNow)) return tNow;
+  if (isMode2TraceSkeletonId(id)) {
+    const traceId = id.slice("m2_trace_".length);
+    const tr = (state.mode2?.traces || []).find((t) => String(t.id) === traceId);
+    const t0 = tr?.data?.samples?.[0]?.t;
+    if (typeof t0 === "number" && Number.isFinite(t0)) return t0;
+    return 0;
+  }
+  return 0;
+}
+
 function getDeleteButtonRectForBBox(bbox) {
   if (!bbox) return null;
   const size = 18;
@@ -3219,23 +3234,26 @@ async function main() {
       let pickedRect = getDrawRect(picked, defaults);
       if (!pickedRect) return;
 
-      // Auto-center on first select (before user manually adjusts it).
-      if (!state.interact?.rectOverrides?.[picked]) {
-        const bbox =
-          typeof tScore === "number" && Number.isFinite(tScore)
-            ? getSkeletonBBoxRectForId(picked, defaults, tScore, 8)
-            : null;
+      // Auto-center the container on select so the skeleton sits in the middle.
+      // Use a robust time fallback so traces can be centered even when YouTube isn't ready.
+      {
+        const tCenter = getCenterTimeForSkeletonId(picked);
+        const { lm, getter } = getSkeletonLandmarksForIdAtTime(picked, tCenter);
+        const bbox = lm ? getTightBBoxFromLandmarks(lm, getter, pickedRect, 8) : null;
         if (bbox) {
           const centered = centerRectOnBBox(pickedRect, bbox);
-          const constrained = constrainRectBySkeletonBBox({
-            id: picked,
-            rect: centered,
-            w,
-            h,
-            tScore,
-            padPx: 8,
-            anchor: null,
-          });
+          const constrained =
+            typeof tCenter === "number" && Number.isFinite(tCenter)
+              ? constrainRectBySkeletonBBox({
+                  id: picked,
+                  rect: centered,
+                  w,
+                  h,
+                  tScore: tCenter,
+                  padPx: 8,
+                  anchor: null,
+                })
+              : clampRectToCanvas(centered, w, h);
           state.interact.rectOverrides[picked] = constrained;
           pickedRect = constrained;
         }
