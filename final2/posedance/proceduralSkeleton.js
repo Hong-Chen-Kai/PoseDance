@@ -90,12 +90,15 @@ const ENABLE_LEG_GROOVE = true;
 // 膝屈：在靜止基線上增加的蹲彈（度）；全屈約 135°，groove 僅用小幅
 const KNEE_FLEX_GROOVE_PEAK_DEG = 18;
 const KNEE_FLEX_GROOVE_MAX_DEG = 32;
-const HIP_SWAY_MAX = 0.012;
-const HIP_DROP_MAX = 0.009;
+// 骨盆整體微移（左右同向），不做左右髖對向內夾
+const PELVIS_SHIFT_X_MAX = 0.003;
+const HIP_DROP_MAX = 0.011;
+// 左右髖 y 微差模擬重心，幅度遠小於下沉
+const HIP_TILT_Y_MAX = 0.0025;
 const LEG_SPRING_HALF_LIFE_BEAT_RATIO = 0.35;
 const LEG_SPRING_HALF_LIFE_MAX = 0.28;
 const KNEE_LEAD_BEAT_FRAC = 0.125;
-const KNEE_FLEX_HIP_DROP_COUP = 0.00045;
+const KNEE_FLEX_HIP_DROP_COUP = 0.0005;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
@@ -338,8 +341,9 @@ function computeLegGrooveTargets(elapsed, beatSec, amp) {
     KNEE_FLEX_GROOVE_MAX_DEG - Math.max(LEG_REST_L.kneeFlexRestDeg, LEG_REST_R.kneeFlexRestDeg),
   );
   const hipDrop = HIP_DROP_MAX * amp * bob;
-  const hipSway = HIP_SWAY_MAX * amp * Math.sin(2 * omega * elapsed);
-  return { kneeFlexAdd, hipSway, hipDrop };
+  const pelvisShiftX = PELVIS_SHIFT_X_MAX * amp * Math.sin(omega * elapsed);
+  const hipTiltY = HIP_TILT_Y_MAX * amp * Math.sin(2 * omega * elapsed);
+  return { kneeFlexAdd, pelvisShiftX, hipTiltY, hipDrop };
 }
 
 function springLegGroove(state, target, halfLife, dt) {
@@ -348,17 +352,34 @@ function springLegGroove(state, target, halfLife, dt) {
   // 半拍左右搖不經 spring，避免高頻目標被過度衰減
   return {
     kneeFlexAdd: state.kneeFlexAdd,
-    hipSway: target.hipSway,
+    pelvisShiftX: target.pelvisShiftX,
+    hipTiltY: target.hipTiltY,
     hipDrop: state.hipDrop,
   };
 }
 
-/** 髖–踝固定段長時求膝（選離 baseKnee 較近的一支） */
-function solveKneeFromHipAnkle(hip, ankle, L1, L2, preferKnee) {
+/** 踝貼地；膝 x 鎖在站姿，主要由 y 下沉產生蹲彈 */
+function solveLegBounce(hip, baseAnkle, baseKnee, L1, L2) {
+  const ankle = [baseAnkle[0], baseAnkle[1]];
+  let knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee);
+  knee[0] = baseKnee[0];
+  let geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
+  knee = geo.knee;
+  knee[0] = baseKnee[0];
+  geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
+  const shinAngle = Math.atan2(
+    geo.ankle[1] - geo.knee[1],
+    geo.ankle[0] - geo.knee[0],
+  );
+  return { knee: geo.knee, ankle: geo.ankle, shinAngle };
+}
+
+/** 髖–踝固定段長求膝：選較符合向下蹲的一支 */
+function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee) {
   const dx = ankle[0] - hip[0];
   const dy = ankle[1] - hip[1];
   let d = Math.hypot(dx, dy);
-  if (d < 1e-8) return [preferKnee[0], preferKnee[1]];
+  if (d < 1e-8) return [baseKnee[0], baseKnee[1]];
   const maxD = L1 + L2 - 1e-5;
   const minD = Math.abs(L1 - L2) + 1e-5;
   d = clamp(d, minD, maxD);
@@ -374,25 +395,12 @@ function solveKneeFromHipAnkle(hip, ankle, L1, L2, preferKnee) {
   const k1 = [midX + px * h, midY + py * h];
   const k2 = [midX - px * h, midY - py * h];
   if (h < 1e-6) return [midX, midY];
-  const d1 = (k1[0] - preferKnee[0]) ** 2 + (k1[1] - preferKnee[1]) ** 2;
-  const d2 = (k2[0] - preferKnee[0]) ** 2 + (k2[1] - preferKnee[1]) ** 2;
-  return d1 <= d2 ? k1 : k2;
-}
-
-/**
- * 踝貼地 IK：髖隨律動下沉/搖擺，踝 x 小幅跟隨，y 保持基線（蹲彈時由髖–踝距離自然屈膝）
- */
-function solveLegPlanted(hip, baseAnkle, baseKnee, kneeFlexAdd, L1, L2, pelvisDx, amp) {
-  const ankleX = baseAnkle[0] + pelvisDx * 0.25 * amp;
-  const ankleY = baseAnkle[1] + kneeFlexAdd * 0.00012;
-  const ankle = [ankleX, ankleY];
-  const knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee);
-  const geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
-  const shinAngle = Math.atan2(
-    geo.ankle[1] - geo.knee[1],
-    geo.ankle[0] - geo.knee[0],
-  );
-  return { knee: geo.knee, ankle: geo.ankle, shinAngle };
+  const scoreKnee = (k) => {
+    const dxBase = k[0] - baseKnee[0];
+    const dyDown = k[1] - baseKnee[1];
+    return dxBase * dxBase * 80 - dyDown * 5;
+  };
+  return scoreKnee(k1) <= scoreKnee(k2) ? k1 : k2;
 }
 
 function applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle) {
@@ -407,29 +415,22 @@ function applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle)
   }
 }
 
-function applyLegGroove(lm, groove, amp) {
+function applyLegGroove(lm, groove) {
   const hipDrop = groove.hipDrop + groove.kneeFlexAdd * KNEE_FLEX_HIP_DROP_COUP;
-  const sway = groove.hipSway;
-  const kneeFlexAdd = groove.kneeFlexAdd;
+  const shiftX = groove.pelvisShiftX;
+  const tiltY = groove.hipTiltY;
 
   const leftHip = [
-    BASE_POSE[23][0] + sway,
-    BASE_POSE[23][1] + hipDrop,
+    BASE_POSE[23][0] + shiftX,
+    BASE_POSE[23][1] + hipDrop + tiltY,
   ];
   const rightHip = [
-    BASE_POSE[24][0] - sway,
-    BASE_POSE[24][1] + hipDrop,
+    BASE_POSE[24][0] + shiftX,
+    BASE_POSE[24][1] + hipDrop - tiltY,
   ];
 
-  const pelvisCx = (leftHip[0] + rightHip[0]) / 2;
-  const pelvisDx = pelvisCx - BASE_PELVIS_CENTER_X;
-
-  const leftLeg = solveLegPlanted(
-    leftHip, BASE_POSE[27], BASE_POSE[25], kneeFlexAdd, L_THIGH_L, L_SHIN_L, pelvisDx, amp,
-  );
-  const rightLeg = solveLegPlanted(
-    rightHip, BASE_POSE[28], BASE_POSE[26], kneeFlexAdd, L_THIGH_R, L_SHIN_R, pelvisDx, amp,
-  );
+  const leftLeg = solveLegBounce(leftHip, BASE_POSE[27], BASE_POSE[25], L_THIGH_L, L_SHIN_L);
+  const rightLeg = solveLegBounce(rightHip, BASE_POSE[28], BASE_POSE[26], L_THIGH_R, L_SHIN_R);
 
   lm[23][0] = leftHip[0];
   lm[23][1] = leftHip[1];
@@ -912,7 +913,7 @@ export class ProceduralSkeleton {
       const legTargets = computeLegGrooveTargets(elapsed, this.beatSec, amp);
       const legHalfLife = legSpringHalfLife(this.beatSec);
       const smoothLeg = springLegGroove(this._legGrooveState, legTargets, legHalfLife, dt);
-      applyLegGroove(lm, smoothLeg, amp);
+      applyLegGroove(lm, smoothLeg);
     }
 
     const avgShoulderY = (lm[11][1] + lm[12][1]) / 2;
