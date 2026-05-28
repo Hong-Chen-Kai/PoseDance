@@ -89,6 +89,7 @@ const state = {
   interact: {
     selectedId: null, // SkeletonId | null
     rectOverrides: {}, // Record<SkeletonId, Rect>
+    poseOffsets: {}, // Record<SkeletonId, { dx: number, dy: number }>
     lastTimeSec: null, // number | null (last known player time)
     drag: {
       active: false,
@@ -381,6 +382,46 @@ function shrinkRectX(rect, insetPx) {
   const ox = rect.ox + inset;
   const dw = Math.max(0, rect.dw - inset * 2);
   return { ox, oy: rect.oy, dw, dh: rect.dh };
+}
+
+function makeOffsetGetter(getXYV, offset) {
+  if (!offset || typeof offset.dx !== "number" || typeof offset.dy !== "number") {
+    return getXYV;
+  }
+  return (pt) => {
+    const p = getXYV(pt);
+    if (!p) return p;
+    return { x: p.x + offset.dx, y: p.y + offset.dy, v: p.v };
+  };
+}
+
+function computeCenterOffsetFromLandmarks(points, getXYV, visTh = 0.5) {
+  if (!points) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let n = 0;
+  for (let i = 0; i < 33; i += 1) {
+    const p = getXYV(points?.[i]);
+    if (!p) continue;
+    if (typeof p.v === "number" && p.v < visTh) continue;
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x);
+    maxY = Math.max(maxY, p.y);
+    n += 1;
+  }
+  if (n < 6) return null;
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  // shift so bbox center lands at 0.5,0.5 within the rect
+  const dx = 0.5 - cx;
+  const dy = 0.5 - cy;
+  // keep within reasonable bounds to avoid flying off-screen
+  const clamp = (v) => Math.max(-0.5, Math.min(0.5, v));
+  return { dx: clamp(dx), dy: clamp(dy) };
 }
 
 function getCenterTimeForSkeletonId(id) {
@@ -817,8 +858,10 @@ function getTightBBoxFromLandmarks(points, getXYV, rect, padPx = 8) {
   let maxX = -Infinity;
   let maxY = -Infinity;
   let n = 0;
+  const offset = state.interact?.poseOffsets?.[state.interact?.selectedId] ?? null;
+  const getXYV2 = makeOffsetGetter(getXYV, offset);
   for (let i = 0; i < 33; i += 1) {
-    const p = getXYV(points?.[i]);
+    const p = getXYV2(points?.[i]);
     if (!p) continue;
     if (typeof p.v === "number" && p.v < 0.5) continue;
     const x = rect.ox + p.x * rect.dw;
@@ -842,11 +885,14 @@ function getTightBBoxFromLandmarks(points, getXYV, rect, padPx = 8) {
 function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
   const drawRect = getDrawRect(id, defaultRects);
   if (!drawRect) return null;
+  const offset = state.interact?.poseOffsets?.[id] ?? null;
 
   // decide landmarks source
   if (state.ui.mode === "mode2") {
     const { lm, getter } = getSkeletonLandmarksForIdAtTime(id, tScore);
-    const bbox = lm ? getTightBBoxFromLandmarks(lm, getter, drawRect, extraPadPx) : null;
+    const bbox = lm
+      ? getTightBBoxFromLandmarks(lm, makeOffsetGetter(getter, offset), drawRect, extraPadPx)
+      : null;
     return bbox || drawRect;
   }
 
@@ -862,7 +908,9 @@ function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
   const isUser = id === SKELETON_IDS.m1_user;
   const lm = isUser ? state.latestUserLandmarks : demoLm;
   const getter = isUser ? getLmXYV : getArrXYV;
-  const bbox = lm ? getTightBBoxFromLandmarks(lm, getter, drawRect, extraPadPx) : null;
+  const bbox = lm
+    ? getTightBBoxFromLandmarks(lm, makeOffsetGetter(getter, offset), drawRect, extraPadPx)
+    : null;
   return bbox || drawRect;
 }
 
@@ -1976,8 +2024,11 @@ function drawClassicAvatar(ctx, points, getXYV, rect, options = {}) {
     typeof options.colorByConnection === "function"
       ? options.colorByConnection
       : () => baseColor;
-  drawPoseConnections(ctx, points, getXYV, rect, colorByConnection, options.lineWidth || 3);
-  drawPosePoints(ctx, points, getXYV, rect, baseColor, options.pointRadius || 3.5);
+  const id = options.skeletonId || null;
+  const offset = id ? state.interact?.poseOffsets?.[id] ?? null : null;
+  const getter2 = makeOffsetGetter(getXYV, offset);
+  drawPoseConnections(ctx, points, getter2, rect, colorByConnection, options.lineWidth || 3);
+  drawPosePoints(ctx, points, getter2, rect, baseColor, options.pointRadius || 3.5);
 }
 
 function drawUserAvatar(ctx, points, getXYV, rect, options = {}) {
@@ -2606,12 +2657,15 @@ function drawMode2Overlay(tScore) {
       : (tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, tScore) : null);
     if (!rect || !lm) continue;
     const trColor = tr.synthetic ? "rgba(0,180,255,0.95)" : demoColor;
-    drawPoseConnections(ctx, lm, getArrXYV, rect, () => trColor, 5);
-    drawPosePoints(ctx, lm, getArrXYV, rect, trColor, 4.5);
+    const off = state.interact?.poseOffsets?.[id] ?? null;
+    const getter2 = makeOffsetGetter(getArrXYV, off);
+    drawPoseConnections(ctx, lm, getter2, rect, () => trColor, 5);
+    drawPosePoints(ctx, lm, getter2, rect, trColor, 4.5);
   }
 
   if (state.latestUserLandmarks) {
     drawUserAvatar(ctx, state.latestUserLandmarks, getLmXYV, rectUser, {
+      skeletonId: SKELETON_IDS.m2_user,
       baseColor: userColor,
       highlightColor: userColor,
       highlightParts: new Set(),
@@ -3236,34 +3290,18 @@ async function main() {
       state.interact.selectedId = picked;
       if (!picked) return;
 
-      // Move should operate on draw-rect (container), not tight bbox.
-      let pickedRect = getDrawRect(picked, defaults);
-      if (!pickedRect) return;
-
-      // Auto-center the container on select so the skeleton sits in the middle.
-      // Use a robust time fallback so traces can be centered even when YouTube isn't ready.
+      // Auto-center the skeleton inside its rect by computing a normalized pose offset.
+      // (Translating rect won't change relative bbox position, because bbox is computed from rect itself.)
       {
         const tCenter = getCenterTimeForSkeletonId(picked);
         const { lm, getter } = getSkeletonLandmarksForIdAtTime(picked, tCenter);
-        const bbox = lm ? getTightBBoxFromLandmarks(lm, getter, pickedRect, 8) : null;
-        if (bbox) {
-          const centered = centerRectOnBBox(pickedRect, bbox);
-          const constrained =
-            typeof tCenter === "number" && Number.isFinite(tCenter)
-              ? constrainRectBySkeletonBBox({
-                  id: picked,
-                  rect: centered,
-                  w,
-                  h,
-                  tScore: tCenter,
-                  padPx: 8,
-                  anchor: null,
-                })
-              : clampRectToCanvas(centered, w, h);
-          state.interact.rectOverrides[picked] = constrained;
-          pickedRect = constrained;
-        }
+        const off = lm ? computeCenterOffsetFromLandmarks(lm, getter, 0.5) : null;
+        if (off) state.interact.poseOffsets[picked] = off;
       }
+
+      // Move should operate on draw-rect (container), not tight bbox.
+      const pickedRect = getDrawRect(picked, defaults);
+      if (!pickedRect) return;
       state.interact.drag = {
         active: true,
         id: picked,
@@ -3445,6 +3483,9 @@ async function main() {
     );
     if (state.interact?.rectOverrides) {
       delete state.interact.rectOverrides[sel];
+    }
+    if (state.interact?.poseOffsets) {
+      delete state.interact.poseOffsets[sel];
     }
     state.interact.selectedId = null;
     clearOverlayCanvas();
