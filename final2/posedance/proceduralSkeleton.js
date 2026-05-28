@@ -101,7 +101,9 @@ const SWING_AMP = 0.004;
 // Bounce：骨盆/膝隨拍下沉；膝小幅外開；踝/腳跟貼地不橫移；腳掌外八僅旋轉趾跟
 const BOUNCE_HIP_DROP = 0.008;
 const BOUNCE_KNEE_OUT_MAX = 0.0045;
-const BOUNCE_FOOT_TURNOUT_DEG = 9;
+// 腳底貼地：腳跟–腳尖同 y，略外八（左 toe 往左、右 toe 往右）
+const FOOT_GROUND_Y_OFFSET = 0.017;
+const FOOT_TOE_SPAN_X = 0.022;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
@@ -391,18 +393,13 @@ function solveLegFromPlantedFoot(hip, ankleFixed, baseKnee, L1, L2, side, kneeOu
   return { knee, ankle: [ankleFixed[0], ankleFixed[1]], shinAngle };
 }
 
-function applyFootFromAnkleWithTurnout(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle, turnoutRad) {
-  applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle + turnoutRad, baseShinAngle);
-}
-
 /**
- * Bounce：骨盆 y 下沉；膝微外；踝/腳跟固定貼地；腳趾外八旋轉以看見腳面。
+ * Bounce：骨盆 y 下沉；膝微外；踝固定；腳底 29–31 / 30–32 貼地橫線不隨律動動。
  */
 function applyBounce(lm, beatSin, amp) {
   const down = bounceDown01(beatSin);
   const hipDrop = BOUNCE_HIP_DROP * amp * down;
   const kneeOut = BOUNCE_KNEE_OUT_MAX * amp * down;
-  const turnout = BOUNCE_FOOT_TURNOUT_DEG * DEG * down * amp;
 
   const leftHip = [BASE_POSE[23][0], BASE_POSE[23][1] + hipDrop];
   const rightHip = [BASE_POSE[24][0], BASE_POSE[24][1] + hipDrop];
@@ -429,24 +426,7 @@ function applyBounce(lm, beatSin, amp) {
   lm[28][0] = rightLeg.ankle[0];
   lm[28][1] = rightLeg.ankle[1];
 
-  applyFootFromAnkleWithTurnout(
-    lm, 27, FOOT_OFFSETS_L, leftLeg.shinAngle, LEG_REST_L.shinAngle, turnout,
-  );
-  applyFootFromAnkleWithTurnout(
-    lm, 28, FOOT_OFFSETS_R, rightLeg.shinAngle, LEG_REST_R.shinAngle, -turnout,
-  );
-}
-
-function applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle) {
-  const rot = shinAngle - baseShinAngle;
-  const c = Math.cos(rot);
-  const s = Math.sin(rot);
-  const ax = lm[ankleIdx][0];
-  const ay = lm[ankleIdx][1];
-  for (const { idx, ox, oy } of footOffsets) {
-    lm[idx][0] = ax + ox * c - oy * s;
-    lm[idx][1] = ay + ox * s + oy * c;
-  }
+  applyPlantedFeet(lm);
 }
 
 function grooveEnablesSwing(mode) {
@@ -516,14 +496,33 @@ const L_SHIN_R = dist2d(BASE_POSE[26], BASE_POSE[28]);
 
 const BASE_PELVIS_CENTER_X = (BASE_POSE[23][0] + BASE_POSE[24][0]) / 2;
 
-const FOOT_OFFSETS_L = [
-  { idx: 29, ox: BASE_POSE[29][0] - BASE_POSE[27][0], oy: BASE_POSE[29][1] - BASE_POSE[27][1] },
-  { idx: 31, ox: BASE_POSE[31][0] - BASE_POSE[27][0], oy: BASE_POSE[31][1] - BASE_POSE[27][1] },
-];
-const FOOT_OFFSETS_R = [
-  { idx: 30, ox: BASE_POSE[30][0] - BASE_POSE[28][0], oy: BASE_POSE[30][1] - BASE_POSE[28][1] },
-  { idx: 32, ox: BASE_POSE[32][0] - BASE_POSE[28][0], oy: BASE_POSE[32][1] - BASE_POSE[28][1] },
-];
+/** 左：29 腳跟–31 腳尖；右：30 腳跟–32 腳尖（貼地橫線，不隨律動旋轉） */
+function buildPlantedFootPose(ankleIdx, heelIdx, toeIdx, toeDirX) {
+  const groundY = BASE_POSE[ankleIdx][1] + FOOT_GROUND_Y_OFFSET;
+  const heelX = BASE_POSE[heelIdx][0];
+  return {
+    heel: [heelX, groundY, BASE_POSE[heelIdx][2], BASE_POSE[heelIdx][3]],
+    toe: [heelX + toeDirX * FOOT_TOE_SPAN_X, groundY, BASE_POSE[toeIdx][2], BASE_POSE[toeIdx][3]],
+  };
+}
+
+const PLANTED_FOOT_L = buildPlantedFootPose(27, 29, 31, -1);
+const PLANTED_FOOT_R = buildPlantedFootPose(28, 30, 32, 1);
+
+function applyPlantedFeet(lm) {
+  lm[29][0] = PLANTED_FOOT_L.heel[0];
+  lm[29][1] = PLANTED_FOOT_L.heel[1];
+  lm[29][2] = PLANTED_FOOT_L.heel[2];
+  lm[31][0] = PLANTED_FOOT_L.toe[0];
+  lm[31][1] = PLANTED_FOOT_L.toe[1];
+  lm[31][2] = PLANTED_FOOT_L.toe[2];
+  lm[30][0] = PLANTED_FOOT_R.heel[0];
+  lm[30][1] = PLANTED_FOOT_R.heel[1];
+  lm[30][2] = PLANTED_FOOT_R.heel[2];
+  lm[32][0] = PLANTED_FOOT_R.toe[0];
+  lm[32][1] = PLANTED_FOOT_R.toe[1];
+  lm[32][2] = PLANTED_FOOT_R.toe[2];
+}
 
 function measureLegRest(hipIdx, kneeIdx, ankleIdx, L1, L2) {
   const hip = BASE_POSE[hipIdx];
