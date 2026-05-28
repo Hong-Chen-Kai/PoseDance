@@ -2582,11 +2582,15 @@ function drawMode2Overlay(tScore) {
   // selection box
   const sel = state.interact?.selectedId;
   if (sel) {
-    const rSel = getSkeletonBBoxRectForId(sel, defaultRects, tScore, 8);
+    // Use the container draw-rect for selection UI so the box stays stable
+    // even when the skeleton's tight bbox changes frame-by-frame.
+    const rSel = getDrawRect(sel, defaultRects);
     if (rSel) {
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
       ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
+      ctx.setLineDash([]);
       const hs = 4;
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
@@ -2868,14 +2872,15 @@ function updateUiLoop() {
       // selection box
       const sel = state.interact?.selectedId;
       if (sel) {
-        const rSel =
-          canUseTime
-            ? getSkeletonBBoxRectForId(sel, defaultRects, tScore, 8)
-            : getDrawRect(sel, defaultRects);
+        // Use the container draw-rect for selection UI so the box stays stable
+        // even when the skeleton's tight bbox changes frame-by-frame.
+        const rSel = getDrawRect(sel, defaultRects);
         if (rSel) {
           ctx.strokeStyle = "rgba(255,255,255,0.85)";
           ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
           ctx.strokeRect(rSel.ox, rSel.oy, rSel.dw, rSel.dh);
+          ctx.setLineDash([]);
           const hs = 4;
           ctx.fillStyle = "rgba(255,255,255,0.9)";
           ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
