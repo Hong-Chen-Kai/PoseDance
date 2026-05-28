@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "planted-feet-4";
+export const PROCEDURAL_SKELETON_BUILD = "planted-feet-5";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -104,9 +104,11 @@ const SWING_AMP = 0.004;
 // Bounce：骨盆/膝隨拍下沉；膝小幅外開；踝/腳跟貼地不橫移；腳掌外八僅旋轉趾跟
 const BOUNCE_HIP_DROP = 0.008;
 const BOUNCE_KNEE_OUT_MAX = 0.0045;
-// 腳底貼地：腳跟–腳尖同 y，略外八（左腳尖往右、右腳尖往左，遠離身體中線）
+// 腳底貼地：29→31（MP 左腳）、30→32（MP 右腳）；外八 = 腳尖遠離骨盆中線（影像 x）
+// posedanceTest #overlay_canvas 有 CSS scaleX(-1)，但整張 canvas 一起鏡像，腳跟→腳尖相對方向不變
 const FOOT_GROUND_Y_OFFSET = 0.017;
-const FOOT_TOE_SPAN_X = 0.022;
+const FOOT_TOE_SPAN_X = 0.026;
+const FOOT_TOE_FORWARD_Y = 0.006;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
@@ -345,9 +347,9 @@ function applySwing(lm, beatSin, amp) {
 
 /**
  * 髖–踝固定段長求膝。
- * side 'L'|'R'：左膝 x 應 ≥ 基線、右膝 x 應 ≤ 基線（外開，避免內扣）。
+ * hipSide 'L'|'R'：依 MP 左/右髖；膝外開 = 遠離骨盆中線（左膝 x↑、右膝 x↓）。
  */
-function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, side) {
+function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, hipSide) {
   const dx = ankle[0] - hip[0];
   const dy = ankle[1] - hip[1];
   let d = Math.hypot(dx, dy);
@@ -369,12 +371,12 @@ function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, side) {
   if (h < 1e-6) return [midX, midY];
   const scoreKnee = (k) => {
     const dyDown = k[1] - baseKnee[1];
-    const inward = side === "L"
-      ? Math.max(0, baseKnee[0] - k[0])
-      : Math.max(0, k[0] - baseKnee[0]);
-    const outward = side === "L"
+    const outward = hipSide === "L"
       ? Math.max(0, k[0] - baseKnee[0])
       : Math.max(0, baseKnee[0] - k[0]);
+    const inward = hipSide === "L"
+      ? Math.max(0, baseKnee[0] - k[0])
+      : Math.max(0, k[0] - baseKnee[0]);
     return inward * 200 - outward * 10 - dyDown * 8;
   };
   return scoreKnee(k1) <= scoreKnee(k2) ? k1 : k2;
@@ -497,18 +499,44 @@ const L_SHIN_R = dist2d(BASE_POSE[26], BASE_POSE[28]);
 
 const BASE_PELVIS_CENTER_X = (BASE_POSE[23][0] + BASE_POSE[24][0]) / 2;
 
-/** 左：29 腳跟–31 腳尖；右：30 腳跟–32 腳尖（貼地橫線，不隨律動旋轉） */
-function buildPlantedFootPose(ankleIdx, heelIdx, toeIdx, toeDirX) {
+/**
+ * 腳尖水平偏移：遠離骨盆中線 = 外八（MediaPipe 影像座標，面朝鏡頭）。
+ * - MP LEFT（腳在畫面右側，x 較大）：腳尖 x > 腳跟 x
+ * - MP RIGHT（腳在畫面左側，x 較小）：腳尖 x < 腳跟 x
+ * 若 BASE 原始 heel→toe 已朝外則沿用；若內扣（如右腳）則強制改為朝外。
+ */
+function computeFootToeDeltaX(heelIdx, toeIdx) {
+  const heelX = BASE_POSE[heelIdx][0];
+  const baseDx = BASE_POSE[toeIdx][0] - heelX;
+  const awaySign = heelX >= BASE_PELVIS_CENTER_X ? 1 : -1;
+  if (Math.abs(baseDx) < 0.004) return awaySign * FOOT_TOE_SPAN_X;
+  const baseSign = baseDx > 0 ? 1 : -1;
+  if (baseSign === awaySign) return baseSign * FOOT_TOE_SPAN_X;
+  return awaySign * FOOT_TOE_SPAN_X;
+}
+
+/** 左 29(跟)–31(尖)；右 30(跟)–32(尖)。保留少量「朝鏡頭」的 y 分量，避免腳掌完全橫向看起來像扭轉。 */
+function buildPlantedFootPose(ankleIdx, heelIdx, toeIdx) {
   const groundY = Math.max(BASE_POSE[ankleIdx][1], BASE_POSE[heelIdx][1]) + FOOT_GROUND_Y_OFFSET;
   const heelX = BASE_POSE[heelIdx][0];
+  const toeDx = computeFootToeDeltaX(heelIdx, toeIdx);
+  const baseDy = BASE_POSE[toeIdx][1] - BASE_POSE[heelIdx][1];
+  const toeForwardY = clamp(baseDy, 0, 0.02) > 0
+    ? Math.min(FOOT_TOE_FORWARD_Y, baseDy * 0.2)
+    : 0;
   return {
     heel: [heelX, groundY, BASE_POSE[heelIdx][2], BASE_POSE[heelIdx][3]],
-    toe: [heelX + toeDirX * FOOT_TOE_SPAN_X, groundY, BASE_POSE[toeIdx][2], BASE_POSE[toeIdx][3]],
+    toe: [
+      heelX + toeDx,
+      groundY + toeForwardY,
+      BASE_POSE[toeIdx][2],
+      BASE_POSE[toeIdx][3],
+    ],
   };
 }
 
-const PLANTED_FOOT_L = buildPlantedFootPose(27, 29, 31, 1);
-const PLANTED_FOOT_R = buildPlantedFootPose(28, 30, 32, -1);
+const PLANTED_FOOT_L = buildPlantedFootPose(27, 29, 31);
+const PLANTED_FOOT_R = buildPlantedFootPose(28, 30, 32);
 
 /**
  * 腳底釘地（所有 groove 模式、每一幀必跑）：
