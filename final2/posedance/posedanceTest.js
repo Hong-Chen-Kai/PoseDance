@@ -90,6 +90,8 @@ const state = {
     selectedId: null, // SkeletonId | null
     rectOverrides: {}, // Record<SkeletonId, Rect>
     poseOffsets: {}, // Record<SkeletonId, { dx: number, dy: number }>
+    pinned: {}, // Record<SkeletonId, boolean> (user-adjusted, don't auto-move)
+    layoutTargets: {}, // Record<SkeletonId, Rect> (animated layout target)
     lastTimeSec: null, // number | null (last known player time)
     drag: {
       active: false,
@@ -311,6 +313,176 @@ function clampRectToCanvas(rect, w, h) {
   ox = Math.max(0, Math.min(w - dw, ox));
   oy = Math.max(0, Math.min(h - dh, oy));
   return { ox, oy, dw, dh };
+}
+
+function rectArea(r) {
+  if (!r) return 0;
+  return Math.max(0, r.dw) * Math.max(0, r.dh);
+}
+
+function rectIntersectionArea(a, b) {
+  if (!a || !b) return 0;
+  const x1 = Math.max(a.ox, b.ox);
+  const y1 = Math.max(a.oy, b.oy);
+  const x2 = Math.min(a.ox + a.dw, b.ox + b.dw);
+  const y2 = Math.min(a.oy + a.dh, b.oy + b.dh);
+  const w = Math.max(0, x2 - x1);
+  const h = Math.max(0, y2 - y1);
+  return w * h;
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function lerpRect(a, b, t) {
+  if (!a) return b;
+  if (!b) return a;
+  return {
+    ox: lerp(a.ox, b.ox, t),
+    oy: lerp(a.oy, b.oy, t),
+    dw: lerp(a.dw, b.dw, t),
+    dh: lerp(a.dh, b.dh, t),
+  };
+}
+
+function getMode2VisibleTraceIds() {
+  const out = [];
+  const traces = state.mode2?.traces || [];
+  for (const tr of traces) {
+    if (!tr || tr.enabled === false) continue;
+    out.push(mode2TraceSkeletonId(tr.id));
+  }
+  return out;
+}
+
+function getCanvasCssSizeSafe() {
+  const w = Math.max(1, Math.floor(els.overlayCanvas?.clientWidth || 0));
+  const h = Math.max(1, Math.floor(els.overlayCanvas?.clientHeight || 0));
+  return { w, h };
+}
+
+function computeLayoutCandidates(w, h, baseRect) {
+  // Candidate centers (normalized) with small offsets to avoid perfect overlap.
+  const centers = [
+    [0.5, 0.22],
+    [0.5, 0.78],
+    [0.22, 0.5],
+    [0.78, 0.5],
+    [0.22, 0.22],
+    [0.78, 0.22],
+    [0.22, 0.78],
+    [0.78, 0.78],
+    [0.5, 0.5],
+  ];
+  const jitter = [
+    [0, 0],
+    [0.03, 0.02],
+    [-0.03, 0.02],
+    [0.03, -0.02],
+    [-0.03, -0.02],
+  ];
+
+  const rects = [];
+  const bw = baseRect.dw;
+  const bh = baseRect.dh;
+  for (const [cx0, cy0] of centers) {
+    for (const [jx, jy] of jitter) {
+      const cx = Math.max(0, Math.min(1, cx0 + jx));
+      const cy = Math.max(0, Math.min(1, cy0 + jy));
+      rects.push({
+        ox: cx * w - bw / 2,
+        oy: cy * h - bh / 2,
+        dw: bw,
+        dh: bh,
+      });
+    }
+  }
+
+  // Also add a small grid for overflow.
+  const cols = 4;
+  const rows = 2;
+  for (let iy = 0; iy < rows; iy += 1) {
+    for (let ix = 0; ix < cols; ix += 1) {
+      const cx = (ix + 0.5) / cols;
+      const cy = 0.12 + (iy + 0.5) * 0.18;
+      rects.push({
+        ox: cx * w - bw / 2,
+        oy: cy * h - bh / 2,
+        dw: bw,
+        dh: bh,
+      });
+    }
+  }
+  return rects;
+}
+
+function scoreCandidateRect(r, w, h, occupied, avoidRect) {
+  // Clamp first for scoring.
+  const rr = clampRectToCanvas(r, w, h);
+  const centerX = rr.ox + rr.dw / 2;
+  const centerY = rr.oy + rr.dh / 2;
+  const dx = centerX - w / 2;
+  const dy = centerY - h / 2;
+  const dist2 = dx * dx + dy * dy;
+
+  let overlap = 0;
+  for (const o of occupied) overlap += rectIntersectionArea(rr, o);
+
+  const avoidOverlap = avoidRect ? rectIntersectionArea(rr, avoidRect) : 0;
+  // weights tuned for UI feel
+  return overlap * 6 + avoidOverlap * 12 + dist2 * 0.002;
+}
+
+function autoLayoutMode2({ animate = true } = {}) {
+  if (state.ui.mode !== "mode2") return;
+  if (!els.overlayCanvas) return;
+  const { w, h } = getCanvasCssSizeSafe();
+  if (!(w > 0 && h > 0)) return;
+
+  const videoAspect =
+    els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+      ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
+      : DEMO_SOURCE_ASPECT;
+  const defaults = getDefaultRectsMode2(w, h, videoAspect);
+
+  const avoidUser = getDrawRect(SKELETON_IDS.m2_user, defaults);
+  const ids = getMode2VisibleTraceIds();
+
+  // occupied = already placed/pinned rects (plus user rect as hard avoid)
+  const occupied = [];
+  if (avoidUser) occupied.push(avoidUser);
+
+  for (const id of ids) {
+    const isPinned = Boolean(state.interact?.pinned?.[id]);
+    const rPinned = isPinned ? (state.interact?.rectOverrides?.[id] || getDrawRect(id, defaults)) : null;
+    if (rPinned) occupied.push(rPinned);
+  }
+
+  for (const id of ids) {
+    if (state.interact?.pinned?.[id]) continue;
+
+    const base = getDrawRect(id, defaults);
+    if (!base) continue;
+    const candidates = computeLayoutCandidates(w, h, base);
+
+    let best = null;
+    let bestScore = Infinity;
+    for (const cand of candidates) {
+      const s = scoreCandidateRect(cand, w, h, occupied, avoidUser);
+      if (s < bestScore) {
+        bestScore = s;
+        best = cand;
+      }
+    }
+    if (!best) continue;
+    const target = clampRectToCanvas(best, w, h);
+    if (animate) state.interact.layoutTargets[id] = target;
+    else state.interact.rectOverrides[id] = target;
+    occupied.push(target);
+  }
+
+  clearOverlayCanvas();
 }
 
 function getPointerPosInOverlayCssPx(ev, canvasEl) {
@@ -2615,6 +2787,35 @@ function drawMode2Overlay(tScore) {
 
   syncInteractCanvasSize();
 
+  // animate layout targets (mode2 only)
+  const ids = getMode2VisibleTraceIds();
+  // Compute defaults once for animation lerp.
+  const wCss = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+  const hCss = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+  const videoAspectAnim =
+    els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+      ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
+      : DEMO_SOURCE_ASPECT;
+  const defaults = getDefaultRectsMode2(wCss, hCss, videoAspectAnim);
+
+  for (const id of ids) {
+    const target = state.interact?.layoutTargets?.[id];
+    if (!target) continue;
+    const cur = state.interact?.rectOverrides?.[id] || getDrawRect(id, defaults);
+    const next = lerpRect(cur, target, 0.18);
+    state.interact.rectOverrides[id] = next;
+    // stop when close enough
+    const done =
+      Math.abs(next.ox - target.ox) < 0.5 &&
+      Math.abs(next.oy - target.oy) < 0.5 &&
+      Math.abs(next.dw - target.dw) < 0.5 &&
+      Math.abs(next.dh - target.dh) < 0.5;
+    if (done) {
+      state.interact.rectOverrides[id] = target;
+      delete state.interact.layoutTargets[id];
+    }
+  }
+
   const ctx = els.overlayCanvas.getContext("2d");
   if (!ctx) return;
 
@@ -3130,6 +3331,7 @@ async function main() {
       }
 
       updateMode2VideoMismatchWarn();
+      autoLayoutMode2({ animate: true });
       clearOverlayCanvas();
     });
   }
@@ -3150,6 +3352,7 @@ async function main() {
         const traceId = sel.slice("m2_trace_".length);
         const t = traces.find((x) => String(x.id) === traceId);
         if (t) t.enabled = !(t.enabled !== false);
+        autoLayoutMode2({ animate: true });
         clearOverlayCanvas();
         return;
       }
@@ -3160,6 +3363,7 @@ async function main() {
         if (!t) continue;
         t.enabled = !anyEnabled;
       }
+      autoLayoutMode2({ animate: true });
       clearOverlayCanvas();
     });
   }
@@ -3188,6 +3392,7 @@ async function main() {
       if (!trace) return;
       state.mode2.traces.push(trace);
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
+      autoLayoutMode2({ animate: true });
       clearOverlayCanvas();
       console.log("[Synth] 已新增舞者", { id: trace.id, bpm });
     });
@@ -3246,7 +3451,17 @@ async function main() {
           if (state.interact?.rectOverrides) {
             delete state.interact.rectOverrides[selIdForDelete];
           }
+          if (state.interact?.poseOffsets) {
+            delete state.interact.poseOffsets[selIdForDelete];
+          }
+          if (state.interact?.pinned) {
+            delete state.interact.pinned[selIdForDelete];
+          }
+          if (state.interact?.layoutTargets) {
+            delete state.interact.layoutTargets[selIdForDelete];
+          }
           state.interact.selectedId = null;
+          autoLayoutMode2({ animate: true });
           clearOverlayCanvas();
           ev.preventDefault();
           return;
@@ -3367,6 +3582,10 @@ async function main() {
       // Constrain by tight bbox (white selection box), not container rect.
       r = constrainRectBySkeletonBBox({ id: d.id, rect: r, w, h, tScore, padPx: 8, anchor });
       state.interact.rectOverrides[d.id] = r;
+      // mark as user-adjusted (pinned)
+      state.interact.pinned[d.id] = true;
+      // stop any pending auto-layout animation for this id
+      if (state.interact.layoutTargets?.[d.id]) delete state.interact.layoutTargets[d.id];
       ev.preventDefault();
     };
 
@@ -3410,6 +3629,8 @@ async function main() {
       let r = scaleRectAboutAnchor(r0, cx, cy, s);
       r = constrainRectBySkeletonBBox({ id, rect: r, w, h, tScore, padPx: 8, anchor: { x: cx, y: cy } });
       state.interact.rectOverrides[id] = r;
+      state.interact.pinned[id] = true;
+      if (state.interact.layoutTargets?.[id]) delete state.interact.layoutTargets[id];
       ev.preventDefault();
     };
 
@@ -3490,7 +3711,14 @@ async function main() {
     if (state.interact?.poseOffsets) {
       delete state.interact.poseOffsets[sel];
     }
+    if (state.interact?.pinned) {
+      delete state.interact.pinned[sel];
+    }
+    if (state.interact?.layoutTargets) {
+      delete state.interact.layoutTargets[sel];
+    }
     state.interact.selectedId = null;
+    autoLayoutMode2({ animate: true });
     clearOverlayCanvas();
     return true;
   };
