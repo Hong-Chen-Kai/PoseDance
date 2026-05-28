@@ -89,6 +89,7 @@ const state = {
   interact: {
     selectedId: null, // SkeletonId | null
     rectOverrides: {}, // Record<SkeletonId, Rect>
+    lastTimeSec: null, // number | null (last known player time)
     drag: {
       active: false,
       id: null, // SkeletonId | null
@@ -387,6 +388,8 @@ function getCenterTimeForSkeletonId(id) {
   // so traces can still be centered even when YouTube isn't ready.
   const tNow = getPlayerTimeSafe();
   if (typeof tNow === "number" && Number.isFinite(tNow)) return tNow;
+  const tLast = state.interact?.lastTimeSec;
+  if (typeof tLast === "number" && Number.isFinite(tLast)) return tLast;
   if (isMode2TraceSkeletonId(id)) {
     const traceId = id.slice("m2_trace_".length);
     const tr = (state.mode2?.traces || []).find((t) => String(t.id) === traceId);
@@ -2669,6 +2672,9 @@ function updateUiLoop() {
   const ytOk = Boolean(state.ready && state.player);
   const tScore =
     ytOk && typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
+  if (typeof tScore === "number" && Number.isFinite(tScore)) {
+    state.interact.lastTimeSec = tScore;
+  }
 
   if (state.ui.mode === "mode2") {
     // Mode2 也要支援錄製：錄製狀態機與 Mode1 相同
