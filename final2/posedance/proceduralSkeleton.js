@@ -1,7 +1,7 @@
 /**
  * proceduralSkeleton.js
  *
- * 程序化骨架動畫生成器 — 角度驅動 + Pattern blend + 2D IK + Spring 平滑
+ * 程序化骨架動畫生成器 — Pattern 手臂 + 街舞律動 Swing/Bounce（可切換）
  *
  * 輸出格式與 MediaPipe Pose 33 點完全相同：lm[33] = [[x,y,z,visibility], ...]
  * 可直接餵入 posedanceTest.js 的 drawPoseConnections / drawPosePoints。
@@ -85,20 +85,24 @@ const CARRYING_ANGLE_BASE = 28;
 // 靜止站姿上臂略外展（對齊 BASE_POSE）
 const REST_ABDUCTION_DEG = 12;
 
-// ─── 下肢原地律動（站姿 groove，非踏步）──────────────────────
-const ENABLE_LEG_GROOVE = true;
-// 膝屈：在靜止基線上增加的蹲彈（度）；全屈約 135°，groove 僅用小幅
-const KNEE_FLEX_GROOVE_PEAK_DEG = 18;
-const KNEE_FLEX_GROOVE_MAX_DEG = 32;
-// 骨盆整體微移（左右同向），不做左右髖對向內夾
-const PELVIS_SHIFT_X_MAX = 0.003;
-const HIP_DROP_MAX = 0.011;
-// 左右髖 y 微差模擬重心，幅度遠小於下沉
-const HIP_TILT_Y_MAX = 0.0025;
-const LEG_SPRING_HALF_LIFE_BEAT_RATIO = 0.35;
-const LEG_SPRING_HALF_LIFE_MAX = 0.28;
-const KNEE_LEAD_BEAT_FRAC = 0.125;
-const KNEE_FLEX_HIP_DROP_COUP = 0.0005;
+// ─── 街舞律動：Swing（上身）/ Bounce（下身）────────────────────
+/** @typedef {'swing' | 'bounce' | 'both'} GrooveMode */
+export const GROOVE_MODES = Object.freeze({
+  SWING: "swing",
+  BOUNCE: "bounce",
+  BOTH: "both",
+});
+
+// 與拍同相：sin(ωt) 峰值 = 下沉最深（bounce 與 swing 共用）
+const BODY_BOB_AMP = 0.008;
+const HEAD_TILT_AMP = 0.006;
+// Swing：左右肩一上一下（街舞上身，不作用於腿）
+const SWING_AMP = 0.004;
+// Bounce：下沉時開膝、骨盆下沉（僅 23–32）
+const BOUNCE_HIP_DROP = 0.012;
+const BOUNCE_KNEE_SPREAD = 0.014;
+const BOUNCE_ANKLE_SPREAD = 0.010;
+const BOUNCE_HIP_SPREAD = 0.006;
 
 function clampElbowFlexForElevation(flexDeg, elevationDeg) {
   let maxFlex = ELBOW_FLEX_MAX;
@@ -317,64 +321,25 @@ function createArmIntentState() {
   };
 }
 
-function legSpringHalfLife(beatSec) {
-  return Math.min(LEG_SPRING_HALF_LIFE_MAX, beatSec * LEG_SPRING_HALF_LIFE_BEAT_RATIO);
+function computeBeatSin(elapsed, beatSec) {
+  return Math.sin((2 * Math.PI / beatSec) * elapsed);
 }
 
-function createLegGrooveState() {
-  return {
-    kneeFlexAdd: 0,
-    hipDrop: 0,
-    vKnee: 0,
-    vDrop: 0,
-  };
+/** sin 峰值 = 1 → 下沉最深（與拍點對齊） */
+function bounceDown01(beatSin) {
+  return clamp((beatSin + 1) * 0.5, 0, 1);
 }
 
-function computeLegGrooveTargets(elapsed, beatSec, amp) {
-  const omega = (2 * Math.PI) / beatSec;
-  const kneePhase = omega * elapsed - beatSec * KNEE_LEAD_BEAT_FRAC;
-  const bob = 0.5 + 0.5 * Math.sin(omega * elapsed);
-  const kneeBob = 0.5 + 0.5 * Math.sin(kneePhase);
-  const kneeFlexAdd = clamp(
-    KNEE_FLEX_GROOVE_PEAK_DEG * amp * kneeBob,
-    0,
-    KNEE_FLEX_GROOVE_MAX_DEG - Math.max(LEG_REST_L.kneeFlexRestDeg, LEG_REST_R.kneeFlexRestDeg),
-  );
-  const hipDrop = HIP_DROP_MAX * amp * bob;
-  const pelvisShiftX = PELVIS_SHIFT_X_MAX * amp * Math.sin(omega * elapsed);
-  const hipTiltY = HIP_TILT_Y_MAX * amp * Math.sin(2 * omega * elapsed);
-  return { kneeFlexAdd, pelvisShiftX, hipTiltY, hipDrop };
+/**
+ * Swing（街舞上身）：左肩下、右肩上 ↔ 反相，僅 11/12，不動腿。
+ */
+function applySwing(lm, beatSin, amp) {
+  const swing = SWING_AMP * amp * beatSin;
+  lm[11][1] -= swing;
+  lm[12][1] += swing;
 }
 
-function springLegGroove(state, target, halfLife, dt) {
-  criticalDampedSpring1D(state, "kneeFlexAdd", "vKnee", target.kneeFlexAdd, halfLife, dt);
-  criticalDampedSpring1D(state, "hipDrop", "vDrop", target.hipDrop, halfLife, dt);
-  // 半拍左右搖不經 spring，避免高頻目標被過度衰減
-  return {
-    kneeFlexAdd: state.kneeFlexAdd,
-    pelvisShiftX: target.pelvisShiftX,
-    hipTiltY: target.hipTiltY,
-    hipDrop: state.hipDrop,
-  };
-}
-
-/** 踝貼地；膝 x 鎖在站姿，主要由 y 下沉產生蹲彈 */
-function solveLegBounce(hip, baseAnkle, baseKnee, L1, L2) {
-  const ankle = [baseAnkle[0], baseAnkle[1]];
-  let knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee);
-  knee[0] = baseKnee[0];
-  let geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
-  knee = geo.knee;
-  knee[0] = baseKnee[0];
-  geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
-  const shinAngle = Math.atan2(
-    geo.ankle[1] - geo.knee[1],
-    geo.ankle[0] - geo.knee[0],
-  );
-  return { knee: geo.knee, ankle: geo.ankle, shinAngle };
-}
-
-/** 髖–踝固定段長求膝：選較符合向下蹲的一支 */
+/** 髖–踝固定段長求膝：優先向下蹲且 x 勿偏離站姿過多 */
 function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee) {
   const dx = ankle[0] - hip[0];
   const dy = ankle[1] - hip[1];
@@ -403,34 +368,37 @@ function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee) {
   return scoreKnee(k1) <= scoreKnee(k2) ? k1 : k2;
 }
 
-function applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle) {
-  const rot = shinAngle - baseShinAngle;
-  const c = Math.cos(rot);
-  const s = Math.sin(rot);
-  const ax = lm[ankleIdx][0];
-  const ay = lm[ankleIdx][1];
-  for (const { idx, ox, oy } of footOffsets) {
-    lm[idx][0] = ax + ox * c - oy * s;
-    lm[idx][1] = ay + ox * s + oy * c;
-  }
+function solveLegFromPlantedFoot(hip, ankle, baseKnee, L1, L2) {
+  const knee = solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee);
+  const geo = enforceLegGeometry(hip, knee, ankle, L1, L2);
+  const shinAngle = Math.atan2(
+    geo.ankle[1] - geo.knee[1],
+    geo.ankle[0] - geo.knee[0],
+  );
+  return { knee: geo.knee, ankle: geo.ankle, shinAngle };
 }
 
-function applyLegGroove(lm, groove) {
-  const hipDrop = groove.hipDrop + groove.kneeFlexAdd * KNEE_FLEX_HIP_DROP_COUP;
-  const shiftX = groove.pelvisShiftX;
-  const tiltY = groove.hipTiltY;
+/**
+ * Bounce（街舞下身）：下沉時膝微開向外、骨盆下沉；踝貼地略外移；骨長鎖定。
+ */
+function applyBounce(lm, beatSin, amp) {
+  const down = bounceDown01(beatSin);
+  const spreadA = BOUNCE_ANKLE_SPREAD * amp * down;
+  const spreadH = BOUNCE_HIP_SPREAD * amp * down;
+  const spreadK = BOUNCE_KNEE_SPREAD * amp * down;
+  const hipDrop = BOUNCE_HIP_DROP * amp * down;
 
-  const leftHip = [
-    BASE_POSE[23][0] + shiftX,
-    BASE_POSE[23][1] + hipDrop + tiltY,
-  ];
-  const rightHip = [
-    BASE_POSE[24][0] + shiftX,
-    BASE_POSE[24][1] + hipDrop - tiltY,
-  ];
+  const leftHip = [BASE_POSE[23][0] - spreadH - spreadK * 0.15, BASE_POSE[23][1] + hipDrop];
+  const rightHip = [BASE_POSE[24][0] + spreadH + spreadK * 0.15, BASE_POSE[24][1] + hipDrop];
+  const leftAnkle = [BASE_POSE[27][0] - spreadA, BASE_POSE[27][1]];
+  const rightAnkle = [BASE_POSE[28][0] + spreadA, BASE_POSE[28][1]];
 
-  const leftLeg = solveLegBounce(leftHip, BASE_POSE[27], BASE_POSE[25], L_THIGH_L, L_SHIN_L);
-  const rightLeg = solveLegBounce(rightHip, BASE_POSE[28], BASE_POSE[26], L_THIGH_R, L_SHIN_R);
+  const leftLeg = solveLegFromPlantedFoot(
+    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L,
+  );
+  const rightLeg = solveLegFromPlantedFoot(
+    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R,
+  );
 
   lm[23][0] = leftHip[0];
   lm[23][1] = leftHip[1];
@@ -447,6 +415,26 @@ function applyLegGroove(lm, groove) {
 
   applyFootFromAnkle(lm, 27, FOOT_OFFSETS_L, leftLeg.shinAngle, LEG_REST_L.shinAngle);
   applyFootFromAnkle(lm, 28, FOOT_OFFSETS_R, rightLeg.shinAngle, LEG_REST_R.shinAngle);
+}
+
+function applyFootFromAnkle(lm, ankleIdx, footOffsets, shinAngle, baseShinAngle) {
+  const rot = shinAngle - baseShinAngle;
+  const c = Math.cos(rot);
+  const s = Math.sin(rot);
+  const ax = lm[ankleIdx][0];
+  const ay = lm[ankleIdx][1];
+  for (const { idx, ox, oy } of footOffsets) {
+    lm[idx][0] = ax + ox * c - oy * s;
+    lm[idx][1] = ay + ox * s + oy * c;
+  }
+}
+
+function grooveEnablesSwing(mode) {
+  return mode === GROOVE_MODES.SWING || mode === GROOVE_MODES.BOTH;
+}
+
+function grooveEnablesBounce(mode) {
+  return mode === GROOVE_MODES.BOUNCE || mode === GROOVE_MODES.BOTH;
 }
 
 function applyShoulderDrive(lm, intentL, intentR, amp) {
@@ -676,6 +664,8 @@ export class ProceduralSkeleton {
     phaseOffsetBeats = 0,
     style = "mixed",
     rhythmMul = 1.0,
+    /** @type {GrooveMode} 預設僅 Swing（上身），不帶 Bounce 腳 */
+    grooveMode = GROOVE_MODES.SWING,
   } = {}) {
     this.bpm = bpm;
     this.beatSec = (60 / bpm) * rhythmMul;
@@ -684,6 +674,9 @@ export class ProceduralSkeleton {
     this.phaseOffsetBeats = phaseOffsetBeats;
     this.rhythmMul = rhythmMul;
     this.style = style;
+    this.grooveMode = Object.values(GROOVE_MODES).includes(grooveMode)
+      ? grooveMode
+      : GROOVE_MODES.SWING;
     this._patternPool = STYLE_POOLS[style] || PATTERN_KEYS;
 
     this._schedule = [];
@@ -696,7 +689,6 @@ export class ProceduralSkeleton {
     };
     this._prevForearmAngle = { L: null, R: null };
     this._prevT = null;
-    this._legGrooveState = createLegGrooveState();
   }
 
   _makeRng(seed) {
@@ -786,7 +778,6 @@ export class ProceduralSkeleton {
     this._armState.R = createArmIntentState();
     this._prevForearmAngle.L = null;
     this._prevForearmAngle.R = null;
-    this._legGrooveState = createLegGrooveState();
   }
 
   /**
@@ -833,17 +824,17 @@ export class ProceduralSkeleton {
 
     const halfLife = springHalfLifeForPattern(patName, this.beatSec);
 
-    const omega = (2 * Math.PI) / this.beatSec;
-    const bodyBob = 0.008 * amp * Math.sin(omega * elapsed);
-    const headTilt = 0.006 * amp * Math.sin(omega * elapsed * 0.5);
-    const shoulderLift = 0.004 * amp * Math.sin(omega * elapsed);
+    const beatSin = computeBeatSin(elapsed, this.beatSec);
+    const bodyBob = BODY_BOB_AMP * amp * beatSin;
+    const headTilt = HEAD_TILT_AMP * amp * Math.sin((2 * Math.PI * elapsed) / (this.beatSec * 2));
 
     const lm = BASE_POSE.map(p => [p[0], p[1], p[2], p[3]]);
 
     for (let i = 0; i <= 22; i++) lm[i][1] += bodyBob;
     for (let i = 0; i <= 10; i++) lm[i][0] += headTilt;
-    lm[11][1] -= shoulderLift;
-    lm[12][1] += shoulderLift;
+    if (grooveEnablesSwing(this.grooveMode)) {
+      applySwing(lm, beatSin, amp);
+    }
 
     const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
     const smoothR = springArmIntent(this._armState.R, intentR, halfLife, dt);
@@ -909,11 +900,8 @@ export class ProceduralSkeleton {
     applySimpleZ(lm, 13, 15, leftFingerIdx, leftShoulder, leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
     applySimpleZ(lm, 14, 16, rightFingerIdx, rightShoulder, rightArm.wrist, L_UPPER_R, L_LOWER_R, rightArm, -1);
 
-    if (ENABLE_LEG_GROOVE) {
-      const legTargets = computeLegGrooveTargets(elapsed, this.beatSec, amp);
-      const legHalfLife = legSpringHalfLife(this.beatSec);
-      const smoothLeg = springLegGroove(this._legGrooveState, legTargets, legHalfLife, dt);
-      applyLegGroove(lm, smoothLeg);
+    if (grooveEnablesBounce(this.grooveMode)) {
+      applyBounce(lm, beatSin, amp);
     }
 
     const avgShoulderY = (lm[11][1] + lm[12][1]) / 2;
@@ -939,7 +927,12 @@ const VARIATION_PRESETS = [
 let _synthCounter = 0;
 
 // ─── 便利方法：建立一個 synthetic trace 物件 ──────────────────
-export function createSyntheticTrace({ bpm = 120, name = null, seed = null } = {}) {
+export function createSyntheticTrace({
+  bpm = 120,
+  name = null,
+  seed = null,
+  grooveMode = GROOVE_MODES.SWING,
+} = {}) {
   const idx = _synthCounter++;
 
   let preset;
@@ -954,11 +947,12 @@ export function createSyntheticTrace({ bpm = 120, name = null, seed = null } = {
     };
   }
 
-  const skeleton = new ProceduralSkeleton({ bpm, seed, ...preset });
+  const skeleton = new ProceduralSkeleton({ bpm, seed, grooveMode, ...preset });
   const styleTag = preset.style === "mixed" ? "" : ` [${preset.style}]`;
+  const grooveTag = grooveMode === GROOVE_MODES.SWING ? "" : ` ·${grooveMode}`;
   return {
     id: `synth_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
-    name: name || `舞者 #${idx + 1}${styleTag} (${bpm} BPM)`,
+    name: name || `舞者 #${idx + 1}${styleTag}${grooveTag} (${bpm} BPM)`,
     synthetic: true,
     enabled: true,
     bpm,
