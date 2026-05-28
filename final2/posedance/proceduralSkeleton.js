@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "planted-feet-3";
+export const PROCEDURAL_SKELETON_BUILD = "planted-feet-4";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -104,7 +104,7 @@ const SWING_AMP = 0.004;
 // Bounce：骨盆/膝隨拍下沉；膝小幅外開；踝/腳跟貼地不橫移；腳掌外八僅旋轉趾跟
 const BOUNCE_HIP_DROP = 0.008;
 const BOUNCE_KNEE_OUT_MAX = 0.0045;
-// 腳底貼地：腳跟–腳尖同 y，略外八（左 toe 往左、右 toe 往右）
+// 腳底貼地：腳跟–腳尖同 y，略外八（左腳尖往右、右腳尖往左，遠離身體中線）
 const FOOT_GROUND_Y_OFFSET = 0.017;
 const FOOT_TOE_SPAN_X = 0.022;
 
@@ -507,8 +507,8 @@ function buildPlantedFootPose(ankleIdx, heelIdx, toeIdx, toeDirX) {
   };
 }
 
-const PLANTED_FOOT_L = buildPlantedFootPose(27, 29, 31, -1);
-const PLANTED_FOOT_R = buildPlantedFootPose(28, 30, 32, 1);
+const PLANTED_FOOT_L = buildPlantedFootPose(27, 29, 31, 1);
+const PLANTED_FOOT_R = buildPlantedFootPose(28, 30, 32, -1);
 
 /**
  * 腳底釘地（所有 groove 模式、每一幀必跑）：
