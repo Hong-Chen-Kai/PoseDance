@@ -417,6 +417,123 @@ function computeLayoutCandidates(w, h, baseRect) {
   return rects;
 }
 
+const MODE2_LAYOUT = Object.freeze({
+  maxVisible: 12, // method 1: cap visible traces
+  gridThreshold: 12, // method 2: switch to grid at/above this
+});
+
+function getMode2TraceMeta() {
+  const traces = state.mode2?.traces || [];
+  const out = [];
+  for (let i = 0; i < traces.length; i += 1) {
+    const tr = traces[i];
+    if (!tr) continue;
+    const id = mode2TraceSkeletonId(tr.id);
+    out.push({ id, i, tr });
+  }
+  return out;
+}
+
+function pickMode2VisibleIds(meta, maxVisible) {
+  const limit = Math.max(1, maxVisible || 12);
+  const selected = state.interact?.selectedId;
+  const pinned = state.interact?.pinned || {};
+
+  const picked = new Set();
+
+  // Always keep selected if it's a trace.
+  if (selected && isMode2TraceSkeletonId(selected)) picked.add(selected);
+
+  // Keep pinned traces.
+  for (const m of meta) {
+    if (pinned[m.id]) picked.add(m.id);
+  }
+
+  // Fill remaining with most recent traces (from the end).
+  for (let k = meta.length - 1; k >= 0 && picked.size < limit; k -= 1) {
+    picked.add(meta[k].id);
+  }
+
+  return picked;
+}
+
+function applyMode2VisibilityPolicy() {
+  const meta = getMode2TraceMeta();
+  const visible = pickMode2VisibleIds(meta, MODE2_LAYOUT.maxVisible);
+  for (const m of meta) {
+    m.tr.enabled = visible.has(m.id);
+  }
+  // If selected was auto-hidden, clear selection.
+  const sel = state.interact?.selectedId;
+  if (sel && isMode2TraceSkeletonId(sel) && !visible.has(sel)) {
+    state.interact.selectedId = null;
+  }
+}
+
+function computeMode2GridRects(w, h, avoidRect, count, baseSizeRect) {
+  const PAD = 10;
+  const GAP = 10;
+  const sideW = Math.max(160, Math.min(320, Math.floor(w * 0.26)));
+
+  // Two side panels around the user stage.
+  const left = { ox: PAD, oy: PAD, dw: sideW, dh: h - PAD * 2 };
+  const right = { ox: w - PAD - sideW, oy: PAD, dw: sideW, dh: h - PAD * 2 };
+
+  // If avoidRect overlaps a panel heavily, reduce that panel area.
+  const panels = [left, right];
+  const usable = panels.map((p) => {
+    if (!avoidRect) return p;
+    const overlap = rectIntersectionArea(p, avoidRect);
+    if (overlap <= 1) return p;
+    // shrink height a bit (simple heuristic)
+    const shrink = Math.min(p.dh * 0.25, Math.max(0, overlap / Math.max(1, p.dw)));
+    return { ...p, oy: p.oy + shrink / 2, dh: Math.max(60, p.dh - shrink) };
+  });
+
+  const totalSlots = Math.max(1, count);
+  const baseW = Math.min(baseSizeRect?.dw || 220, sideW);
+  const baseH = Math.min(baseSizeRect?.dh || 160, Math.floor(h * 0.3));
+
+  // Determine grid cell size (shrink as needed).
+  let cellW = baseW;
+  let cellH = baseH;
+  const panelArea = usable.reduce((s, p) => s + p.dw * p.dh, 0);
+  const approxCellArea = Math.max(1, panelArea / totalSlots);
+  const s = Math.min(1, Math.sqrt(approxCellArea / Math.max(1, cellW * cellH)));
+  cellW = Math.max(110, Math.floor(cellW * s));
+  cellH = Math.max(90, Math.floor(cellH * s));
+
+  const rects = [];
+  let placed = 0;
+  for (const p of usable) {
+    const cols = Math.max(1, Math.floor((p.dw + GAP) / (cellW + GAP)));
+    const rows = Math.max(1, Math.floor((p.dh + GAP) / (cellH + GAP)));
+    for (let r = 0; r < rows && placed < totalSlots; r += 1) {
+      for (let c = 0; c < cols && placed < totalSlots; c += 1) {
+        const ox = p.ox + c * (cellW + GAP);
+        const oy = p.oy + r * (cellH + GAP);
+        rects.push({ ox, oy, dw: cellW, dh: cellH });
+        placed += 1;
+      }
+    }
+  }
+
+  // Fallback: if still not enough, stack near top-left of user rect.
+  while (rects.length < totalSlots) {
+    const k = rects.length;
+    const dx = 18 * (k % 6);
+    const dy = 14 * Math.floor(k / 6);
+    rects.push({
+      ox: Math.max(0, (avoidRect?.ox || PAD) + dx),
+      oy: Math.max(0, (avoidRect?.oy || PAD) + dy),
+      dw: cellW,
+      dh: cellH,
+    });
+  }
+
+  return rects.map((r) => clampRectToCanvas(r, w, h));
+}
+
 function scoreCandidateRect(r, w, h, occupied, avoidRect) {
   // Clamp first for scoring.
   const rr = clampRectToCanvas(r, w, h);
@@ -437,6 +554,7 @@ function scoreCandidateRect(r, w, h, occupied, avoidRect) {
 function autoLayoutMode2({ animate = true } = {}) {
   if (state.ui.mode !== "mode2") return;
   if (!els.overlayCanvas) return;
+  applyMode2VisibilityPolicy();
   const { w, h } = getCanvasCssSizeSafe();
   if (!(w > 0 && h > 0)) return;
 
@@ -448,6 +566,7 @@ function autoLayoutMode2({ animate = true } = {}) {
 
   const avoidUser = getDrawRect(SKELETON_IDS.m2_user, defaults);
   const ids = getMode2VisibleTraceIds();
+  const useGrid = ids.length >= MODE2_LAYOUT.gridThreshold;
 
   // occupied = already placed/pinned rects (plus user rect as hard avoid)
   const occupied = [];
@@ -459,27 +578,40 @@ function autoLayoutMode2({ animate = true } = {}) {
     if (rPinned) occupied.push(rPinned);
   }
 
-  for (const id of ids) {
-    if (state.interact?.pinned?.[id]) continue;
-
-    const base = getDrawRect(id, defaults);
-    if (!base) continue;
-    const candidates = computeLayoutCandidates(w, h, base);
-
-    let best = null;
-    let bestScore = Infinity;
-    for (const cand of candidates) {
-      const s = scoreCandidateRect(cand, w, h, occupied, avoidUser);
-      if (s < bestScore) {
-        bestScore = s;
-        best = cand;
-      }
+  if (useGrid) {
+    const base0 = ids.length ? getDrawRect(ids[0], defaults) : null;
+    const grid = computeMode2GridRects(w, h, avoidUser, ids.length, base0);
+    for (let i = 0; i < ids.length; i += 1) {
+      const id = ids[i];
+      if (state.interact?.pinned?.[id]) continue;
+      const target = grid[i];
+      if (!target) continue;
+      if (animate) state.interact.layoutTargets[id] = target;
+      else state.interact.rectOverrides[id] = target;
     }
-    if (!best) continue;
-    const target = clampRectToCanvas(best, w, h);
-    if (animate) state.interact.layoutTargets[id] = target;
-    else state.interact.rectOverrides[id] = target;
-    occupied.push(target);
+  } else {
+    for (const id of ids) {
+      if (state.interact?.pinned?.[id]) continue;
+
+      const base = getDrawRect(id, defaults);
+      if (!base) continue;
+      const candidates = computeLayoutCandidates(w, h, base);
+
+      let best = null;
+      let bestScore = Infinity;
+      for (const cand of candidates) {
+        const s = scoreCandidateRect(cand, w, h, occupied, avoidUser);
+        if (s < bestScore) {
+          bestScore = s;
+          best = cand;
+        }
+      }
+      if (!best) continue;
+      const target = clampRectToCanvas(best, w, h);
+      if (animate) state.interact.layoutTargets[id] = target;
+      else state.interact.rectOverrides[id] = target;
+      occupied.push(target);
+    }
   }
 
   clearOverlayCanvas();
