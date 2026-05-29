@@ -32,7 +32,11 @@
             <button id="loadSkeletonButton" class="btn btn-load" type="button">
               載入骨架
             </button>
-            <button id="toggleMode1DemoButton" class="btn btn-load" type="button">
+            <button
+              id="toggleMode1DemoButton"
+              class="btn btn-load"
+              type="button"
+            >
               隱藏骨架
             </button>
             <button
@@ -74,11 +78,15 @@
                 class="topbar__url-input topbar__groove-select"
                 title="律動類型"
               >
-                <option value="swing">Swing（上身）</option>
-                <option value="bounce" selected>Bounce（下身）</option>
+                <option value="swing">Swing</option>
+                <option value="bounce" selected>Bounce</option>
                 <option value="both">Swing + Bounce</option>
               </select>
-              <button id="addSynthTraceButton" class="btn btn-load" type="button">
+              <button
+                id="addSynthTraceButton"
+                class="btn btn-load"
+                type="button"
+              >
                 生成舞者
               </button>
             </span>
@@ -99,7 +107,11 @@
             />
           </div>
           <div class="topbar__controls-group topbar__controls-group--right">
-            <select id="modeSelect" class="topbar__mode-select" aria-label="模式">
+            <select
+              id="modeSelect"
+              class="topbar__mode-select"
+              aria-label="模式"
+            >
               <option value="mode1" selected>Mode 1</option>
               <option value="mode2">Mode 2</option>
             </select>
@@ -111,7 +123,12 @@
             <button id="startCameraButton" class="btn btn-camera" type="button">
               啟動攝影機
             </button>
-            <button id="recordButton" class="btn btn-record" type="button" disabled>
+            <button
+              id="recordButton"
+              class="btn btn-record"
+              type="button"
+              disabled
+            >
               開始錄製
             </button>
           </div>
@@ -119,10 +136,19 @@
       </header>
 
       <div class="modal-backdrop" id="songModalBackdrop" aria-hidden="true">
-        <div class="modal" role="dialog" aria-modal="true" aria-label="挑選音樂">
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="挑選音樂"
+        >
           <div class="modal__header">
             <div class="modal__title">挑選音樂</div>
-            <button class="modal__close" id="songModalCloseButton" type="button">
+            <button
+              class="modal__close"
+              id="songModalCloseButton"
+              type="button"
+            >
               關閉
             </button>
           </div>
@@ -139,17 +165,29 @@
                   type="text"
                   placeholder="搜尋歌名/作曲者（q）"
                 />
-                <button id="songSearchButton" class="btn btn-load" type="button">
+                <button
+                  id="songSearchButton"
+                  class="btn btn-load"
+                  type="button"
+                >
                   搜尋
                 </button>
               </div>
               <div class="modal__list" id="songList"></div>
               <div class="modal__footer">
-                <button id="songPrevPageButton" class="btn btn-load" type="button">
+                <button
+                  id="songPrevPageButton"
+                  class="btn btn-load"
+                  type="button"
+                >
                   上一頁
                 </button>
                 <div class="small" id="songPageText">—</div>
-                <button id="songNextPageButton" class="btn btn-load" type="button">
+                <button
+                  id="songNextPageButton"
+                  class="btn btn-load"
+                  type="button"
+                >
                   下一頁
                 </button>
               </div>
@@ -176,15 +214,47 @@
             <canvas id="overlay_canvas"></canvas>
 
             <!-- 畫布內側底部：示範骨架縮放（依序 L1 / L2 / R1 / R2，中間留空） -->
-            <div id="demoScaleBottom" class="demo-scale-bottom demo-scale-bottom--overlay" aria-label="示範骨架縮放">
+            <div
+              id="demoScaleBottom"
+              class="demo-scale-bottom demo-scale-bottom--overlay"
+              aria-label="示範骨架縮放"
+            >
               <div class="demo-scale-bottom__left">
-                <input id="demoScaleL1" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
-                <input id="demoScaleL2" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
+                <input
+                  id="demoScaleL1"
+                  type="range"
+                  min="1.5"
+                  max="3.3"
+                  step="0.05"
+                  value="3.3"
+                />
+                <input
+                  id="demoScaleL2"
+                  type="range"
+                  min="1.5"
+                  max="3.3"
+                  step="0.05"
+                  value="3.3"
+                />
               </div>
               <div class="demo-scale-bottom__spacer" aria-hidden="true"></div>
               <div class="demo-scale-bottom__right">
-                <input id="demoScaleR1" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
-                <input id="demoScaleR2" type="range" min="1.5" max="3.3" step="0.05" value="3.3" />
+                <input
+                  id="demoScaleR1"
+                  type="range"
+                  min="1.5"
+                  max="3.3"
+                  step="0.05"
+                  value="3.3"
+                />
+                <input
+                  id="demoScaleR2"
+                  type="range"
+                  min="1.5"
+                  max="3.3"
+                  step="0.05"
+                  value="3.3"
+                />
               </div>
             </div>
           </div>
@@ -198,12 +268,23 @@
           <span class="small">YouTube</span>
         </div>
         <div id="player" class="yt-wrapper__player"></div>
-        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--tl" id="ytResizeHandleTL"></div>
-        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--tr" id="ytResizeHandleTR"></div>
-        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--bl" id="ytResizeHandleBL"></div>
-        <div class="yt-wrapper__resize-handle yt-wrapper__resize-handle--br" id="ytResizeHandle"></div>
+        <div
+          class="yt-wrapper__resize-handle yt-wrapper__resize-handle--tl"
+          id="ytResizeHandleTL"
+        ></div>
+        <div
+          class="yt-wrapper__resize-handle yt-wrapper__resize-handle--tr"
+          id="ytResizeHandleTR"
+        ></div>
+        <div
+          class="yt-wrapper__resize-handle yt-wrapper__resize-handle--bl"
+          id="ytResizeHandleBL"
+        ></div>
+        <div
+          class="yt-wrapper__resize-handle yt-wrapper__resize-handle--br"
+          id="ytResizeHandle"
+        ></div>
       </div>
-
     </div>
 
     <script type="importmap">
