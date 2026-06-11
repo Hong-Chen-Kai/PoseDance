@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <base href="../" />
-    <title>【實驗】Pose Dance · 3D VRM</title>
+    <title>Pose Dance Test</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./main.css" />
@@ -11,16 +11,8 @@
     <link rel="stylesheet" href="three/avatar-demo.css" />
   </head>
   <body>
-    <p class="exp-banner">
-      實驗分支（3D VRM）· 與穩定版分開維護 · 穩定版：
-      <a href="./posedanceTest.html">posedanceTest</a>
-    </p>
     <div class="app">
-      <header class="topbar">
-        <div class="topbar__title">
-          <h1>【實驗】3D VRM</h1>
-        </div>
-
+      <header class="topbar topbar--single-row">
         <div class="topbar__controls">
           <div class="topbar__controls-group topbar__controls-group--left">
             <input
@@ -67,7 +59,7 @@
               type="button"
               style="display: none"
             >
-              恢復本首歌預設骨架
+              恢復預錄骨架
             </button>
             <span id="synthControls" style="display: none">
               <input
@@ -111,8 +103,6 @@
               multiple
               style="display: none"
             />
-          </div>
-          <div class="topbar__controls-group topbar__controls-group--right">
             <select
               id="modeSelect"
               class="topbar__mode-select"
@@ -326,7 +316,7 @@
           "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
           "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
           "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.4.4/lib/three-vrm.module.js",
-          "kalidokit": "https://cdn.jsdelivr.net/npm/kalidokit@1.1.5/dist/index.esm.js"
+          "kalidokit": "https://cdn.jsdelivr.net/npm/kalidokit@1.1.5/dist/kalidokit.es.js"
         }
       }
     </script>

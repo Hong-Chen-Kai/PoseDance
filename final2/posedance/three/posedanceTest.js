@@ -22,15 +22,16 @@ function getSyntheticLandmarksAtTime(trace, t) {
 
 
 const DEMO_SOURCE_ASPECT = 16 / 9;
-/** 以模組 URL 解析，避免部署子路徑或與 HTML 不同層級時 fetch 404 */
+/** three/ 子目錄版：資源在上一層 posedance/ */
+const APP_BASE = new URL("../", import.meta.url);
 const DEMO_TRACE_PATHS = {
   easy: new URL(
-    "./song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_easy.json",
-    import.meta.url,
+    "song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_easy.json",
+    APP_BASE,
   ).href,
   hard: new URL(
-    "./song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_hard.json",
-    import.meta.url,
+    "song-skeletons/3ce5b2d5-1358-402b-a1aa-ab9106a5bb45/model1/pose_trace_hard.json",
+    APP_BASE,
   ).href,
 };
 
@@ -1305,8 +1306,8 @@ async function fetchJson(url) {
 function buildSongBindingManifestUrl(songId) {
   if (!songId) return null;
   return new URL(
-    `./song-skeletons/${encodeURIComponent(songId)}/manifest.json`,
-    import.meta.url,
+    `song-skeletons/${encodeURIComponent(songId)}/manifest.json`,
+    APP_BASE,
   ).href;
 }
 

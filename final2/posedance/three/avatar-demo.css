@@ -1,3 +1,30 @@
+/* 頂欄：單列按鈕（無標題列） */
+.topbar--single-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+}
+
+.topbar--single-row .topbar__controls {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.topbar--single-row .topbar__controls-group {
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.topbar--single-row .topbar__controls-group--left {
+  justify-content: flex-start;
+}
+
+.topbar--single-row .topbar__url-input--compact {
+  flex: 0 1 200px;
+  min-width: 140px;
+}
+
 /* 3D VRM 面板（疊在 posedanceTest 主舞台上方） */
 .vrm-panel {
   position: absolute;
@@ -72,16 +99,3 @@
   border-color: #0ea5e9 !important;
 }
 
-.exp-banner {
-  padding: 6px 16px;
-  font-size: 0.78rem;
-  text-align: center;
-  background: #422006;
-  color: #fcd34d;
-  border-bottom: 1px solid rgba(252, 211, 77, 0.25);
-}
-
-.exp-banner a {
-  color: #fde68a;
-  text-underline-offset: 2px;
-}
