@@ -71,3 +71,17 @@
   background: #0369a1 !important;
   border-color: #0ea5e9 !important;
 }
+
+.exp-banner {
+  padding: 6px 16px;
+  font-size: 0.78rem;
+  text-align: center;
+  background: #422006;
+  color: #fcd34d;
+  border-bottom: 1px solid rgba(252, 211, 77, 0.25);
+}
+
+.exp-banner a {
+  color: #fde68a;
+  text-underline-offset: 2px;
+}
