@@ -8,6 +8,7 @@ import { Pose } from "kalidokit";
 import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
 const VRM_URL = new URL("./assets/avatar-sample.vrm", import.meta.url).href;
+const VRM_ASSET_BASE = new URL("./assets/", import.meta.url).href;
 const REF_VIEWPORT_H = 280;
 
 const BONE_MAP = Object.freeze({
@@ -41,6 +42,8 @@ const vrmState = {
   raf: 0,
   pool: new Map(),
   poolKey: "",
+  vrmBufferPromise: null,
+  skinApplied: false,
 };
 
 function waitForTestState(maxMs = 30000) {
@@ -249,12 +252,25 @@ function applyLmToVrm(vrm, lm, videoEl, { mirror = false, worldRaw = null } = {}
   return applyPoseToVrm(vrm, mp, world, videoEl);
 }
 
-async function loadVRM(url) {
+async function fetchVrmBuffer() {
+  if (!vrmState.vrmBufferPromise) {
+    vrmState.vrmBufferPromise = fetch(VRM_URL, { cache: "force-cache" }).then(async (res) => {
+      if (!res.ok) throw new Error(`VRM HTTP ${res.status}：${VRM_URL}`);
+      return res.arrayBuffer();
+    });
+  }
+  return vrmState.vrmBufferPromise;
+}
+
+async function createVrmInstance() {
+  const buffer = await fetchVrmBuffer();
   const loader = new GLTFLoader();
   loader.register((parser) => new VRMLoaderPlugin(parser));
-  const gltf = await loader.loadAsync(url);
+  const gltf = await new Promise((resolve, reject) => {
+    loader.parse(buffer, VRM_ASSET_BASE, resolve, reject);
+  });
   const vrm = gltf.userData.vrm;
-  if (!vrm) throw new Error("VRM not found");
+  if (!vrm) throw new Error("VRM not found in glTF");
   VRMUtils.rotateVRM0(vrm);
   vrm.scene.traverse((o) => {
     o.frustumCulled = false;
@@ -286,13 +302,15 @@ function initThree() {
     canvas: els.canvas,
     alpha: true,
     antialias: true,
-    premultipliedAlpha: true,
+    premultipliedAlpha: false,
   });
   vrmState.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   vrmState.renderer.setSize(w, h, false);
   vrmState.renderer.outputColorSpace = THREE.SRGBColorSpace;
   vrmState.renderer.setClearColor(0x000000, 0);
+  vrmState.renderer.setClearAlpha(0);
   vrmState.renderer.autoClear = false;
+  if (els.canvas) els.canvas.style.background = "transparent";
 
   vrmState.scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 1.15));
   const dir = new THREE.DirectionalLight(0xffffff, 1.1);
@@ -337,6 +355,16 @@ function updateCameraForRect(rect) {
   cam.updateProjectionMatrix();
 }
 
+function firstTraceLandmarks(tr, tScore) {
+  if (tr.synthetic) {
+    return getSyntheticLandmarksAtTime(tr, tScore);
+  }
+  if (tr?.data?.samples?.length) {
+    return getLandmarksAtTime(tr.data.samples, tScore) ?? tr.data.samples[0]?.lm ?? null;
+  }
+  return null;
+}
+
 function collectMode2Slots(st, api) {
   const layout = api.getOverlayLayout();
   if (!layout) return [];
@@ -350,9 +378,7 @@ function collectMode2Slots(st, api) {
     const id = mode2TraceSkeletonId(tr.id);
     const rect = getDrawRect(id, defaultRects);
     if (!rect) continue;
-    const lm = tr.synthetic
-      ? getSyntheticLandmarksAtTime(tr, tScore)
-      : (tr?.data?.samples ? getLandmarksAtTime(tr.data.samples, tScore) : null);
+    const lm = firstTraceLandmarks(tr, tScore);
     if (!lm) continue;
     slots.push({ id, rect, lm, mirror: false, video: null, world: null });
   }
@@ -439,7 +465,7 @@ async function syncVrmPool(neededIds) {
     if (vrmState.pool.has(id)) continue;
     vrmState.pool.set(id, { loading: true, vrm: null });
     pending.push(
-      loadVRM(VRM_URL)
+      createVrmInstance()
         .then((vrm) => {
           vrm.scene.visible = false;
           vrmState.scene.add(vrm.scene);
@@ -463,6 +489,18 @@ function schedulePoolSync(neededIds) {
   syncVrmPool(neededIds);
 }
 
+function updateSkinUi(drawn) {
+  if (drawn > 0) {
+    vrmState.skinApplied = true;
+    setSkinActive(true);
+    if (els.toggle) els.toggle.textContent = "關閉套皮";
+    return;
+  }
+  vrmState.skinApplied = false;
+  setSkinActive(false);
+  if (vrmState.active && els.toggle) els.toggle.textContent = "載入套皮…";
+}
+
 function vrmFrame() {
   if (!vrmState.active) return;
   vrmState.raf = requestAnimationFrame(vrmFrame);
@@ -471,7 +509,6 @@ function vrmFrame() {
   const api = window.__posedanceTestApi;
   if (!st || !api || !vrmState.renderer) return;
 
-  setSkinActive(true);
   const slots = collectSlots(st, api);
   const neededIds = new Set(slots.map((s) => s.id));
   schedulePoolSync(neededIds);
@@ -484,6 +521,7 @@ function vrmFrame() {
   renderer.setScissorTest(true);
   renderer.clear(true, true, true);
 
+  let drawn = 0;
   for (const slot of slots) {
     const vrm = vrmState.pool.get(slot.id)?.vrm;
     if (!vrm) continue;
@@ -502,9 +540,15 @@ function vrmFrame() {
     updateCameraForRect(slot.rect);
     setViewportFromRect(renderer, slot.rect);
     renderer.render(scene, camera);
+    drawn += 1;
   }
 
+  const fullW = renderer.domElement.width;
+  const fullH = renderer.domElement.height;
+  renderer.setViewport(0, 0, fullW, fullH);
   renderer.setScissorTest(false);
+
+  updateSkinUi(drawn);
 }
 
 async function ensureRendererReady() {
@@ -517,9 +561,10 @@ async function showVrmSkin() {
   if (els.canvas) els.canvas.hidden = false;
 
   vrmState.active = true;
-  setSkinActive(true);
+  vrmState.skinApplied = false;
+  setSkinActive(false);
   els.toggle?.classList.add("btn-vrm-on");
-  if (els.toggle) els.toggle.textContent = "關閉套皮";
+  if (els.toggle) els.toggle.textContent = "載入套皮…";
 
   cancelAnimationFrame(vrmState.raf);
   vrmFrame();
@@ -527,6 +572,7 @@ async function showVrmSkin() {
 
 function hideVrmSkin() {
   vrmState.active = false;
+  vrmState.skinApplied = false;
   setSkinActive(false);
   cancelAnimationFrame(vrmState.raf);
 
@@ -548,6 +594,7 @@ async function boot() {
   try {
     await waitForTestState();
     if (els.toggle) els.toggle.disabled = false;
+    fetchVrmBuffer().catch((e) => console.warn("[VRM] 預載失敗（按套皮時會重試）", e));
   } catch (e) {
     console.warn("[VRM]", e);
   }

@@ -35,6 +35,7 @@
   z-index: 12;
   pointer-events: none;
   transform: scaleX(-1);
+  background: transparent;
 }
 
 .vrm-overlay-canvas[hidden] {
