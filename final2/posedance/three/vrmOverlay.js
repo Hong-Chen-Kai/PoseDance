@@ -4,27 +4,32 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
-import { Pose } from "kalidokit";
 import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
-const VRM_URL = new URL("./assets/avatar-sample.vrm", import.meta.url).href;
+/**
+ * 預設套皮：WeirdCat（CC0 · 100Avatars R3）
+ * https://opensourceavatars.com · Arweave 永久鏈
+ */
+const VRM_URLS = [
+  new URL("./assets/blue-cat.vrm", import.meta.url).href,
+  new URL("./assets/avatar-sample.vrm", import.meta.url).href,
+];
 const VRM_ASSET_BASE = new URL("./assets/", import.meta.url).href;
-const DEMO_IMAGE_SIZE = { width: 1280, height: 720 };
-const REF_VIEWPORT_H = 280;
 
-const BONE_MAP = Object.freeze({
-  Hips: "hips",
-  Spine: "spine",
-  Chest: "chest",
-  RightUpperArm: "rightUpperArm",
-  RightLowerArm: "rightLowerArm",
-  LeftUpperArm: "leftUpperArm",
-  LeftLowerArm: "leftLowerArm",
-  RightUpperLeg: "rightUpperLeg",
-  RightLowerLeg: "rightLowerLeg",
-  LeftUpperLeg: "leftUpperLeg",
-  LeftLowerLeg: "leftLowerLeg",
-});
+const _VEC3 = {
+  up: new THREE.Vector3(0, 1, 0),
+  leftUpper: new THREE.Vector3(1, 0, 0),
+  rightUpper: new THREE.Vector3(-1, 0, 0),
+  leftLeg: new THREE.Vector3(0, -1, 0),
+  rightLeg: new THREE.Vector3(0, -1, 0),
+};
+const _box = new THREE.Box3();
+const _center = new THREE.Vector3();
+const _size = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _dirA = new THREE.Vector3();
+const _dirB = new THREE.Vector3();
+const _quat = new THREE.Quaternion();
 
 const els = {
   canvas: document.getElementById("avatar_canvas"),
@@ -156,121 +161,150 @@ function lmArrayToMp(lm) {
   });
 }
 
-function mpToWorldForKalidokit(mp, imageSize = DEMO_IMAGE_SIZE) {
-  if (!mp) return null;
-  const hipL = mp[23];
-  const hipR = mp[24];
-  if (!hipL || !hipR) return mpToWorldApprox(mp);
-  const cx = (hipL.x + hipR.x) / 2;
-  const cy = (hipL.y + hipR.y) / 2;
-  const cz = ((hipL.z ?? 0) + (hipR.z ?? 0)) / 2;
-  const aspect = imageSize.width / Math.max(1, imageSize.height);
-  return mp.map((p) => ({
-    x: (p.x - cx) * aspect * 2,
-    y: -(p.y - cy) * 2,
-    z: -((p.z ?? 0) - cz) * 2,
-    visibility: p.visibility ?? 1,
-  }));
+function mpPoint(mp, index) {
+  const p = mp[index];
+  if (!p || (p.visibility ?? 1) < 0.35) return null;
+  return p;
 }
 
-function mpToWorldApprox(mp) {
-  return mpToWorldForKalidokit(mp, DEMO_IMAGE_SIZE);
-}
-
-function getNormBBox(mp) {
-  if (!mp) return null;
-  let minX = 1;
-  let minY = 1;
-  let maxX = 0;
-  let maxY = 0;
-  let n = 0;
-  for (const p of mp) {
-    if (!p || (p.visibility ?? 1) < 0.35) continue;
-    minX = Math.min(minX, p.x);
-    maxX = Math.max(maxX, p.x);
-    minY = Math.min(minY, p.y);
-    maxY = Math.max(maxY, p.y);
-    n += 1;
-  }
-  if (n < 6) return null;
-  const pad = 0.04;
-  return {
-    minX: minX - pad,
-    maxX: maxX + pad,
-    minY: minY - pad,
-    maxY: maxY + pad,
-    width: maxX - minX + pad * 2,
-    height: maxY - minY + pad * 2,
-    centerX: (minX + maxX) / 2,
-    centerY: (minY + maxY) / 2,
-  };
-}
-
-function rigRotation(vrm, boneKey, rotation, dampener = 1) {
-  if (!vrm || !rotation) return;
-  const boneName = BONE_MAP[boneKey];
-  if (!boneName) return;
-  const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
-  if (!bone) return;
-  const euler = new THREE.Euler(
-    rotation.x * dampener,
-    rotation.y * dampener,
-    rotation.z * dampener,
+function segDirInto(target, a, b) {
+  target.set(
+    b.x - a.x,
+    -(b.y - a.y),
+    -((b.z ?? 0) - (a.z ?? 0)),
   );
-  bone.quaternion.setFromEuler(euler);
+  const len = target.length();
+  if (len < 1e-6) return false;
+  target.divideScalar(len);
+  return true;
 }
 
-function applyPoseToVrm(vrm, pose2D, pose3D, videoEl) {
-  if (!vrm || !pose2D) return false;
+function aimBone(bone, from, to, restDir) {
+  if (!bone || !from || !to) return;
+  if (!segDirInto(_dir, from, to)) return;
+  _quat.setFromUnitVectors(restDir, _dir);
+  bone.quaternion.copy(_quat);
+}
+
+function bendBone(bone, joint, tip, root) {
+  if (!bone || !joint || !tip || !root) return;
+  if (!segDirInto(_dirA, root, joint)) return;
+  if (!segDirInto(_dirB, joint, tip)) return;
+  const bend = Math.acos(THREE.MathUtils.clamp(_dirA.dot(_dirB), -1, 1));
+  bone.rotation.set(bend, 0, 0);
+}
+
+/** 2D 骨架同源的 limb 驅動（與 overlay 畫線用同一套 landmark） */
+function applySkeletonMatchPose(vrm, mp) {
+  if (!vrm || !mp) return false;
   vrm.humanoid?.resetNormalizedPose?.();
+  vrm.scene.position.set(0, 0, 0);
+  vrm.scene.scale.setScalar(1);
 
-  const world = pose3D || mpToWorldForKalidokit(pose2D, DEMO_IMAGE_SIZE);
-  const solveOpts = { runtime: "mediapipe", enableLegs: true };
-  if (videoEl?.videoWidth > 0) {
-    solveOpts.video = videoEl;
-  } else {
-    solveOpts.imageSize = DEMO_IMAGE_SIZE;
-  }
-
-  let rigged;
-  try {
-    rigged = Pose.solve(world, pose2D, solveOpts);
-  } catch {
-    return false;
-  }
-  if (!rigged) return false;
-
-  rigRotation(vrm, "Hips", rigged.Hips?.rotation, 0.85);
-  rigRotation(vrm, "Chest", rigged.Spine, 0.25);
-  rigRotation(vrm, "Spine", rigged.Spine, 0.5);
-  rigRotation(vrm, "RightUpperArm", rigged.RightUpperArm);
-  rigRotation(vrm, "RightLowerArm", rigged.RightLowerArm);
-  rigRotation(vrm, "LeftUpperArm", rigged.LeftUpperArm);
-  rigRotation(vrm, "LeftLowerArm", rigged.LeftLowerArm);
-  rigRotation(vrm, "LeftUpperLeg", rigged.LeftUpperLeg);
-  rigRotation(vrm, "LeftLowerLeg", rigged.LeftLowerLeg);
-  rigRotation(vrm, "RightUpperLeg", rigged.RightUpperLeg);
-  rigRotation(vrm, "RightLowerLeg", rigged.RightLowerLeg);
+  const hipL = mpPoint(mp, 23);
+  const hipR = mpPoint(mp, 24);
+  const shL = mpPoint(mp, 11);
+  const shR = mpPoint(mp, 12);
+  const hipMid =
+    hipL && hipR
+      ? { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2, z: ((hipL.z ?? 0) + (hipR.z ?? 0)) / 2 }
+      : null;
+  const shMid =
+    shL && shR
+      ? { x: (shL.x + shR.x) / 2, y: (shL.y + shR.y) / 2, z: ((shL.z ?? 0) + (shR.z ?? 0)) / 2 }
+      : null;
 
   const hips = vrm.humanoid?.getNormalizedBoneNode?.("hips");
+  const spine = vrm.humanoid?.getNormalizedBoneNode?.("spine");
+  const chest = vrm.humanoid?.getNormalizedBoneNode?.("chest");
+  if (hipMid && shMid) {
+    aimBone(spine, hipMid, shMid, _VEC3.up);
+    aimBone(chest, hipMid, shMid, _VEC3.up);
+    if (hips) hips.rotation.set(0, 0, 0);
+  }
+
+  aimBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("leftUpperArm"),
+    mpPoint(mp, 11),
+    mpPoint(mp, 13),
+    _VEC3.leftUpper,
+  );
+  bendBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("leftLowerArm"),
+    mpPoint(mp, 13),
+    mpPoint(mp, 15),
+    mpPoint(mp, 11),
+  );
+  aimBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("rightUpperArm"),
+    mpPoint(mp, 12),
+    mpPoint(mp, 14),
+    _VEC3.rightUpper,
+  );
+  bendBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("rightLowerArm"),
+    mpPoint(mp, 14),
+    mpPoint(mp, 16),
+    mpPoint(mp, 12),
+  );
+  aimBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("leftUpperLeg"),
+    mpPoint(mp, 23),
+    mpPoint(mp, 25),
+    _VEC3.leftLeg,
+  );
+  bendBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("leftLowerLeg"),
+    mpPoint(mp, 25),
+    mpPoint(mp, 27),
+    mpPoint(mp, 23),
+  );
+  aimBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("rightUpperLeg"),
+    mpPoint(mp, 24),
+    mpPoint(mp, 26),
+    _VEC3.rightLeg,
+  );
+  bendBone(
+    vrm.humanoid?.getNormalizedBoneNode?.("rightLowerLeg"),
+    mpPoint(mp, 26),
+    mpPoint(mp, 28),
+    mpPoint(mp, 24),
+  );
+
   if (hips) hips.position.set(0, 0, 0);
   return true;
 }
 
-function applyLmToVrm(vrm, lm, videoEl, { worldRaw = null } = {}) {
+function applyLmToVrm(vrm, lm) {
   const mp = lmArrayToMp(lm);
   if (!mp) return false;
-  const world =
-    worldRaw && worldRaw.length === 33 ? lmArrayToMp(worldRaw) : mpToWorldForKalidokit(mp, DEMO_IMAGE_SIZE);
-  return applyPoseToVrm(vrm, mp, world, videoEl);
+  return applySkeletonMatchPose(vrm, mp);
 }
 
 async function fetchVrmBuffer() {
   if (!vrmState.vrmBufferPromise) {
-    vrmState.vrmBufferPromise = fetch(VRM_URL, { cache: "force-cache" }).then(async (res) => {
-      if (!res.ok) throw new Error(`VRM HTTP ${res.status}：${VRM_URL}`);
-      return res.arrayBuffer();
-    });
+    vrmState.vrmBufferPromise = (async () => {
+      let lastErr = null;
+      for (const url of VRM_URLS) {
+        try {
+          const res = await fetch(url, { cache: "force-cache" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const buf = await res.arrayBuffer();
+          if (url.includes("blue-cat")) {
+            console.info("[VRM] 使用 WeirdCat 套皮（CC0 · 100Avatars R3）");
+          } else {
+            console.warn("[VRM] blue-cat.vrm 未找到，改用 avatar-sample.vrm");
+          }
+          vrmState.loadedUrl = url;
+          return buf;
+        } catch (e) {
+          lastErr = e;
+          console.warn("[VRM] 載入失敗", url, e);
+        }
+      }
+      throw lastErr ?? new Error("無可用 VRM 資源");
+    })();
   }
   return vrmState.vrmBufferPromise;
 }
@@ -285,6 +319,7 @@ async function createVrmInstance() {
   const vrm = gltf.userData.vrm;
   if (!vrm) throw new Error("VRM not found in glTF");
   VRMUtils.rotateVRM0(vrm);
+  VRMUtils.removeUnnecessaryJoints(vrm.scene);
   vrm.scene.traverse((o) => {
     o.frustumCulled = false;
   });
@@ -307,9 +342,9 @@ function initThree() {
   const h = wrap?.clientHeight || 480;
 
   vrmState.scene = new THREE.Scene();
-  vrmState.camera = new THREE.PerspectiveCamera(32, w / h, 0.1, 50);
-  vrmState.camera.position.set(0, 1.0, 3.6);
-  vrmState.camera.lookAt(0, 0.95, 0);
+  vrmState.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100);
+  vrmState.camera.position.set(0, 1, 5);
+  vrmState.camera.lookAt(0, 1, 0);
 
   vrmState.renderer = new THREE.WebGLRenderer({
     canvas: els.canvas,
@@ -335,13 +370,38 @@ function initThree() {
 }
 
 function onVrmResize() {
-  if (!vrmState.renderer || !vrmState.camera) return;
+  if (!vrmState.renderer) return;
   const wrap = els.wrap || els.canvas?.parentElement;
   const w = wrap?.clientWidth || 800;
   const h = wrap?.clientHeight || 480;
-  vrmState.camera.aspect = w / h;
-  vrmState.camera.updateProjectionMatrix();
   vrmState.renderer.setSize(w, h, false);
+}
+
+function frameVrmToViewport(vrm, camera, rect) {
+  vrm.scene.updateMatrixWorld(true);
+  _box.setFromObject(vrm.scene);
+  if (_box.isEmpty()) return;
+
+  _box.getCenter(_center);
+  _box.getSize(_size);
+
+  const margin = 1.1;
+  const viewAspect = rect.dw / Math.max(1, rect.dh);
+  let halfH = Math.max(_size.y * 0.5 * margin, 0.35);
+  let halfW = Math.max(_size.x * 0.5 * margin, 0.2);
+
+  if (halfW / halfH > viewAspect) halfH = halfW / viewAspect;
+  else halfW = halfH * viewAspect;
+
+  camera.left = _center.x - halfW;
+  camera.right = _center.x + halfW;
+  camera.top = _center.y + halfH;
+  camera.bottom = _center.y - halfH;
+  camera.near = 0.01;
+  camera.far = 100;
+  camera.position.set(_center.x, _center.y, _center.z + 5);
+  camera.lookAt(_center);
+  camera.updateProjectionMatrix();
 }
 
 function setViewportFromRect(renderer, rect) {
@@ -355,31 +415,6 @@ function setViewportFromRect(renderer, rect) {
   renderer.setScissor(x, y, w, h);
 }
 
-function fitVrmToSkeleton(vrm, mp, rect) {
-  const bbox = getNormBBox(mp);
-  const bodyH = Math.max(0.38, bbox?.height ?? 0.62);
-  const bodyCy = bbox?.centerY ?? 0.52;
-  const rectScale = THREE.MathUtils.clamp(rect.dh / REF_VIEWPORT_H, 0.55, 1.9);
-  const scale = THREE.MathUtils.clamp((1.05 / bodyH) * rectScale, 0.75, 2.6);
-  vrm.scene.scale.setScalar(scale);
-  vrm.scene.position.set(0, (0.52 - bodyCy) * scale * 2.4, 0);
-}
-
-function updateCameraForRect(rect, mp) {
-  const cam = vrmState.camera;
-  const bbox = getNormBBox(mp);
-  const bodyH = Math.max(0.38, bbox?.height ?? 0.62);
-  const bodyCy = bbox?.centerY ?? 0.52;
-  const aspect = rect.dw / Math.max(1, rect.dh);
-
-  cam.aspect = aspect;
-  cam.fov = THREE.MathUtils.clamp(34 + (0.62 - bodyH) * 18, 28, 42);
-  const dist = THREE.MathUtils.clamp(3.8 / bodyH, 2.8, 5.2);
-  const lookY = bodyCy * 1.85;
-  cam.position.set(0, lookY + 0.08, dist);
-  cam.lookAt(0, lookY, 0);
-  cam.updateProjectionMatrix();
-}
 
 function firstTraceLandmarks(tr, tScore) {
   if (tr.synthetic) {
@@ -550,18 +585,14 @@ function vrmFrame() {
     const vrm = vrmState.pool.get(slot.id)?.vrm;
     if (!vrm) continue;
 
-    const mp = lmArrayToMp(slot.lm);
-    if (!mp) continue;
-
-    applyLmToVrm(vrm, slot.lm, slot.video, { worldRaw: slot.world });
-    fitVrmToSkeleton(vrm, mp, slot.rect);
+    applyLmToVrm(vrm, slot.lm);
     vrm.update?.(delta);
 
     for (const [, e] of vrmState.pool) {
       if (e?.vrm?.scene) e.vrm.scene.visible = e.vrm === vrm;
     }
 
-    updateCameraForRect(slot.rect, mp);
+    frameVrmToViewport(vrm, camera, slot.rect);
     setViewportFromRect(renderer, slot.rect);
     renderer.render(scene, camera);
     drawn += 1;
