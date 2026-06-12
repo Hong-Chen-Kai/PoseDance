@@ -121,7 +121,7 @@
               class="btn btn-load"
               type="button"
               disabled
-              title="顯示 Three.js VRM 套皮（疊加全屏）"
+              title="在骨架位置顯示 VRM 套皮（可開關，其餘功能不變）"
             >
               3D 套皮
             </button>
@@ -217,25 +217,12 @@
             <video id="input_video" playsinline></video>
             <canvas id="output_canvas"></canvas>
             <canvas id="overlay_canvas"></canvas>
-
-            <div
-              id="vrmPanel"
-              class="vrm-panel"
+            <canvas
+              id="avatar_canvas"
+              class="vrm-overlay-canvas"
               hidden
-              aria-label="3D VRM 套皮"
-            >
-              <div class="vrm-panel__canvas-wrap">
-                <canvas id="avatar_canvas"></canvas>
-                <div class="vrm-panel__labels" aria-hidden="true">
-                  <span>使用者（Live）</span>
-                  <span>程序化 / 生成舞者</span>
-                  <span>錄製 / Demo trace</span>
-                </div>
-              </div>
-              <div id="vrmStatusBar" class="vrm-panel__status">
-                按「3D 套皮」載入…
-              </div>
-            </div>
+              aria-hidden="true"
+            ></canvas>
 
             <div
               id="demoScaleBottom"

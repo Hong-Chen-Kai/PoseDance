@@ -25,77 +25,23 @@
   min-width: 140px;
 }
 
-/* 3D VRM 面板（疊在 posedanceTest 主舞台上方） */
-.vrm-panel {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  background: #0f172a;
-  display: flex;
-  flex-direction: column;
-}
-
-.vrm-panel[hidden] {
-  display: none !important;
-}
-
-.vrm-panel__canvas-wrap {
-  flex: 1;
-  position: relative;
-  min-height: 0;
-}
-
-#avatar_canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.vrm-panel__labels {
+/* 透明 WebGL 疊在 overlay 上方，跟隨各骨架 getDrawRect */
+.vrm-overlay-canvas {
   position: absolute;
   left: 0;
-  right: 0;
-  top: 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 12;
   pointer-events: none;
-  text-align: center;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-  z-index: 2;
+  transform: scaleX(-1);
 }
 
-.vrm-panel__labels span:nth-child(1) {
-  color: #fb923c;
-}
-
-.vrm-panel__labels span:nth-child(2) {
-  color: #38bdf8;
-}
-
-.vrm-panel__labels span:nth-child(3) {
-  color: #4ade80;
-}
-
-.vrm-panel__status {
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  background: rgba(30, 41, 59, 0.95);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.vrm-panel__status.ok {
-  color: #4ade80;
-}
-
-.vrm-panel__status.err {
-  color: #f87171;
+.vrm-overlay-canvas[hidden] {
+  display: none !important;
 }
 
 .btn-vrm-on {
   background: #0369a1 !important;
   border-color: #0ea5e9 !important;
 }
-

@@ -91,6 +91,7 @@ const state = {
     hintMode: "easy",
     demoScale: { l1: 1, l2: 1, r1: 1, r2: 1 },
     mode1DemoEnabled: true,
+    vrmSkinActive: false,
   },
 
   interact: {
@@ -2995,33 +2996,37 @@ function drawMode2Overlay(tScore) {
 
   const rectUser = getDrawRect(SKELETON_IDS.m2_user, defaultRects);
 
+  const skinOn = state.ui.vrmSkinActive;
+
   // Draw traces first (behind), then user skeleton on top.
   const traces = state.mode2?.traces || [];
-  for (const tr of traces) {
-    if (!tr || tr.enabled === false) continue;
-    const id = mode2TraceSkeletonId(tr.id);
-    const rect = getDrawRect(id, defaultRects);
-    const lm = tr.synthetic
-      ? getSyntheticLandmarksAtTime(tr, tScore)
-      : (tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, tScore) : null);
-    if (!rect || !lm) continue;
-    const trColor = tr.synthetic ? "rgba(0,180,255,0.95)" : demoColor;
-    const off = state.interact?.poseOffsets?.[id] ?? null;
-    const getter2 = makeOffsetGetter(getArrXYV, off);
-    drawPoseConnections(ctx, lm, getter2, rect, () => trColor, 5);
-    drawPosePoints(ctx, lm, getter2, rect, trColor, 4.5);
-  }
+  if (!skinOn) {
+    for (const tr of traces) {
+      if (!tr || tr.enabled === false) continue;
+      const id = mode2TraceSkeletonId(tr.id);
+      const rect = getDrawRect(id, defaultRects);
+      const lm = tr.synthetic
+        ? getSyntheticLandmarksAtTime(tr, tScore)
+        : (tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, tScore) : null);
+      if (!rect || !lm) continue;
+      const trColor = tr.synthetic ? "rgba(0,180,255,0.95)" : demoColor;
+      const off = state.interact?.poseOffsets?.[id] ?? null;
+      const getter2 = makeOffsetGetter(getArrXYV, off);
+      drawPoseConnections(ctx, lm, getter2, rect, () => trColor, 5);
+      drawPosePoints(ctx, lm, getter2, rect, trColor, 4.5);
+    }
 
-  if (state.latestUserLandmarks) {
-    drawUserAvatar(ctx, state.latestUserLandmarks, getLmXYV, rectUser, {
-      skeletonId: SKELETON_IDS.m2_user,
-      baseColor: userColor,
-      highlightColor: userColor,
-      highlightParts: new Set(),
-      colorByConnection: () => userColor,
-      lineWidth: 3,
-      pointRadius: 3.5,
-    });
+    if (state.latestUserLandmarks) {
+      drawUserAvatar(ctx, state.latestUserLandmarks, getLmXYV, rectUser, {
+        skeletonId: SKELETON_IDS.m2_user,
+        baseColor: userColor,
+        highlightColor: userColor,
+        highlightParts: new Set(),
+        colorByConnection: () => userColor,
+        lineWidth: 3,
+        pointRadius: 3.5,
+      });
+    }
   }
 
   // selection box
@@ -3289,35 +3294,38 @@ function updateUiLoop() {
         if (isRecordingMode) return USER_SKELETON_COLOR;
         return activeParts.has(part) ? redColor : USER_SKELETON_COLOR;
       };
-      if (userLm) {
-        drawUserAvatar(ctx, userLm, getLmXYV, stageRect, {
-          skeletonId: SKELETON_IDS.m1_user,
-          baseColor,
-          highlightColor: isOrange ? USER_SKELETON_COLOR_GOOD : redColor,
-          highlightParts,
-          colorByConnection: colorByConn,
-          lineWidth: 3,
-          pointRadius: 3.5,
-        });
-      }
+      const skinOn = state.ui.vrmSkinActive;
+      if (!skinOn) {
+        if (userLm) {
+          drawUserAvatar(ctx, userLm, getLmXYV, stageRect, {
+            skeletonId: SKELETON_IDS.m1_user,
+            baseColor,
+            highlightColor: isOrange ? USER_SKELETON_COLOR_GOOD : redColor,
+            highlightParts,
+            colorByConnection: colorByConn,
+            lineWidth: 3,
+            pointRadius: 3.5,
+          });
+        }
 
-      // Demo overlay (green / blue) on top so it's always visible
-      if (demoLm && !isRecordingMode && state.ui.mode1DemoEnabled) {
-        const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
-        const rectIds = [
-          SKELETON_IDS.m1_demo_0,
-          SKELETON_IDS.m1_demo_1,
-          SKELETON_IDS.m1_demo_2,
-          SKELETON_IDS.m1_demo_3,
-        ];
+        // Demo overlay (green / blue) on top so it's always visible
+        if (demoLm && !isRecordingMode && state.ui.mode1DemoEnabled) {
+          const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
+          const rectIds = [
+            SKELETON_IDS.m1_demo_0,
+            SKELETON_IDS.m1_demo_1,
+            SKELETON_IDS.m1_demo_2,
+            SKELETON_IDS.m1_demo_3,
+          ];
 
-        for (let i = 0; i < rectIds.length; i += 1) {
-          const id = rectIds[i];
-          const r = getDrawRect(id, defaultRects) || stageRect;
-          const off = state.interact?.poseOffsets?.[id] ?? null;
-          const getter2 = makeOffsetGetter(getArrXYV, off);
-          drawPoseConnections(ctx, demoLm, getter2, r, () => demoColor, 5);
-          drawPosePoints(ctx, demoLm, getter2, r, demoColor, 4.5);
+          for (let i = 0; i < rectIds.length; i += 1) {
+            const id = rectIds[i];
+            const r = getDrawRect(id, defaultRects) || stageRect;
+            const off = state.interact?.poseOffsets?.[id] ?? null;
+            const getter2 = makeOffsetGetter(getArrXYV, off);
+            drawPoseConnections(ctx, demoLm, getter2, r, () => demoColor, 5);
+            drawPosePoints(ctx, demoLm, getter2, r, demoColor, 4.5);
+          }
         }
       }
 
@@ -3348,10 +3356,30 @@ function updateUiLoop() {
   }
 }
 
+function getOverlayLayout() {
+  if (!els.overlayCanvas) return null;
+  const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
+  const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
+  const videoAspect =
+    els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+      ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
+      : DEMO_SOURCE_ASPECT;
+  const defaultRects = getDefaultRectsForCurrentMode(w, h, videoAspect);
+  return { w, h, videoAspect, defaultRects };
+}
+
 async function main() {
   initDomRefs();
   // debug handle for DevTools
   window.__posedanceTestState = state;
+  window.__posedanceTestApi = {
+    SKELETON_IDS,
+    mode2TraceSkeletonId,
+    getOverlayLayout,
+    getDrawRect,
+    getDemoLandmarksAtTime,
+    getDemoTraceByMode,
+  };
   setModeUiText();
   bindDemoScaleSlider(els.demoScaleL1, "l1");
   bindDemoScaleSlider(els.demoScaleL2, "l2");

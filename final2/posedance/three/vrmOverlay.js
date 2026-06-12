@@ -1,22 +1,14 @@
 /**
- * vrmOverlay.js — 掛在 posedanceTest 上的 3D VRM 套皮（讀 __posedanceTestState）
+ * vrmOverlay.js — 可開關的 VRM 套皮層（Mode 1 / 2，跟隨 getDrawRect）
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { Pose } from "kalidokit";
-import {
-  createSyntheticTrace,
-  getSyntheticLandmarksAtTime,
-} from "../proceduralSkeleton.js";
+import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
 const VRM_URL = new URL("./assets/avatar-sample.vrm", import.meta.url).href;
-
-const AVATAR_SLOTS = Object.freeze({
-  user: { x: -1.35 },
-  synth: { x: 0 },
-  trace: { x: 1.35 },
-});
+const REF_VIEWPORT_H = 280;
 
 const BONE_MAP = Object.freeze({
   Hips: "hips",
@@ -33,38 +25,29 @@ const BONE_MAP = Object.freeze({
 });
 
 const els = {
-  panel: document.getElementById("vrmPanel"),
   canvas: document.getElementById("avatar_canvas"),
-  status: document.getElementById("vrmStatusBar"),
   toggle: document.getElementById("toggleVrmButton"),
   video: document.getElementById("input_video"),
+  wrap: document.querySelector(".camera-wrapper"),
 };
 
 const vrmState = {
   active: false,
   ready: false,
-  vrms: { user: null, synth: null, trace: null },
-  fallbackSynth: null,
-  fallbackStart: 0,
-  clock: null,
   scene: null,
   camera: null,
   renderer: null,
+  clock: null,
   raf: 0,
+  pool: new Map(),
+  poolKey: "",
 };
-
-function setVrmStatus(text, ok = null) {
-  if (!els.status) return;
-  els.status.textContent = text;
-  els.status.classList.toggle("ok", ok === true);
-  els.status.classList.toggle("err", ok === false);
-}
 
 function waitForTestState(maxMs = 30000) {
   return new Promise((resolve, reject) => {
     const t0 = performance.now();
     const tick = () => {
-      if (window.__posedanceTestState) {
+      if (window.__posedanceTestState && window.__posedanceTestApi) {
         resolve(window.__posedanceTestState);
         return;
       }
@@ -78,6 +61,11 @@ function waitForTestState(maxMs = 30000) {
   });
 }
 
+function setSkinActive(on) {
+  const st = window.__posedanceTestState;
+  if (st?.ui) st.ui.vrmSkinActive = Boolean(on);
+}
+
 function getTScore(st) {
   try {
     const t = st.player?.getCurrentTime?.();
@@ -85,7 +73,7 @@ function getTScore(st) {
   } catch {
     /* ignore */
   }
-  return null;
+  return performance.now() / 1000;
 }
 
 function getDemoTimeBracket(samples, t) {
@@ -256,7 +244,8 @@ function applyLmToVrm(vrm, lm, videoEl, { mirror = false, worldRaw = null } = {}
   let mp = lmArrayToMp(lm);
   if (!mp) return false;
   if (mirror) mp = mirrorMpLandmarks(mp);
-  let world = worldRaw && worldRaw.length === 33 ? mirrorWorldLandmarks(worldRaw) : mpToWorldApprox(mp);
+  const world =
+    worldRaw && worldRaw.length === 33 ? mirrorWorldLandmarks(worldRaw) : mpToWorldApprox(mp);
   return applyPoseToVrm(vrm, mp, world, videoEl);
 }
 
@@ -273,162 +262,277 @@ async function loadVRM(url) {
   return vrm;
 }
 
+function disposeVrmEntry(entry) {
+  if (!entry?.vrm) return;
+  vrmState.scene?.remove(entry.vrm.scene);
+  try {
+    VRMUtils.deepDispose(entry.vrm.scene);
+  } catch {
+    /* ignore */
+  }
+}
+
 function initThree() {
-  const wrap = els.canvas.parentElement;
-  const w = wrap.clientWidth || 800;
-  const h = wrap.clientHeight || 480;
+  const wrap = els.wrap || els.canvas?.parentElement;
+  const w = wrap?.clientWidth || 800;
+  const h = wrap?.clientHeight || 480;
 
   vrmState.scene = new THREE.Scene();
-  vrmState.scene.background = new THREE.Color(0x0f172a);
   vrmState.camera = new THREE.PerspectiveCamera(30, w / h, 0.1, 50);
-  vrmState.camera.position.set(0, 1.25, 3.4);
-  vrmState.camera.lookAt(0, 1, 0);
+  vrmState.camera.position.set(0, 1.05, 3.2);
+  vrmState.camera.lookAt(0, 0.95, 0);
 
   vrmState.renderer = new THREE.WebGLRenderer({
     canvas: els.canvas,
+    alpha: true,
     antialias: true,
+    premultipliedAlpha: true,
   });
   vrmState.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   vrmState.renderer.setSize(w, h, false);
   vrmState.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  vrmState.renderer.setClearColor(0x000000, 0);
+  vrmState.renderer.autoClear = false;
 
-  vrmState.scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 1.1));
-  const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+  vrmState.scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 1.15));
+  const dir = new THREE.DirectionalLight(0xffffff, 1.1);
   dir.position.set(1, 3, 2);
   vrmState.scene.add(dir);
-
-  const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(3.5, 48),
-    new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 }),
-  );
-  floor.rotation.x = -Math.PI / 2;
-  vrmState.scene.add(floor);
 
   vrmState.clock = new THREE.Clock();
   window.addEventListener("resize", onVrmResize);
 }
 
 function onVrmResize() {
-  if (!vrmState.renderer || !vrmState.camera || !els.canvas) return;
-  const wrap = els.canvas.parentElement;
-  const w = wrap.clientWidth || 800;
-  const h = wrap.clientHeight || 480;
+  if (!vrmState.renderer || !vrmState.camera) return;
+  const wrap = els.wrap || els.canvas?.parentElement;
+  const w = wrap?.clientWidth || 800;
+  const h = wrap?.clientHeight || 480;
   vrmState.camera.aspect = w / h;
   vrmState.camera.updateProjectionMatrix();
   vrmState.renderer.setSize(w, h, false);
 }
 
-function placeVrm(vrm, slotKey) {
-  vrm.scene.position.set(AVATAR_SLOTS[slotKey].x, 0, 0);
-  vrmState.scene.add(vrm.scene);
+function setViewportFromRect(renderer, rect) {
+  const dpr = renderer.getPixelRatio();
+  const canvasH = renderer.domElement.height;
+  const x = Math.max(0, Math.floor(rect.ox * dpr));
+  const w = Math.max(1, Math.floor(rect.dw * dpr));
+  const h = Math.max(1, Math.floor(rect.dh * dpr));
+  const y = Math.max(0, Math.floor(canvasH - (rect.oy + rect.dh) * dpr));
+  renderer.setViewport(x, y, w, h);
+  renderer.setScissor(x, y, w, h);
 }
 
-async function initVrmAvatars() {
-  setVrmStatus("載入 VRM…");
-  vrmState.vrms.user = placeVrm(await loadVRM(VRM_URL), "user");
-  setVrmStatus("載入 VRM 2/3…");
-  vrmState.vrms.synth = placeVrm(await loadVRM(VRM_URL), "synth");
-  setVrmStatus("載入 VRM 3/3…");
-  vrmState.vrms.trace = placeVrm(await loadVRM(VRM_URL), "trace");
-  vrmState.fallbackSynth = createSyntheticTrace({ bpm: 120, grooveMode: "bounce" });
-  vrmState.fallbackStart = performance.now() / 1000;
-  vrmState.ready = true;
-  setVrmStatus("3D 就緒 · 左：使用者 · 中：程序化 · 右：錄製/demo", true);
+function applyRectScale(vrm, rect) {
+  const s = THREE.MathUtils.clamp(rect.dh / REF_VIEWPORT_H, 0.42, 1.85);
+  vrm.scene.scale.setScalar(s);
 }
 
-function pickSources(st) {
+function updateCameraForRect(rect) {
+  const cam = vrmState.camera;
+  cam.aspect = rect.dw / Math.max(1, rect.dh);
+  cam.position.set(0, 1.05, 3.2);
+  cam.lookAt(0, 0.95, 0);
+  cam.updateProjectionMatrix();
+}
+
+function collectMode2Slots(st, api) {
+  const layout = api.getOverlayLayout();
+  if (!layout) return [];
+  const { defaultRects } = layout;
   const tScore = getTScore(st);
-  const synthTime = tScore ?? performance.now() / 1000 - vrmState.fallbackStart;
+  const slots = [];
+  const { SKELETON_IDS, mode2TraceSkeletonId, getDrawRect } = api;
 
-  let synthLm = null;
-  let traceLm = null;
+  for (const tr of st.mode2?.traces || []) {
+    if (!tr || tr.enabled === false) continue;
+    const id = mode2TraceSkeletonId(tr.id);
+    const rect = getDrawRect(id, defaultRects);
+    if (!rect) continue;
+    const lm = tr.synthetic
+      ? getSyntheticLandmarksAtTime(tr, tScore)
+      : (tr?.data?.samples ? getLandmarksAtTime(tr.data.samples, tScore) : null);
+    if (!lm) continue;
+    slots.push({ id, rect, lm, mirror: false, video: null, world: null });
+  }
 
-  if (st.ui?.mode === "mode2") {
-    const traces = st.mode2?.traces || [];
-    const synthTr = traces.find((tr) => tr?.synthetic && tr.enabled !== false);
-    const recTr = traces.find((tr) => tr && !tr.synthetic && tr.enabled !== false);
-    if (synthTr) synthLm = getSyntheticLandmarksAtTime(synthTr, synthTime);
-    if (recTr?.data?.samples && typeof tScore === "number") {
-      traceLm = getLandmarksAtTime(recTr.data.samples, tScore);
-    } else if (recTr?.data?.samples) {
-      traceLm = getLandmarksAtTime(recTr.data.samples, synthTime);
-    }
-  } else {
-    const hint = st.ui?.hintMode === "hard" ? "hard" : "easy";
-    const data = hint === "hard" ? st.demo?.hard : st.demo?.easy;
-    if (data?.samples) {
-      const t = typeof tScore === "number" ? tScore : synthTime;
-      traceLm = getLandmarksAtTime(data.samples, t);
+  if (st.latestUserLandmarks) {
+    const rect = getDrawRect(SKELETON_IDS.m2_user, defaultRects);
+    if (rect) {
+      slots.push({
+        id: SKELETON_IDS.m2_user,
+        rect,
+        lm: st.latestUserLandmarks,
+        mirror: true,
+        video: els.video,
+        world: st.latestUserWorldLandmarks,
+      });
     }
   }
 
-  if (!synthLm && vrmState.fallbackSynth) {
-    synthLm = getSyntheticLandmarksAtTime(vrmState.fallbackSynth, synthTime);
+  return slots;
+}
+
+function collectMode1Slots(st, api) {
+  const layout = api.getOverlayLayout();
+  if (!layout) return [];
+  const { defaultRects } = layout;
+  const tScore = getTScore(st);
+  const { SKELETON_IDS, getDrawRect, getDemoTraceByMode, getDemoLandmarksAtTime } = api;
+  const slots = [];
+
+  const hintMode =
+    st.ui?.hintMode === "hard" || st.ui?.hintMode === "user" ? st.ui.hintMode : "easy";
+  const trace = st.recorder?.armed ? null : getDemoTraceByMode(hintMode);
+  const demoLm =
+    st.ui?.mode1DemoEnabled && trace?.samples && typeof tScore === "number"
+      ? getDemoLandmarksAtTime(trace.samples, tScore)
+      : null;
+
+  if (demoLm) {
+    const demoIds = [
+      SKELETON_IDS.m1_demo_0,
+      SKELETON_IDS.m1_demo_1,
+      SKELETON_IDS.m1_demo_2,
+      SKELETON_IDS.m1_demo_3,
+    ];
+    for (const id of demoIds) {
+      const rect = getDrawRect(id, defaultRects);
+      if (!rect) continue;
+      slots.push({ id, rect, lm: demoLm, mirror: false, video: null, world: null });
+    }
   }
 
-  return {
-    userLm: st.latestUserLandmarks,
-    userWorld: st.latestUserWorldLandmarks,
-    synthLm,
-    traceLm,
-  };
+  if (st.latestUserLandmarks) {
+    const rect = getDrawRect(SKELETON_IDS.m1_user, defaultRects);
+    if (rect) {
+      slots.push({
+        id: SKELETON_IDS.m1_user,
+        rect,
+        lm: st.latestUserLandmarks,
+        mirror: true,
+        video: els.video,
+        world: st.latestUserWorldLandmarks,
+      });
+    }
+  }
+
+  return slots;
+}
+
+function collectSlots(st, api) {
+  if (st.ui?.mode === "mode2") return collectMode2Slots(st, api);
+  return collectMode1Slots(st, api);
+}
+
+async function syncVrmPool(neededIds) {
+  for (const [id, entry] of vrmState.pool.entries()) {
+    if (!neededIds.has(id)) {
+      disposeVrmEntry(entry);
+      vrmState.pool.delete(id);
+    }
+  }
+
+  const pending = [];
+  for (const id of neededIds) {
+    if (vrmState.pool.has(id)) continue;
+    vrmState.pool.set(id, { loading: true, vrm: null });
+    pending.push(
+      loadVRM(VRM_URL)
+        .then((vrm) => {
+          vrm.scene.visible = false;
+          vrmState.scene.add(vrm.scene);
+          vrmState.pool.set(id, { loading: false, vrm });
+        })
+        .catch((e) => {
+          console.error("[VRM] load failed", id, e);
+          vrmState.pool.delete(id);
+        }),
+    );
+  }
+
+  if (pending.length) await Promise.all(pending);
+  vrmState.ready = [...neededIds].every((id) => vrmState.pool.get(id)?.vrm);
+}
+
+function schedulePoolSync(neededIds) {
+  const key = [...neededIds].sort().join("|");
+  if (key === vrmState.poolKey) return;
+  vrmState.poolKey = key;
+  syncVrmPool(neededIds);
 }
 
 function vrmFrame() {
-  if (!vrmState.active || !vrmState.ready) return;
+  if (!vrmState.active) return;
   vrmState.raf = requestAnimationFrame(vrmFrame);
-  const delta = vrmState.clock.getDelta();
+
   const st = window.__posedanceTestState;
-  if (!st) return;
+  const api = window.__posedanceTestApi;
+  if (!st || !api || !vrmState.renderer) return;
 
-  const { userLm, userWorld, synthLm, traceLm } = pickSources(st);
+  setSkinActive(true);
+  const slots = collectSlots(st, api);
+  const neededIds = new Set(slots.map((s) => s.id));
+  schedulePoolSync(neededIds);
 
-  if (userLm && vrmState.vrms.user) {
-    applyLmToVrm(vrmState.vrms.user, userLm, els.video, {
-      mirror: true,
-      worldRaw: userWorld,
+  const renderer = vrmState.renderer;
+  const scene = vrmState.scene;
+  const camera = vrmState.camera;
+  const delta = vrmState.clock.getDelta();
+
+  renderer.setScissorTest(true);
+  renderer.clear(true, true, true);
+
+  for (const slot of slots) {
+    const vrm = vrmState.pool.get(slot.id)?.vrm;
+    if (!vrm) continue;
+
+    applyLmToVrm(vrm, slot.lm, slot.video, {
+      mirror: slot.mirror,
+      worldRaw: slot.world,
     });
-  }
-  if (synthLm && vrmState.vrms.synth) {
-    applyLmToVrm(vrmState.vrms.synth, synthLm, null);
-  }
-  if (traceLm && vrmState.vrms.trace) {
-    applyLmToVrm(vrmState.vrms.trace, traceLm, null);
+    applyRectScale(vrm, slot.rect);
+    vrm.update?.(delta);
+
+    for (const [, e] of vrmState.pool) {
+      if (e?.vrm?.scene) e.vrm.scene.visible = e.vrm === vrm;
+    }
+
+    updateCameraForRect(slot.rect);
+    setViewportFromRect(renderer, slot.rect);
+    renderer.render(scene, camera);
   }
 
-  for (const vrm of Object.values(vrmState.vrms)) {
-    vrm?.update?.(delta);
-  }
-  vrmState.renderer.render(vrmState.scene, vrmState.camera);
+  renderer.setScissorTest(false);
 }
 
-async function showVrmPanel() {
-  if (!els.panel) return;
-  els.panel.hidden = false;
-  vrmState.active = true;
-  els.toggle?.classList.add("btn-vrm-on");
-  els.toggle.textContent = "關閉 3D";
-
-  if (!vrmState.renderer) {
-    initThree();
-    try {
-      await initVrmAvatars();
-    } catch (e) {
-      console.error(e);
-      setVrmStatus(`VRM 載入失敗：${e.message}`, false);
-      return;
-    }
-  }
-
+async function ensureRendererReady() {
+  if (!vrmState.renderer) initThree();
   onVrmResize();
+}
+
+async function showVrmSkin() {
+  await ensureRendererReady();
+  if (els.canvas) els.canvas.hidden = false;
+
+  vrmState.active = true;
+  setSkinActive(true);
+  els.toggle?.classList.add("btn-vrm-on");
+  if (els.toggle) els.toggle.textContent = "關閉套皮";
+
   cancelAnimationFrame(vrmState.raf);
   vrmFrame();
 }
 
-function hideVrmPanel() {
+function hideVrmSkin() {
   vrmState.active = false;
+  setSkinActive(false);
   cancelAnimationFrame(vrmState.raf);
-  if (els.panel) els.panel.hidden = true;
+
+  if (els.canvas) els.canvas.hidden = true;
+  if (vrmState.renderer) vrmState.renderer.clear(true, true, true);
+
   els.toggle?.classList.remove("btn-vrm-on");
   if (els.toggle) els.toggle.textContent = "3D 套皮";
 }
@@ -436,8 +540,8 @@ function hideVrmPanel() {
 async function boot() {
   if (els.toggle) {
     els.toggle.addEventListener("click", () => {
-      if (vrmState.active) hideVrmPanel();
-      else showVrmPanel();
+      if (vrmState.active) hideVrmSkin();
+      else showVrmSkin();
     });
   }
 
@@ -446,7 +550,6 @@ async function boot() {
     if (els.toggle) els.toggle.disabled = false;
   } catch (e) {
     console.warn("[VRM]", e);
-    setVrmStatus("posedanceTest 未載入", false);
   }
 }
 
