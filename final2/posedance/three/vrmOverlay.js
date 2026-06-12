@@ -9,6 +9,7 @@ import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
 const VRM_URL = new URL("./assets/avatar-sample.vrm", import.meta.url).href;
 const VRM_ASSET_BASE = new URL("./assets/", import.meta.url).href;
+const DEMO_IMAGE_SIZE = { width: 1280, height: 720 };
 const REF_VIEWPORT_H = 280;
 
 const BONE_MAP = Object.freeze({
@@ -155,37 +156,57 @@ function lmArrayToMp(lm) {
   });
 }
 
-function mpToWorldApprox(mp) {
+function mpToWorldForKalidokit(mp, imageSize = DEMO_IMAGE_SIZE) {
   if (!mp) return null;
   const hipL = mp[23];
   const hipR = mp[24];
-  const cx = hipL && hipR ? (hipL.x + hipR.x) / 2 : 0.5;
-  const cy = hipL && hipR ? (hipL.y + hipR.y) / 2 : 0.5;
-  const scale = 2;
+  if (!hipL || !hipR) return mpToWorldApprox(mp);
+  const cx = (hipL.x + hipR.x) / 2;
+  const cy = (hipL.y + hipR.y) / 2;
+  const cz = ((hipL.z ?? 0) + (hipR.z ?? 0)) / 2;
+  const aspect = imageSize.width / Math.max(1, imageSize.height);
   return mp.map((p) => ({
-    x: (p.x - cx) * scale,
-    y: -(p.y - cy) * scale,
-    z: -(p.z ?? 0) * scale,
-    visibility: p.visibility,
-  }));
-}
-
-function mirrorMpLandmarks(mp) {
-  if (!mp) return null;
-  return mp.map((p) => ({ ...p, x: 1 - p.x }));
-}
-
-function mirrorWorldLandmarks(world) {
-  if (!world) return null;
-  return world.map((p) => ({
-    x: -(p.x ?? 0),
-    y: p.y ?? 0,
-    z: p.z ?? 0,
+    x: (p.x - cx) * aspect * 2,
+    y: -(p.y - cy) * 2,
+    z: -((p.z ?? 0) - cz) * 2,
     visibility: p.visibility ?? 1,
   }));
 }
 
-function rigRotation(vrm, boneKey, rotation, dampener = 1, lerpAmount = 0.35) {
+function mpToWorldApprox(mp) {
+  return mpToWorldForKalidokit(mp, DEMO_IMAGE_SIZE);
+}
+
+function getNormBBox(mp) {
+  if (!mp) return null;
+  let minX = 1;
+  let minY = 1;
+  let maxX = 0;
+  let maxY = 0;
+  let n = 0;
+  for (const p of mp) {
+    if (!p || (p.visibility ?? 1) < 0.35) continue;
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+    n += 1;
+  }
+  if (n < 6) return null;
+  const pad = 0.04;
+  return {
+    minX: minX - pad,
+    maxX: maxX + pad,
+    minY: minY - pad,
+    maxY: maxY + pad,
+    width: maxX - minX + pad * 2,
+    height: maxY - minY + pad * 2,
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2,
+  };
+}
+
+function rigRotation(vrm, boneKey, rotation, dampener = 1) {
   if (!vrm || !rotation) return;
   const boneName = BONE_MAP[boneKey];
   if (!boneName) return;
@@ -196,25 +217,20 @@ function rigRotation(vrm, boneKey, rotation, dampener = 1, lerpAmount = 0.35) {
     rotation.y * dampener,
     rotation.z * dampener,
   );
-  const q = new THREE.Quaternion().setFromEuler(euler);
-  bone.quaternion.slerp(q, lerpAmount);
-}
-
-function rigPosition(vrm, boneKey, position, lerpAmount = 0.07) {
-  if (!vrm || !position) return;
-  const boneName = BONE_MAP[boneKey];
-  if (!boneName) return;
-  const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
-  if (!bone) return;
-  bone.position.lerp(new THREE.Vector3(position.x, position.y, position.z), lerpAmount);
+  bone.quaternion.setFromEuler(euler);
 }
 
 function applyPoseToVrm(vrm, pose2D, pose3D, videoEl) {
   if (!vrm || !pose2D) return false;
-  const world = pose3D || mpToWorldApprox(pose2D);
+  vrm.humanoid?.resetNormalizedPose?.();
+
+  const world = pose3D || mpToWorldForKalidokit(pose2D, DEMO_IMAGE_SIZE);
   const solveOpts = { runtime: "mediapipe", enableLegs: true };
-  if (videoEl?.videoWidth > 0) solveOpts.video = videoEl;
-  else solveOpts.imageSize = { width: 640, height: 480 };
+  if (videoEl?.videoWidth > 0) {
+    solveOpts.video = videoEl;
+  } else {
+    solveOpts.imageSize = DEMO_IMAGE_SIZE;
+  }
 
   let rigged;
   try {
@@ -224,14 +240,9 @@ function applyPoseToVrm(vrm, pose2D, pose3D, videoEl) {
   }
   if (!rigged) return false;
 
-  rigRotation(vrm, "Hips", rigged.Hips?.rotation, 0.7);
-  rigPosition(vrm, "Hips", {
-    x: rigged.Hips?.position?.x ?? 0,
-    y: (rigged.Hips?.position?.y ?? 0) + 0.05,
-    z: -(rigged.Hips?.position?.z ?? 0),
-  });
+  rigRotation(vrm, "Hips", rigged.Hips?.rotation, 0.85);
   rigRotation(vrm, "Chest", rigged.Spine, 0.25);
-  rigRotation(vrm, "Spine", rigged.Spine, 0.45);
+  rigRotation(vrm, "Spine", rigged.Spine, 0.5);
   rigRotation(vrm, "RightUpperArm", rigged.RightUpperArm);
   rigRotation(vrm, "RightLowerArm", rigged.RightLowerArm);
   rigRotation(vrm, "LeftUpperArm", rigged.LeftUpperArm);
@@ -240,15 +251,17 @@ function applyPoseToVrm(vrm, pose2D, pose3D, videoEl) {
   rigRotation(vrm, "LeftLowerLeg", rigged.LeftLowerLeg);
   rigRotation(vrm, "RightUpperLeg", rigged.RightUpperLeg);
   rigRotation(vrm, "RightLowerLeg", rigged.RightLowerLeg);
+
+  const hips = vrm.humanoid?.getNormalizedBoneNode?.("hips");
+  if (hips) hips.position.set(0, 0, 0);
   return true;
 }
 
-function applyLmToVrm(vrm, lm, videoEl, { mirror = false, worldRaw = null } = {}) {
-  let mp = lmArrayToMp(lm);
+function applyLmToVrm(vrm, lm, videoEl, { worldRaw = null } = {}) {
+  const mp = lmArrayToMp(lm);
   if (!mp) return false;
-  if (mirror) mp = mirrorMpLandmarks(mp);
   const world =
-    worldRaw && worldRaw.length === 33 ? mirrorWorldLandmarks(worldRaw) : mpToWorldApprox(mp);
+    worldRaw && worldRaw.length === 33 ? lmArrayToMp(worldRaw) : mpToWorldForKalidokit(mp, DEMO_IMAGE_SIZE);
   return applyPoseToVrm(vrm, mp, world, videoEl);
 }
 
@@ -294,8 +307,8 @@ function initThree() {
   const h = wrap?.clientHeight || 480;
 
   vrmState.scene = new THREE.Scene();
-  vrmState.camera = new THREE.PerspectiveCamera(30, w / h, 0.1, 50);
-  vrmState.camera.position.set(0, 1.05, 3.2);
+  vrmState.camera = new THREE.PerspectiveCamera(32, w / h, 0.1, 50);
+  vrmState.camera.position.set(0, 1.0, 3.6);
   vrmState.camera.lookAt(0, 0.95, 0);
 
   vrmState.renderer = new THREE.WebGLRenderer({
@@ -342,16 +355,29 @@ function setViewportFromRect(renderer, rect) {
   renderer.setScissor(x, y, w, h);
 }
 
-function applyRectScale(vrm, rect) {
-  const s = THREE.MathUtils.clamp(rect.dh / REF_VIEWPORT_H, 0.42, 1.85);
-  vrm.scene.scale.setScalar(s);
+function fitVrmToSkeleton(vrm, mp, rect) {
+  const bbox = getNormBBox(mp);
+  const bodyH = Math.max(0.38, bbox?.height ?? 0.62);
+  const bodyCy = bbox?.centerY ?? 0.52;
+  const rectScale = THREE.MathUtils.clamp(rect.dh / REF_VIEWPORT_H, 0.55, 1.9);
+  const scale = THREE.MathUtils.clamp((1.05 / bodyH) * rectScale, 0.75, 2.6);
+  vrm.scene.scale.setScalar(scale);
+  vrm.scene.position.set(0, (0.52 - bodyCy) * scale * 2.4, 0);
 }
 
-function updateCameraForRect(rect) {
+function updateCameraForRect(rect, mp) {
   const cam = vrmState.camera;
-  cam.aspect = rect.dw / Math.max(1, rect.dh);
-  cam.position.set(0, 1.05, 3.2);
-  cam.lookAt(0, 0.95, 0);
+  const bbox = getNormBBox(mp);
+  const bodyH = Math.max(0.38, bbox?.height ?? 0.62);
+  const bodyCy = bbox?.centerY ?? 0.52;
+  const aspect = rect.dw / Math.max(1, rect.dh);
+
+  cam.aspect = aspect;
+  cam.fov = THREE.MathUtils.clamp(34 + (0.62 - bodyH) * 18, 28, 42);
+  const dist = THREE.MathUtils.clamp(3.8 / bodyH, 2.8, 5.2);
+  const lookY = bodyCy * 1.85;
+  cam.position.set(0, lookY + 0.08, dist);
+  cam.lookAt(0, lookY, 0);
   cam.updateProjectionMatrix();
 }
 
@@ -380,7 +406,7 @@ function collectMode2Slots(st, api) {
     if (!rect) continue;
     const lm = firstTraceLandmarks(tr, tScore);
     if (!lm) continue;
-    slots.push({ id, rect, lm, mirror: false, video: null, world: null });
+    slots.push({ id, rect, lm, video: null, world: null });
   }
 
   if (st.latestUserLandmarks) {
@@ -390,7 +416,6 @@ function collectMode2Slots(st, api) {
         id: SKELETON_IDS.m2_user,
         rect,
         lm: st.latestUserLandmarks,
-        mirror: true,
         video: els.video,
         world: st.latestUserWorldLandmarks,
       });
@@ -426,7 +451,7 @@ function collectMode1Slots(st, api) {
     for (const id of demoIds) {
       const rect = getDrawRect(id, defaultRects);
       if (!rect) continue;
-      slots.push({ id, rect, lm: demoLm, mirror: false, video: null, world: null });
+      slots.push({ id, rect, lm: demoLm, video: null, world: null });
     }
   }
 
@@ -437,7 +462,6 @@ function collectMode1Slots(st, api) {
         id: SKELETON_IDS.m1_user,
         rect,
         lm: st.latestUserLandmarks,
-        mirror: true,
         video: els.video,
         world: st.latestUserWorldLandmarks,
       });
@@ -526,18 +550,18 @@ function vrmFrame() {
     const vrm = vrmState.pool.get(slot.id)?.vrm;
     if (!vrm) continue;
 
-    applyLmToVrm(vrm, slot.lm, slot.video, {
-      mirror: slot.mirror,
-      worldRaw: slot.world,
-    });
-    applyRectScale(vrm, slot.rect);
+    const mp = lmArrayToMp(slot.lm);
+    if (!mp) continue;
+
+    applyLmToVrm(vrm, slot.lm, slot.video, { worldRaw: slot.world });
+    fitVrmToSkeleton(vrm, mp, slot.rect);
     vrm.update?.(delta);
 
     for (const [, e] of vrmState.pool) {
       if (e?.vrm?.scene) e.vrm.scene.visible = e.vrm === vrm;
     }
 
-    updateCameraForRect(slot.rect);
+    updateCameraForRect(slot.rect, mp);
     setViewportFromRect(renderer, slot.rect);
     renderer.render(scene, camera);
     drawn += 1;
