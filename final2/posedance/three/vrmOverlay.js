@@ -6,10 +6,10 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
-/** 預設套皮：本地下載的 01.vrm，失敗時依序 fallback */
+/** 預設套皮：CoolTiger.vrm（100Avatars · CC0），失敗時依序 fallback */
 const VRM_URLS = [
+  new URL("./assets/CoolTiger.vrm", import.meta.url).href,
   new URL("./assets/01.vrm", import.meta.url).href,
-  new URL("./assets/dog-avatar.vrm", import.meta.url).href,
   new URL("./assets/avatar-sample.vrm", import.meta.url).href,
 ];
 const VRM_ASSET_BASE = new URL("./assets/", import.meta.url).href;
@@ -289,14 +289,10 @@ async function fetchVrmBuffer() {
           const res = await fetch(url, { cache: "force-cache" });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const buf = await res.arrayBuffer();
-          const label = url.includes("/01.vrm")
-            ? "01.vrm"
-            : url.includes("dog-avatar")
-              ? "dog-avatar.vrm"
-              : "avatar-sample.vrm";
+          const label = new URL(url).pathname.split("/").pop() ?? url;
           console.info(`[VRM] 使用 ${label} 套皮`);
-          if (!url.includes("/01.vrm")) {
-            console.warn(`[VRM] 01.vrm 未找到，改用 ${label}`);
+          if (!label.includes("CoolTiger")) {
+            console.warn(`[VRM] CoolTiger.vrm 未找到，改用 ${label}`);
           }
           vrmState.loadedUrl = url;
           return buf;
