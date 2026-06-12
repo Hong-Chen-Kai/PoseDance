@@ -7,11 +7,11 @@ import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
 /**
- * 預設套皮：WeirdCat（CC0 · 100Avatars R3）
- * https://opensourceavatars.com · Arweave 永久鏈
+ * 預設套皮：DogoBurger（CC0 · 100Avatars R3 · 可愛人形犬）
+ * https://opensourceavatars.com
  */
 const VRM_URLS = [
-  new URL("./assets/blue-cat.vrm", import.meta.url).href,
+  new URL("./assets/dog-avatar.vrm", import.meta.url).href,
   new URL("./assets/avatar-sample.vrm", import.meta.url).href,
 ];
 const VRM_ASSET_BASE = new URL("./assets/", import.meta.url).href;
@@ -291,10 +291,10 @@ async function fetchVrmBuffer() {
           const res = await fetch(url, { cache: "force-cache" });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const buf = await res.arrayBuffer();
-          if (url.includes("blue-cat")) {
-            console.info("[VRM] 使用 WeirdCat 套皮（CC0 · 100Avatars R3）");
+          if (url.includes("dog-avatar")) {
+            console.info("[VRM] 使用 DogoBurger 套皮（CC0 · 100Avatars R3）");
           } else {
-            console.warn("[VRM] blue-cat.vrm 未找到，改用 avatar-sample.vrm");
+            console.warn("[VRM] dog-avatar.vrm 未找到，改用 avatar-sample.vrm");
           }
           vrmState.loadedUrl = url;
           return buf;
