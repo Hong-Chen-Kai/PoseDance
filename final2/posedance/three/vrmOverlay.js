@@ -6,11 +6,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
-/**
- * 預設套皮：DogoBurger（CC0 · 100Avatars R3 · 可愛人形犬）
- * https://opensourceavatars.com
- */
+/** 預設套皮：本地下載的 01.vrm，失敗時依序 fallback */
 const VRM_URLS = [
+  new URL("./assets/01.vrm", import.meta.url).href,
   new URL("./assets/dog-avatar.vrm", import.meta.url).href,
   new URL("./assets/avatar-sample.vrm", import.meta.url).href,
 ];
@@ -291,10 +289,14 @@ async function fetchVrmBuffer() {
           const res = await fetch(url, { cache: "force-cache" });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const buf = await res.arrayBuffer();
-          if (url.includes("dog-avatar")) {
-            console.info("[VRM] 使用 DogoBurger 套皮（CC0 · 100Avatars R3）");
-          } else {
-            console.warn("[VRM] dog-avatar.vrm 未找到，改用 avatar-sample.vrm");
+          const label = url.includes("/01.vrm")
+            ? "01.vrm"
+            : url.includes("dog-avatar")
+              ? "dog-avatar.vrm"
+              : "avatar-sample.vrm";
+          console.info(`[VRM] 使用 ${label} 套皮`);
+          if (!url.includes("/01.vrm")) {
+            console.warn(`[VRM] 01.vrm 未找到，改用 ${label}`);
           }
           vrmState.loadedUrl = url;
           return buf;
