@@ -1,9 +1,11 @@
 /**
  * vrmOverlay.js — 可開關的 VRM 套皮層（Mode 1 / 2，跟隨 getDrawRect）
+ * 姿勢驅動：Kalidokit Pose.solve（MediaPipe 33 點 → VRM Humanoid）
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import { Pose as KalidoPose } from "kalidokit";
 import { getSyntheticLandmarksAtTime } from "../proceduralSkeleton.js";
 
 /** 預設套皮：CoolTiger.vrm（100Avatars · CC0），失敗時依序 fallback */
@@ -14,20 +16,28 @@ const VRM_URLS = [
 ];
 const VRM_ASSET_BASE = new URL("./assets/", import.meta.url).href;
 
-const _VEC3 = {
-  up: new THREE.Vector3(0, 1, 0),
-  leftUpper: new THREE.Vector3(1, 0, 0),
-  rightUpper: new THREE.Vector3(-1, 0, 0),
-  leftLeg: new THREE.Vector3(0, -1, 0),
-  rightLeg: new THREE.Vector3(0, -1, 0),
+/** Kalidokit 輸出骨名 → three-vrm normalized bone 名 */
+const KALIDOKIT_TO_VRM = {
+  Hips: "hips",
+  Spine: "spine",
+  Chest: "chest",
+  Neck: "neck",
+  Head: "head",
+  LeftUpperArm: "leftUpperArm",
+  LeftLowerArm: "leftLowerArm",
+  LeftHand: "leftHand",
+  RightUpperArm: "rightUpperArm",
+  RightLowerArm: "rightLowerArm",
+  RightHand: "rightHand",
+  LeftUpperLeg: "leftUpperLeg",
+  LeftLowerLeg: "leftLowerLeg",
+  RightUpperLeg: "rightUpperLeg",
+  RightLowerLeg: "rightLowerLeg",
 };
+
 const _box = new THREE.Box3();
 const _center = new THREE.Vector3();
 const _size = new THREE.Vector3();
-const _dir = new THREE.Vector3();
-const _dirA = new THREE.Vector3();
-const _dirB = new THREE.Vector3();
-const _quat = new THREE.Quaternion();
 
 const els = {
   canvas: document.getElementById("avatar_canvas"),
@@ -149,135 +159,151 @@ function getLandmarksAtTime(samples, t) {
   return interpolateLandmarks(left.lm, right.lm, alpha);
 }
 
-function lmArrayToMp(lm) {
+function lmPointToMp(p) {
+  if (!p) return { x: 0, y: 0, z: 0, visibility: 0 };
+  if (typeof p.x === "number") {
+    return {
+      x: p.x,
+      y: p.y,
+      z: p.z ?? 0,
+      visibility: p.visibility ?? 1,
+    };
+  }
+  const [x, y, z, v] = p;
+  return { x, y, z: z ?? 0, visibility: v ?? 1 };
+}
+
+/** 統一為 MediaPipe 影像座標格式（0–1，Kalidokit lm2d） */
+function lmToMp2d(lm) {
   if (!lm || lm.length !== 33) return null;
-  if (typeof lm[0]?.x === "number") return lm;
-  return lm.map((p) => {
-    if (!p) return { x: 0, y: 0, z: 0, visibility: 0 };
-    const [x, y, z, v] = p;
-    return { x, y, z: z ?? 0, visibility: v ?? 1 };
+  return lm.map(lmPointToMp);
+}
+
+function applyPoseOffsetToMp(mp, offset) {
+  if (!mp || !offset || typeof offset.dx !== "number" || typeof offset.dy !== "number") {
+    return mp;
+  }
+  return mp.map((p) => {
+    if (!p) return p;
+    return { ...p, x: p.x + offset.dx, y: p.y + offset.dy };
   });
 }
 
-function mpPoint(mp, index) {
-  const p = mp[index];
-  if (!p || (p.visibility ?? 1) < 0.35) return null;
-  return p;
+/**
+ * 預錄 trace 無 worldLandmarks 時，由影像座標推估 pseudo-world（Kalidokit lm3d）
+ * 以髖中心為原點、Y 軸朝上，供 calcArms / calcLegs / calcHips 使用。
+ */
+function mp2dToPseudoWorld(mp2d) {
+  if (!mp2d || mp2d.length !== 33) return null;
+  const hipL = mp2d[23];
+  const hipR = mp2d[24];
+  if (!hipL || !hipR) return mp2d;
+
+  const cx = (hipL.x + hipR.x) * 0.5;
+  const cy = (hipL.y + hipR.y) * 0.5;
+  const cz = ((hipL.z ?? 0) + (hipR.z ?? 0)) * 0.5;
+  const scale = 2;
+
+  return mp2d.map((p) => {
+    if (!p) return p;
+    return {
+      x: (p.x - cx) * scale,
+      y: -(p.y - cy) * scale,
+      z: -((p.z ?? 0) - cz) * scale,
+      visibility: p.visibility ?? 1,
+    };
+  });
 }
 
-function segDirInto(target, a, b) {
-  target.set(
-    b.x - a.x,
-    -(b.y - a.y),
-    -((b.z ?? 0) - (a.z ?? 0)),
+function worldLmToMp3d(world) {
+  if (!world || world.length !== 33) return null;
+  return world.map(lmPointToMp);
+}
+
+function getKalidokitSolveOptions(slot) {
+  const video = slot?.video;
+  if (video?.videoWidth > 0 && video?.videoHeight > 0) {
+    return { runtime: "mediapipe", video, enableLegs: true };
+  }
+  // 預錄 trace / demo：landmark 已是 0–1 正規化
+  return { runtime: "mediapipe", imageSize: { width: 1, height: 1 }, enableLegs: true };
+}
+
+function solveKalidokitPose(mp2d, mp3d, solveOptions) {
+  if (!mp2d || mp2d.length !== 33) return null;
+  const lm3d = mp3d?.length === 33 ? mp3d : mp2dToPseudoWorld(mp2d);
+  if (!lm3d) return null;
+  try {
+    return KalidoPose.solve(lm3d, mp2d, solveOptions);
+  } catch (e) {
+    console.warn("[VRM] Kalidokit Pose.solve 失敗", e);
+    return null;
+  }
+}
+
+function rigKalidokitRotation(vrm, kalidoName, rotation, dampener = 1) {
+  const boneName = KALIDOKIT_TO_VRM[kalidoName];
+  if (!boneName || !rotation) return;
+  const bone = vrm.humanoid?.getNormalizedBoneNode?.(boneName);
+  if (!bone) return;
+  bone.rotation.set(
+    (rotation.x ?? 0) * dampener,
+    (rotation.y ?? 0) * dampener,
+    (rotation.z ?? 0) * dampener,
   );
-  const len = target.length();
-  if (len < 1e-6) return false;
-  target.divideScalar(len);
-  return true;
 }
 
-function aimBone(bone, from, to, restDir) {
-  if (!bone || !from || !to) return;
-  if (!segDirInto(_dir, from, to)) return;
-  _quat.setFromUnitVectors(restDir, _dir);
-  bone.quaternion.copy(_quat);
+function rigKalidokitHips(vrm, hips) {
+  const bone = vrm.humanoid?.getNormalizedBoneNode?.("hips");
+  if (!bone || !hips) return;
+  if (hips.rotation) {
+    rigKalidokitRotation(vrm, "Hips", hips.rotation, 0.7);
+  }
+  if (hips.position) {
+    bone.position.set(
+      hips.position.x ?? 0,
+      (hips.position.y ?? 0) + 0.05,
+      -(hips.position.z ?? 0),
+    );
+  }
 }
 
-function bendBone(bone, joint, tip, root) {
-  if (!bone || !joint || !tip || !root) return;
-  if (!segDirInto(_dirA, root, joint)) return;
-  if (!segDirInto(_dirB, joint, tip)) return;
-  const bend = Math.acos(THREE.MathUtils.clamp(_dirA.dot(_dirB), -1, 1));
-  bone.rotation.set(bend, 0, 0);
-}
+/** Kalidokit 輸出 → VRM normalized bones（與官方 demo 相同骨名對應） */
+function applyKalidokitPoseToVrm(vrm, rigged) {
+  if (!vrm?.humanoid || !rigged) return false;
 
-/** 2D 骨架同源的 limb 驅動（與 overlay 畫線用同一套 landmark） */
-function applySkeletonMatchPose(vrm, mp) {
-  if (!vrm || !mp) return false;
-  vrm.humanoid?.resetNormalizedPose?.();
+  vrm.humanoid.resetNormalizedPose?.();
   vrm.scene.position.set(0, 0, 0);
   vrm.scene.scale.setScalar(1);
 
-  const hipL = mpPoint(mp, 23);
-  const hipR = mpPoint(mp, 24);
-  const shL = mpPoint(mp, 11);
-  const shR = mpPoint(mp, 12);
-  const hipMid =
-    hipL && hipR
-      ? { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2, z: ((hipL.z ?? 0) + (hipR.z ?? 0)) / 2 }
-      : null;
-  const shMid =
-    shL && shR
-      ? { x: (shL.x + shR.x) / 2, y: (shL.y + shR.y) / 2, z: ((shL.z ?? 0) + (shR.z ?? 0)) / 2 }
-      : null;
+  rigKalidokitHips(vrm, rigged.Hips);
+  rigKalidokitRotation(vrm, "Spine", rigged.Spine, 0.45);
 
-  const hips = vrm.humanoid?.getNormalizedBoneNode?.("hips");
-  const spine = vrm.humanoid?.getNormalizedBoneNode?.("spine");
-  const chest = vrm.humanoid?.getNormalizedBoneNode?.("chest");
-  if (hipMid && shMid) {
-    aimBone(spine, hipMid, shMid, _VEC3.up);
-    aimBone(chest, hipMid, shMid, _VEC3.up);
-    if (hips) hips.rotation.set(0, 0, 0);
-  }
+  rigKalidokitRotation(vrm, "RightUpperArm", rigged.RightUpperArm, 1);
+  rigKalidokitRotation(vrm, "RightLowerArm", rigged.RightLowerArm, 1);
+  rigKalidokitRotation(vrm, "LeftUpperArm", rigged.LeftUpperArm, 1);
+  rigKalidokitRotation(vrm, "LeftLowerArm", rigged.LeftLowerArm, 1);
+  rigKalidokitRotation(vrm, "RightHand", rigged.RightHand, 1);
+  rigKalidokitRotation(vrm, "LeftHand", rigged.LeftHand, 1);
 
-  aimBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("leftUpperArm"),
-    mpPoint(mp, 11),
-    mpPoint(mp, 13),
-    _VEC3.leftUpper,
-  );
-  bendBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("leftLowerArm"),
-    mpPoint(mp, 13),
-    mpPoint(mp, 15),
-    mpPoint(mp, 11),
-  );
-  aimBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("rightUpperArm"),
-    mpPoint(mp, 12),
-    mpPoint(mp, 14),
-    _VEC3.rightUpper,
-  );
-  bendBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("rightLowerArm"),
-    mpPoint(mp, 14),
-    mpPoint(mp, 16),
-    mpPoint(mp, 12),
-  );
-  aimBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("leftUpperLeg"),
-    mpPoint(mp, 23),
-    mpPoint(mp, 25),
-    _VEC3.leftLeg,
-  );
-  bendBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("leftLowerLeg"),
-    mpPoint(mp, 25),
-    mpPoint(mp, 27),
-    mpPoint(mp, 23),
-  );
-  aimBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("rightUpperLeg"),
-    mpPoint(mp, 24),
-    mpPoint(mp, 26),
-    _VEC3.rightLeg,
-  );
-  bendBone(
-    vrm.humanoid?.getNormalizedBoneNode?.("rightLowerLeg"),
-    mpPoint(mp, 26),
-    mpPoint(mp, 28),
-    mpPoint(mp, 24),
-  );
+  rigKalidokitRotation(vrm, "RightUpperLeg", rigged.RightUpperLeg, 1);
+  rigKalidokitRotation(vrm, "RightLowerLeg", rigged.RightLowerLeg, 1);
+  rigKalidokitRotation(vrm, "LeftUpperLeg", rigged.LeftUpperLeg, 1);
+  rigKalidokitRotation(vrm, "LeftLowerLeg", rigged.LeftLowerLeg, 1);
 
-  if (hips) hips.position.set(0, 0, 0);
   return true;
 }
 
-function applyLmToVrm(vrm, lm) {
-  const mp = lmArrayToMp(lm);
-  if (!mp) return false;
-  return applySkeletonMatchPose(vrm, mp);
+function applyLmToVrm(vrm, lm, worldLm, solveOptions, poseOffset) {
+  let mp2d = lmToMp2d(lm);
+  if (!mp2d) return false;
+  mp2d = applyPoseOffsetToMp(mp2d, poseOffset);
+  // 有拖曳 offset 時改由 offset 後的 2D 推估 3D，避免 2D/3D 不一致
+  const mp3d =
+    poseOffset != null ? null : worldLm ? worldLmToMp3d(worldLm) : null;
+  const rigged = solveKalidokitPose(mp2d, mp3d, solveOptions);
+  if (!rigged) return false;
+  return applyKalidokitPoseToVrm(vrm, rigged);
 }
 
 async function fetchVrmBuffer() {
@@ -290,7 +316,7 @@ async function fetchVrmBuffer() {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const buf = await res.arrayBuffer();
           const label = new URL(url).pathname.split("/").pop() ?? url;
-          console.info(`[VRM] 使用 ${label} 套皮`);
+          console.info(`[VRM] 使用 ${label} 套皮（Kalidokit 驅動）`);
           if (!label.includes("CoolTiger")) {
             console.warn(`[VRM] CoolTiger.vrm 未找到，改用 ${label}`);
           }
@@ -583,7 +609,15 @@ function vrmFrame() {
     const vrm = vrmState.pool.get(slot.id)?.vrm;
     if (!vrm) continue;
 
-    applyLmToVrm(vrm, slot.lm);
+    const poseOffset = st.interact?.poseOffsets?.[slot.id] ?? null;
+    const posed = applyLmToVrm(
+      vrm,
+      slot.lm,
+      slot.world,
+      getKalidokitSolveOptions(slot),
+      poseOffset,
+    );
+    if (!posed) continue;
     vrm.update?.(delta);
 
     for (const [, e] of vrmState.pool) {
