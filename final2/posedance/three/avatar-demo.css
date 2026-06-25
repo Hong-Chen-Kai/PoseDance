@@ -1,0 +1,48 @@
+/* 頂欄：單列按鈕（無標題列） */
+.topbar--single-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+}
+
+.topbar--single-row .topbar__controls {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.topbar--single-row .topbar__controls-group {
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.topbar--single-row .topbar__controls-group--left {
+  justify-content: flex-start;
+}
+
+.topbar--single-row .topbar__url-input--compact {
+  flex: 0 1 200px;
+  min-width: 140px;
+}
+
+/* 透明 WebGL 疊在 overlay 上方，跟隨各骨架 getDrawRect */
+.vrm-overlay-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 12;
+  pointer-events: none;
+  transform: scaleX(-1);
+  background: transparent;
+}
+
+.vrm-overlay-canvas[hidden] {
+  display: none !important;
+}
+
+.btn-vrm-on {
+  background: #0369a1 !important;
+  border-color: #0ea5e9 !important;
+}
