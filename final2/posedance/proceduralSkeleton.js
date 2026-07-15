@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "planted-feet-5";
+export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-v1";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -610,40 +610,67 @@ function applySimpleZ(lm, elbowIdx, wristIdx, fingerIdxs, shoulder, wrist, L1, L
   }
 }
 
-// ─── Pattern 定義 ────────────────────────────────────────────
+// ─── Pattern 定義（刪減後 9 個；全部進同一隨機／Mix 池）────────
 // upper: 90=垂下, 越小越舉高；forearm 與 upper 差≈肘屈
+//
+// 目錄：
+//   sway      | 左右輕搖   | 左右輪流小幅抬手     | 交替
+//   wave      | 左右揮手   | 半段左、半段右揮手   | 分段
+//   disco     | 輪流指向   | 輪流高舉彎肘指向     | 交替
+//   reach     | 左右伸展   | 輪流直臂上伸再收回   | 分段
+//   surrender | 雙手投降舉 | 雙手過頭彎肘同舉     | 對稱
+//   pump      | 反相泵動   | 左右反相上下快泵     | 反相
+//   armwave   | 手臂波浪   | 水平手臂波浪傳遞     | 對稱（另有 modulate）
+//   toyman    | 機械手臂   | 階梯直角機械動作     | 交替（另有 snap）
+//   clap      | 胸前拍手   | 雙手胸前合開         | 對稱
 const PATTERNS = {
   sway: {
-    name: "左右搖擺",
+    name: "左右輕搖",
     beats: 8,
     left_upper:    [90, 55, 35, 55, 90, 105, 115, 105],
     left_forearm:  [108, 118, 128, 118, 108, 125, 135, 125],
     right_upper:   [90, 105, 115, 105, 90, 55, 35, 55],
     right_forearm: [108, 125, 135, 125, 108, 118, 128, 118],
   },
-  raise: {
-    name: "雙手舉起",
+  wave: {
+    name: "左右揮手",
     beats: 8,
-    left_upper:    [90, 45, 10, -25, -25, 10, 45, 90],
-    left_forearm:  [112, 135, 160, 175, 175, 160, 135, 112],
-    right_upper:   [90, 45, 10, -25, -25, 10, 45, 90],
-    right_forearm: [112, 135, 160, 175, 175, 160, 135, 112],
+    left_upper:    [90, 35, 5, 35, 90, 90, 90, 90],
+    left_forearm:  [112, 140, 160, 140, 112, 112, 112, 112],
+    right_upper:   [90, 90, 90, 90, 90, 35, 5, 35],
+    right_forearm: [112, 112, 112, 112, 112, 140, 160, 140],
+  },
+  disco: {
+    name: "輪流指向",
+    beats: 8,
+    left_upper:    [90, 25, 5, 25, 90, 60, 30, 90],
+    left_forearm:  [112, 130, 145, 130, 112, 125, 140, 112],
+    right_upper:   [90, 60, 30, 90, 90, 25, 5, 25],
+    right_forearm: [112, 125, 140, 112, 112, 130, 145, 130],
+  },
+  reach: {
+    name: "左右伸展",
+    beats: 8,
+    left_upper:    [90, 30, 0, 0, 30, 90, 90, 90],
+    left_forearm:  [108, 105, 102, 102, 105, 108, 108, 108],
+    right_upper:   [90, 90, 90, 30, 0, 0, 30, 90],
+    right_forearm: [108, 108, 108, 105, 102, 102, 105, 108],
   },
   surrender: {
-    name: "投降舉手",
+    name: "雙手投降舉",
     beats: 8,
     left_upper:    [90, 35, 5, -20, -20, 5, 35, 90],
     left_forearm:  [120, 155, 185, 195, 195, 185, 155, 120],
     right_upper:   [90, 35, 5, -20, -20, 5, 35, 90],
     right_forearm: [120, 155, 185, 195, 195, 185, 155, 120],
   },
-  wave: {
-    name: "側向擺手",
+  pump: {
+    name: "反相泵動",
     beats: 8,
-    left_upper:    [90, 35, 5, 35, 90, 90, 90, 90],
-    left_forearm:  [112, 140, 160, 140, 112, 112, 112, 112],
-    right_upper:   [90, 90, 90, 90, 90, 35, 5, 35],
-    right_forearm: [112, 112, 112, 112, 112, 140, 160, 140],
+    left_upper:    [90, 20, 90, 20, 90, 20, 90, 20],
+    left_forearm:  [112, 125, 112, 125, 112, 125, 112, 125],
+    right_upper:   [20, 90, 20, 90, 20, 90, 20, 90],
+    right_forearm: [125, 112, 125, 112, 125, 112, 125, 112],
   },
   armwave: {
     name: "手臂波浪",
@@ -655,7 +682,7 @@ const PATTERNS = {
     right_forearm: [98, 108, 118, 122, 118, 108, 98, 94],
   },
   toyman: {
-    name: "Toyman機械",
+    name: "機械手臂",
     beats: 8,
     left_upper:    [90, 0, 0, 90, 0, 0, 90, 20],
     left_forearm:  [105, 90, 90, 105, 90, 90, 105, 110],
@@ -663,64 +690,19 @@ const PATTERNS = {
     right_forearm: [105, 105, 90, 90, 105, 105, 90, 110],
   },
   clap: {
-    name: "拍手",
+    name: "胸前拍手",
     beats: 8,
     left_upper:    [88, 55, 62, 88, 88, 55, 62, 88],
     left_forearm:  [125, 155, 148, 125, 125, 155, 148, 125],
     right_upper:   [88, 55, 62, 88, 88, 55, 62, 88],
     right_forearm: [125, 155, 148, 125, 125, 155, 148, 125],
   },
-  groove: {
-    name: "律動搖擺",
-    beats: 8,
-    left_upper:    [90, 70, 50, 70, 95, 110, 120, 110],
-    left_forearm:  [112, 125, 138, 125, 112, 120, 128, 120],
-    right_upper:   [95, 110, 120, 110, 90, 70, 50, 70],
-    right_forearm: [112, 120, 128, 120, 112, 125, 138, 125],
-  },
-  pump: {
-    name: "上下泵動",
-    beats: 8,
-    left_upper:    [90, 20, 90, 20, 90, 20, 90, 20],
-    left_forearm:  [112, 125, 112, 125, 112, 125, 112, 125],
-    right_upper:   [20, 90, 20, 90, 20, 90, 20, 90],
-    right_forearm: [125, 112, 125, 112, 125, 112, 125, 112],
-  },
-  reach: {
-    name: "伸展收回",
-    beats: 8,
-    left_upper:    [90, 30, 0, 0, 30, 90, 90, 90],
-    left_forearm:  [108, 105, 102, 102, 105, 108, 108, 108],
-    right_upper:   [90, 90, 90, 30, 0, 0, 30, 90],
-    right_forearm: [108, 108, 108, 105, 102, 102, 105, 108],
-  },
-  twist: {
-    name: "扭轉交替",
-    beats: 8,
-    left_upper:    [88, 45, 15, 45, 100, 115, 108, 100],
-    left_forearm:  [112, 128, 140, 128, 118, 135, 130, 118],
-    right_upper:   [100, 115, 108, 100, 88, 45, 15, 45],
-    right_forearm: [118, 135, 130, 118, 112, 128, 140, 128],
-  },
-  disco: {
-    name: "迪斯科指向",
-    beats: 8,
-    left_upper:    [90, 25, 5, 25, 90, 60, 30, 90],
-    left_forearm:  [112, 130, 145, 130, 112, 125, 140, 112],
-    right_upper:   [90, 60, 30, 90, 90, 25, 5, 25],
-    right_forearm: [112, 125, 140, 112, 112, 130, 145, 130],
-  },
 };
 
+/** Mix／隨機池順序（固定輪巡與 UI 下拉共用） */
 const PATTERN_KEYS = Object.keys(PATTERNS);
 
-// ─── 風格子集 ────────────────────────────────────────────────
-const STYLE_POOLS = {
-  energetic: ["raise", "surrender", "armwave", "toyman", "pump", "disco", "reach"],
-  chill:     ["sway", "groove", "twist", "surrender", "wave"],
-  popping:   ["toyman", "armwave", "pump", "disco"],
-  mixed:     PATTERN_KEYS,
-};
+/** @typedef {'random' | 'mix' | string} PatternMode — random／mix／或單一 pattern key */
 
 // ─── ProceduralSkeleton 主類 ─────────────────────────────────
 export class ProceduralSkeleton {
@@ -729,10 +711,17 @@ export class ProceduralSkeleton {
     seed = null,
     amplitudeScale = 1.0,
     phaseOffsetBeats = 0,
-    style = "mixed",
     rhythmMul = 1.0,
-    /** @type {GrooveMode} 預設僅 Swing（上身），不帶 Bounce 腳 */
+    /** @type {GrooveMode} */
     grooveMode = GROOVE_MODES.SWING,
+    /**
+     * 動作編排：
+     * - random：同池隨機（避免連續重複）
+     * - mix：依 PATTERN_KEYS 固定輪巡九個
+     * - 其他：鎖定該 pattern key（檢視用）
+     * @type {PatternMode}
+     */
+    patternMode = "random",
   } = {}) {
     this.bpm = bpm;
     this.beatSec = (60 / bpm) * rhythmMul;
@@ -740,11 +729,23 @@ export class ProceduralSkeleton {
     this.amplitudeScale = clamp(amplitudeScale, 0.4, 1.6);
     this.phaseOffsetBeats = phaseOffsetBeats;
     this.rhythmMul = rhythmMul;
-    this.style = style;
     this.grooveMode = Object.values(GROOVE_MODES).includes(grooveMode)
       ? grooveMode
       : GROOVE_MODES.SWING;
-    this._patternPool = STYLE_POOLS[style] || PATTERN_KEYS;
+
+    const mode = String(patternMode || "random");
+    if (mode === "random" || mode === "mix") {
+      this.patternMode = mode;
+      this._lockedPattern = null;
+    } else if (PATTERNS[mode]) {
+      this.patternMode = "lock";
+      this._lockedPattern = mode;
+    } else {
+      this.patternMode = "random";
+      this._lockedPattern = null;
+    }
+    this._patternPool = PATTERN_KEYS;
+    this._mixIndex = 0;
 
     this._schedule = [];
     this._scheduleBuiltUpToBeat = -1;
@@ -782,6 +783,15 @@ export class ProceduralSkeleton {
   }
 
   _pickPattern() {
+    if (this.patternMode === "lock" && this._lockedPattern) {
+      return this._lockedPattern;
+    }
+    if (this.patternMode === "mix") {
+      const pick = this._patternPool[this._mixIndex % this._patternPool.length];
+      this._mixIndex += 1;
+      return pick;
+    }
+    // random：同一池抽卡，避免連續重複
     const pool = this._patternPool;
     const last = this._schedule.length > 0
       ? this._schedule[this._schedule.length - 1].pattern
@@ -984,17 +994,31 @@ export class ProceduralSkeleton {
   }
 }
 
-// ─── 自動遞增差異預設 ────────────────────────────────────────
+// ─── 自動遞增差異預設（同一動作池；差異靠幅度／相位／節奏）──
+// 數值精细调另案；此處先維持可用差異，不再用 style 分流動作池
 const VARIATION_PRESETS = [
-  { amplitudeScale: 1.0, phaseOffsetBeats: 0,   style: "mixed",     rhythmMul: 1.0 },
-  { amplitudeScale: 0.7, phaseOffsetBeats: 1.5, style: "chill",     rhythmMul: 1.0 },
-  { amplitudeScale: 1.3, phaseOffsetBeats: 0.5, style: "energetic", rhythmMul: 1.0 },
-  { amplitudeScale: 1.2, phaseOffsetBeats: 0.25, style: "popping",  rhythmMul: 1.0 },
-  { amplitudeScale: 0.9, phaseOffsetBeats: 2.0, style: "chill",     rhythmMul: 2.0 },
-  { amplitudeScale: 1.1, phaseOffsetBeats: 1.0, style: "energetic", rhythmMul: 0.5 },
+  { amplitudeScale: 1.0, phaseOffsetBeats: 0,    rhythmMul: 1.0 },
+  { amplitudeScale: 0.7, phaseOffsetBeats: 1.5,  rhythmMul: 1.0 },
+  { amplitudeScale: 1.3, phaseOffsetBeats: 0.5,  rhythmMul: 1.0 },
+  { amplitudeScale: 1.2, phaseOffsetBeats: 0.25, rhythmMul: 1.0 },
+  { amplitudeScale: 0.9, phaseOffsetBeats: 2.0,  rhythmMul: 2.0 },
+  { amplitudeScale: 1.1, phaseOffsetBeats: 1.0,  rhythmMul: 0.5 },
 ];
 
 let _synthCounter = 0;
+
+function patternModeLabel(patternMode) {
+  if (patternMode === "random") return "";
+  if (patternMode === "mix") return " ·Mix";
+  if (PATTERNS[patternMode]) return ` ·${PATTERNS[patternMode].name}`;
+  return "";
+}
+
+function grooveModeLabel(grooveMode) {
+  if (grooveMode === GROOVE_MODES.BOTH) return " ·swing + bounce";
+  if (grooveMode === GROOVE_MODES.BOUNCE) return " ·bounce";
+  return "";
+}
 
 // ─── 便利方法：建立一個 synthetic trace 物件 ──────────────────
 export function createSyntheticTrace({
@@ -1002,30 +1026,39 @@ export function createSyntheticTrace({
   name = null,
   seed = null,
   grooveMode = GROOVE_MODES.SWING,
+  /** @type {PatternMode} */
+  patternMode = "random",
 } = {}) {
   const idx = _synthCounter++;
 
   let preset;
   if (idx < VARIATION_PRESETS.length) {
-    preset = VARIATION_PRESETS[idx];
+    preset = { ...VARIATION_PRESETS[idx] };
   } else {
     preset = {
       amplitudeScale: 0.6 + Math.random() * 0.8,
       phaseOffsetBeats: Math.random() * 3,
-      style: ["mixed", "energetic", "chill", "popping"][Math.floor(Math.random() * 4)],
       rhythmMul: [0.5, 1.0, 1.0, 2.0][Math.floor(Math.random() * 4)],
     };
   }
 
-  const skeleton = new ProceduralSkeleton({ bpm, seed, ...preset, grooveMode });
-  const styleTag = preset.style === "mixed" ? "" : ` [${preset.style}]`;
-  const grooveTag = grooveMode === GROOVE_MODES.SWING ? "" : ` ·${grooveMode}`;
+  const skeleton = new ProceduralSkeleton({
+    bpm,
+    seed,
+    ...preset,
+    grooveMode,
+    patternMode,
+  });
+  const modeTag = patternModeLabel(patternMode);
+  const grooveTag = grooveModeLabel(grooveMode);
   return {
     id: `synth_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
-    name: name || `舞者 #${idx + 1}${styleTag}${grooveTag} (${bpm} BPM)`,
+    name: name || `舞者 #${idx + 1}${modeTag}${grooveTag} (${bpm} BPM)`,
     synthetic: true,
     enabled: true,
     bpm,
+    patternMode,
+    grooveMode,
     _skeleton: skeleton,
   };
 }

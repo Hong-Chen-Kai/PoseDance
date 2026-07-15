@@ -371,3 +371,11 @@
   cursor: pointer;
 }
 
+.topbar__pattern-select {
+  width: auto;
+  min-width: 10.5em;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
