@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-v1";
+export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-v2-keep4";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -240,49 +240,8 @@ function solveArmAnatomical(shoulder, L1, L2, intent, side, prevForearmAngle) {
 
 function springHalfLifeForPattern(patternName, beatSec) {
   const base = Math.min(SPRING_HALF_LIFE_MAX, beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
-  if (patternName === "toyman") return Math.min(0.07, base);
-  if (patternName === "armwave") return Math.min(0.2, base * 1.35);
-  if (patternName === "pump" || patternName === "disco") return Math.min(0.13, base);
+  if (patternName === "pump") return Math.min(0.13, base);
   return base;
-}
-
-function modulateToymanIntent(intent) {
-  const snap = (v, step) => Math.round(v / step) * step;
-  return {
-    elevation: clamp(snap(intent.elevation, 45), 0, 165),
-    sweep: clamp(snap(intent.sweep, 30), -80, 80),
-    elbowFlex: clamp(snap(intent.elbowFlex, 45), 30, 135),
-    humeralRot: clamp(snap(intent.humeralRot, 20), HUMERAL_ROT_MIN, HUMERAL_ROT_MAX),
-  };
-}
-
-/** 波浪沿肩→肘→手傳遞（相位遞延，幅度柔和） */
-function wavePhase(localBeatFloat, delayBeats, side) {
-  const p = (localBeatFloat / 8 - delayBeats) * Math.PI * 2 + side * 0.35;
-  return Math.sin(p);
-}
-
-function modulateArmWaveIntent(intent, localBeatFloat, side) {
-  const wShoulder = wavePhase(localBeatFloat, 0, side);
-  const wElbow = wavePhase(localBeatFloat, 0.32, side);
-  const wHand = wavePhase(localBeatFloat, 0.62, side);
-  return {
-    elevation: clamp(intent.elevation + 9 * wShoulder, 0, 165),
-    sweep: clamp(intent.sweep + 5 * wShoulder, -80, 80),
-    elbowFlex: clamp(intent.elbowFlex + 16 * wElbow, ELBOW_FLEX_MIN, ELBOW_FLEX_MAX),
-    humeralRot: clamp(intent.humeralRot + 7 * wHand, HUMERAL_ROT_MIN, HUMERAL_ROT_MAX),
-  };
-}
-
-/** 手部節點波浪：pinky → index → thumb 依序起伏（不改手腕–肘長度） */
-function applyHandWaveChain(lm, wristIdx, fingerIdxs, localBeatFloat, side) {
-  const ampY = 0.014;
-  const ampX = 0.009;
-  fingerIdxs.forEach((fi, i) => {
-    const w = wavePhase(localBeatFloat, 0.62 + i * 0.14, side);
-    lm[fi][0] += ampX * w * side;
-    lm[fi][1] += ampY * w;
-  });
 }
 
 function criticalDampedSpring1D(state, key, vKey, target, halfLife, dt) {
@@ -610,28 +569,16 @@ function applySimpleZ(lm, elbowIdx, wristIdx, fingerIdxs, shoulder, wrist, L1, L
   }
 }
 
-// ─── Pattern 定義（刪減後 9 個；全部進同一隨機／Mix 池）────────
+// ─── Pattern 定義（刪減後 4 個；全部進同一隨機／Mix 池）────────
 // upper: 90=垂下, 越小越舉高；forearm 與 upper 差≈肘屈
+// 已刪：sway／disco／reach（與 wave 撞臉）、armwave／toyman（實測失敗）
 //
 // 目錄：
-//   sway      | 左右輕搖   | 左右輪流小幅抬手     | 交替
 //   wave      | 左右揮手   | 半段左、半段右揮手   | 分段
-//   disco     | 輪流指向   | 輪流高舉彎肘指向     | 交替
-//   reach     | 左右伸展   | 輪流直臂上伸再收回   | 分段
 //   surrender | 雙手投降舉 | 雙手過頭彎肘同舉     | 對稱
 //   pump      | 反相泵動   | 左右反相上下快泵     | 反相
-//   armwave   | 手臂波浪   | 水平手臂波浪傳遞     | 對稱（另有 modulate）
-//   toyman    | 機械手臂   | 階梯直角機械動作     | 交替（另有 snap）
 //   clap      | 胸前拍手   | 雙手胸前合開         | 對稱
 const PATTERNS = {
-  sway: {
-    name: "左右輕搖",
-    beats: 8,
-    left_upper:    [90, 55, 35, 55, 90, 105, 115, 105],
-    left_forearm:  [108, 118, 128, 118, 108, 125, 135, 125],
-    right_upper:   [90, 105, 115, 105, 90, 55, 35, 55],
-    right_forearm: [108, 125, 135, 125, 108, 118, 128, 118],
-  },
   wave: {
     name: "左右揮手",
     beats: 8,
@@ -639,22 +586,6 @@ const PATTERNS = {
     left_forearm:  [112, 140, 160, 140, 112, 112, 112, 112],
     right_upper:   [90, 90, 90, 90, 90, 35, 5, 35],
     right_forearm: [112, 112, 112, 112, 112, 140, 160, 140],
-  },
-  disco: {
-    name: "輪流指向",
-    beats: 8,
-    left_upper:    [90, 25, 5, 25, 90, 60, 30, 90],
-    left_forearm:  [112, 130, 145, 130, 112, 125, 140, 112],
-    right_upper:   [90, 60, 30, 90, 90, 25, 5, 25],
-    right_forearm: [112, 125, 140, 112, 112, 130, 145, 130],
-  },
-  reach: {
-    name: "左右伸展",
-    beats: 8,
-    left_upper:    [90, 30, 0, 0, 30, 90, 90, 90],
-    left_forearm:  [108, 105, 102, 102, 105, 108, 108, 108],
-    right_upper:   [90, 90, 90, 30, 0, 0, 30, 90],
-    right_forearm: [108, 108, 108, 105, 102, 102, 105, 108],
   },
   surrender: {
     name: "雙手投降舉",
@@ -671,23 +602,6 @@ const PATTERNS = {
     left_forearm:  [112, 125, 112, 125, 112, 125, 112, 125],
     right_upper:   [20, 90, 20, 90, 20, 90, 20, 90],
     right_forearm: [125, 112, 125, 112, 125, 112, 125, 112],
-  },
-  armwave: {
-    name: "手臂波浪",
-    beats: 8,
-    // 肩先抬至水平，肘屈延後一拍，形成肩→肘→手的波浪 keyframe
-    left_upper:    [90, 58, 42, 38, 38, 42, 58, 90],
-    left_forearm:  [94, 98, 108, 118, 122, 118, 108, 98],
-    right_upper:   [90, 58, 42, 38, 38, 42, 58, 90],
-    right_forearm: [98, 108, 118, 122, 118, 108, 98, 94],
-  },
-  toyman: {
-    name: "機械手臂",
-    beats: 8,
-    left_upper:    [90, 0, 0, 90, 0, 0, 90, 20],
-    left_forearm:  [105, 90, 90, 105, 90, 90, 105, 110],
-    right_upper:   [90, 90, 0, 0, 90, 90, 0, 20],
-    right_forearm: [105, 105, 90, 90, 105, 105, 90, 110],
   },
   clap: {
     name: "胸前拍手",
@@ -717,7 +631,7 @@ export class ProceduralSkeleton {
     /**
      * 動作編排：
      * - random：同池隨機（避免連續重複）
-     * - mix：依 PATTERN_KEYS 固定輪巡九個
+     * - mix：依 PATTERN_KEYS 固定輪巡四個
      * - 其他：鎖定該 pattern key（檢視用）
      * @type {PatternMode}
      */
@@ -868,7 +782,6 @@ export class ProceduralSkeleton {
     const entry = this._getPatternAtBeat(beatIndex);
     const raw = this._sampleArmAngles(beatFloat, entry);
     const patName = entry.pattern;
-    const localBeatFloat = beatFloat - entry.beatStart;
 
     const amp = this.amplitudeScale;
     const luDeg = 90 + (raw.lu - 90) * amp;
@@ -876,21 +789,13 @@ export class ProceduralSkeleton {
     const lfDeg = 90 + (raw.lf - 90) * amp;
     const rfDeg = 90 + (raw.rf - 90) * amp;
 
-    const noiseScale = patName === "armwave" ? 0.35 : 1;
-    const noiseLu = NOISE_SCALE_DEG * noiseScale * perlin1d(t * 1.7);
-    const noiseLf = NOISE_SCALE_DEG * noiseScale * perlin1d(t * 2.3 + 100);
-    const noiseRu = NOISE_SCALE_DEG * noiseScale * perlin1d(t * 1.9 + 200);
-    const noiseRf = NOISE_SCALE_DEG * noiseScale * perlin1d(t * 2.1 + 300);
+    const noiseLu = NOISE_SCALE_DEG * perlin1d(t * 1.7);
+    const noiseLf = NOISE_SCALE_DEG * perlin1d(t * 2.3 + 100);
+    const noiseRu = NOISE_SCALE_DEG * perlin1d(t * 1.9 + 200);
+    const noiseRf = NOISE_SCALE_DEG * perlin1d(t * 2.1 + 300);
 
-    let intentL = patternToArmIntent(luDeg + noiseLu, lfDeg + noiseLf);
-    let intentR = patternToArmIntent(ruDeg + noiseRu, rfDeg + noiseRf);
-    if (patName === "armwave") {
-      intentL = modulateArmWaveIntent(intentL, localBeatFloat, 1);
-      intentR = modulateArmWaveIntent(intentR, localBeatFloat + 1.25, -1);
-    } else if (patName === "toyman") {
-      intentL = modulateToymanIntent(intentL);
-      intentR = modulateToymanIntent(intentR);
-    }
+    const intentL = patternToArmIntent(luDeg + noiseLu, lfDeg + noiseLf);
+    const intentR = patternToArmIntent(ruDeg + noiseRu, rfDeg + noiseRf);
 
     let dt = this._prevT == null ? 1 / 60 : clamp(t - this._prevT, 1 / 240, 0.05);
     if (this._prevT != null && (t < this._prevT - 1e-4 || t - this._prevT > 0.2)) {
@@ -967,11 +872,6 @@ export class ProceduralSkeleton {
       const ox = FINGER_OFFSETS_R[i][0], oy = FINGER_OFFSETS_R[i][1];
       lm[rightFingerIdx[i]][0] = lm[16][0] + ox * rCos - oy * rSin;
       lm[rightFingerIdx[i]][1] = lm[16][1] + ox * rSin + oy * rCos;
-    }
-
-    if (patName === "armwave") {
-      applyHandWaveChain(lm, 15, leftFingerIdx, localBeatFloat, 1);
-      applyHandWaveChain(lm, 16, rightFingerIdx, localBeatFloat + 1.25, -1);
     }
 
     applySimpleZ(lm, 13, 15, leftFingerIdx, leftShoulder, leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
