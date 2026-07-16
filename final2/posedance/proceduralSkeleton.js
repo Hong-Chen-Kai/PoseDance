@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-v3-keep3";
+export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-b1-v1";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -606,6 +606,48 @@ const PATTERNS = {
 /** Mix／隨機池順序（固定輪巡與 UI 下拉共用） */
 const PATTERN_KEYS = Object.keys(PATTERNS);
 
+// B1：random 加權抽樣（與池大小無關；mix／lock 不受影響）
+const RANDOM_RECENT_PENALTY = 0.45;
+const RANDOM_ABSENCE_SEGMENTS_FOR_BOOST = 2;
+const RANDOM_ABSENCE_BOOST = 1.25;
+const RANDOM_ABSENCE_BOOST_MAX = 1.5;
+
+function segmentsSinceLastPlayed(schedule, key) {
+  if (schedule.length === 0) return Number.POSITIVE_INFINITY;
+  for (let i = schedule.length - 1; i >= 0; i--) {
+    if (schedule[i].pattern === key) return schedule.length - 1 - i;
+  }
+  return schedule.length;
+}
+
+function computeRandomPatternWeight(key, schedule, last, secondLast) {
+  if (key === last) return 0;
+  let w = 1;
+  if (secondLast != null && key === secondLast) w *= RANDOM_RECENT_PENALTY;
+  const absence = segmentsSinceLastPlayed(schedule, key);
+  if (absence >= RANDOM_ABSENCE_SEGMENTS_FOR_BOOST) {
+    const steps = Math.min(3, absence - RANDOM_ABSENCE_SEGMENTS_FOR_BOOST + 1);
+    const boost = Math.min(
+      RANDOM_ABSENCE_BOOST_MAX,
+      1 + (RANDOM_ABSENCE_BOOST - 1) * steps,
+    );
+    w *= boost;
+  }
+  return w;
+}
+
+function pickWeightedFromPool(pool, weights, rng) {
+  let total = 0;
+  for (const w of weights) total += w;
+  if (total <= 0) return pool[0];
+  let r = rng() * total;
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
 /** @typedef {'random' | 'mix' | string} PatternMode — random／mix／或單一 pattern key */
 
 // ─── ProceduralSkeleton 主類 ─────────────────────────────────
@@ -620,8 +662,8 @@ export class ProceduralSkeleton {
     grooveMode = GROOVE_MODES.SWING,
     /**
      * 動作編排：
-     * - random：同池隨機（避免連續重複）
-     * - mix：依 PATTERN_KEYS 固定輪巡三個
+     * - random：同池加權隨機（禁連續重複＋近期降權＋缺席補償）
+     * - mix：依 PATTERN_KEYS 固定輪巡
      * - 其他：鎖定該 pattern key（檢視用）
      * @type {PatternMode}
      */
@@ -695,18 +737,25 @@ export class ProceduralSkeleton {
       this._mixIndex += 1;
       return pick;
     }
-    // random：同一池抽卡，避免連續重複
+    return this._pickPatternWeightedRandom();
+  }
+
+  /** B1：pool-agnostic 加權隨機（僅 patternMode === "random"） */
+  _pickPatternWeightedRandom() {
     const pool = this._patternPool;
+    if (pool.length === 1) return pool[0];
+
     const last = this._schedule.length > 0
       ? this._schedule[this._schedule.length - 1].pattern
       : null;
-    let pick;
-    let attempts = 0;
-    do {
-      pick = pool[Math.floor(this._rng() * pool.length)];
-      attempts++;
-    } while (pick === last && pool.length > 1 && attempts < 10);
-    return pick;
+    const secondLast = this._schedule.length > 1
+      ? this._schedule[this._schedule.length - 2].pattern
+      : null;
+
+    const weights = pool.map((key) =>
+      computeRandomPatternWeight(key, this._schedule, last, secondLast),
+    );
+    return pickWeightedFromPool(pool, weights, this._rng);
   }
 
   _getPatternAtBeat(beatIndex) {
