@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-v2-keep4";
+export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-v3-keep3";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -238,10 +238,8 @@ function solveArmAnatomical(shoulder, L1, L2, intent, side, prevForearmAngle) {
   return { elbow, wrist, forearmAngle, upperDir, humeralRot, elbowFlex };
 }
 
-function springHalfLifeForPattern(patternName, beatSec) {
-  const base = Math.min(SPRING_HALF_LIFE_MAX, beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
-  if (patternName === "pump") return Math.min(0.13, base);
-  return base;
+function springHalfLifeForPattern(_patternName, beatSec) {
+  return Math.min(SPRING_HALF_LIFE_MAX, beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
 }
 
 function criticalDampedSpring1D(state, key, vKey, target, halfLife, dt) {
@@ -569,14 +567,14 @@ function applySimpleZ(lm, elbowIdx, wristIdx, fingerIdxs, shoulder, wrist, L1, L
   }
 }
 
-// ─── Pattern 定義（刪減後 4 個；全部進同一隨機／Mix 池）────────
+// ─── Pattern 定義（刪減後 3 個；全部進同一隨機／Mix 池）────────
 // upper: 90=垂下, 越小越舉高；forearm 與 upper 差≈肘屈
-// 已刪：sway／disco／reach（與 wave 撞臉）、armwave／toyman（實測失敗）
+// 已刪：sway／disco／reach（與 wave 撞臉）、armwave／toyman（實測失敗）、
+//       pump（與 wave 實測類似；之後可加大反差再救回）
 //
 // 目錄：
 //   wave      | 左右揮手   | 半段左、半段右揮手   | 分段
 //   surrender | 雙手投降舉 | 雙手過頭彎肘同舉     | 對稱
-//   pump      | 反相泵動   | 左右反相上下快泵     | 反相
 //   clap      | 胸前拍手   | 雙手胸前合開         | 對稱
 const PATTERNS = {
   wave: {
@@ -594,14 +592,6 @@ const PATTERNS = {
     left_forearm:  [120, 155, 185, 195, 195, 185, 155, 120],
     right_upper:   [90, 35, 5, -20, -20, 5, 35, 90],
     right_forearm: [120, 155, 185, 195, 195, 185, 155, 120],
-  },
-  pump: {
-    name: "反相泵動",
-    beats: 8,
-    left_upper:    [90, 20, 90, 20, 90, 20, 90, 20],
-    left_forearm:  [112, 125, 112, 125, 112, 125, 112, 125],
-    right_upper:   [20, 90, 20, 90, 20, 90, 20, 90],
-    right_forearm: [125, 112, 125, 112, 125, 112, 125, 112],
   },
   clap: {
     name: "胸前拍手",
@@ -631,7 +621,7 @@ export class ProceduralSkeleton {
     /**
      * 動作編排：
      * - random：同池隨機（避免連續重複）
-     * - mix：依 PATTERN_KEYS 固定輪巡四個
+     * - mix：依 PATTERN_KEYS 固定輪巡三個
      * - 其他：鎖定該 pattern key（檢視用）
      * @type {PatternMode}
      */
