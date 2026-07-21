@@ -1,7 +1,7 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
 
 // 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
-const PROCEDURAL_IMPORT_BUILD = "pattern-pool-b1-v1";
+const PROCEDURAL_IMPORT_BUILD = "pattern-pool-c1c2-v1";
 let _synthModule = null;
 const _synthReady = import(`./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`)
   .then((m) => {
@@ -18,6 +18,10 @@ function createSyntheticTrace(opts) {
 function getSyntheticLandmarksAtTime(trace, t) {
   if (!_synthModule) return null;
   return _synthModule.getSyntheticLandmarksAtTime(trace, t);
+}
+function getSyntheticPatternInfoAtTime(trace, t) {
+  if (!_synthModule?.getSyntheticPatternInfoAtTime) return null;
+  return _synthModule.getSyntheticPatternInfoAtTime(trace, t);
 }
 
 
@@ -268,6 +272,7 @@ function initDomRefs() {
   els.toggleMode1DemoButton = $("toggleMode1DemoButton");
   els.recordButton = $("recordButton");
   els.poseInfoText = $("poseInfoText");
+  els.synthPatternHud = $("synthPatternHud");
 
   els.inputVideo = $("input_video");
   els.outputCanvas = $("output_canvas");
@@ -292,6 +297,7 @@ function initDomRefs() {
   els.ytResizeHandleBL = $("ytResizeHandleBL");
 
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
+  if (els.synthPatternHud) els.synthPatternHud.style.display = "none";
 }
 
 function clampRectToCanvas(rect, w, h) {
@@ -830,6 +836,7 @@ function clearOverlayCanvas() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   ctx.restore();
+  if (els.synthPatternHud) els.synthPatternHud.style.display = "none";
 }
 
 function stopCameraIfRunning() {
@@ -3059,6 +3066,47 @@ function drawMode2Overlay(tScore) {
   }
 
   ctx.restore();
+  updateSynthPatternHud(tScore);
+}
+
+/** E4：選中的 Mode2 trace；若選中非 synth，改取第一個 enabled 的 synth */
+function getSynthTraceForHud() {
+  const traces = state.mode2?.traces || [];
+  const sel = state.interact?.selectedId;
+  if (sel && isMode2TraceSkeletonId(sel)) {
+    const traceId = sel.slice("m2_trace_".length);
+    const picked = traces.find((tr) => tr && tr.id === traceId);
+    if (picked?.synthetic && picked.enabled !== false) return picked;
+  }
+  return traces.find((tr) => tr?.synthetic && tr.enabled !== false) || null;
+}
+
+function updateSynthPatternHud(tScore) {
+  const el = els.synthPatternHud;
+  if (!el) return;
+  if (state.ui?.mode !== "mode2") {
+    el.style.display = "none";
+    return;
+  }
+  const tr = getSynthTraceForHud();
+  if (!tr || typeof tScore !== "number" || !Number.isFinite(tScore)) {
+    el.style.display = "none";
+    return;
+  }
+  const info = getSyntheticPatternInfoAtTime(tr, tScore);
+  if (!info) {
+    el.style.display = "none";
+    return;
+  }
+  const label = `${info.name} (${info.key})`;
+  let text = `動作：${label}`;
+  if (info.blending && info.nextKey && info.nextKey !== info.key) {
+    const pct = Math.round(clamp01(info.blendProgress) * 100);
+    text += ` → ${info.nextName} (${info.nextKey}) ${pct}%`;
+    if (info.viaRest) text += " ·via rest";
+  }
+  el.textContent = text;
+  el.style.display = "";
 }
 
 function updateUiLoop() {

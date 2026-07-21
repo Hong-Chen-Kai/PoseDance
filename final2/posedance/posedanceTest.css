@@ -379,3 +379,16 @@
   cursor: pointer;
 }
 
+/* E4：當前程序化動作名稱（測試用） */
+.synth-pattern-hud {
+  left: 12px;
+  right: auto;
+  bottom: auto;
+  top: 12px;
+  z-index: 5;
+  max-width: min(420px, calc(100% - 24px));
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.88);
+}
+

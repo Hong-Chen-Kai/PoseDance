@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-b1-v1";
+export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-c1c2-v1";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -73,7 +73,9 @@ function smootherstep(t) {
 }
 
 // ─── 調參預設 ────────────────────────────────────────────────
-const BLEND_WINDOW_BEATS = 0.75;
+// C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
+const BLEND_WINDOW_BEATS_SMALL = 0.6;   // wave ↔ clap
+const BLEND_WINDOW_BEATS_LARGE = 1.35;  // 任一端為 surrender 等 large
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
 const NOISE_SCALE_DEG = 1.0;
@@ -579,6 +581,7 @@ function applySimpleZ(lm, elbowIdx, wristIdx, fingerIdxs, shoulder, wrist, L1, L
 const PATTERNS = {
   wave: {
     name: "左右揮手",
+    size: "small",
     beats: 8,
     left_upper:    [90, 35, 5, 35, 90, 90, 90, 90],
     left_forearm:  [112, 140, 160, 140, 112, 112, 112, 112],
@@ -587,6 +590,7 @@ const PATTERNS = {
   },
   surrender: {
     name: "雙手投降舉",
+    size: "large",
     beats: 8,
     left_upper:    [90, 35, 5, -20, -20, 5, 35, 90],
     left_forearm:  [120, 155, 185, 195, 195, 185, 155, 120],
@@ -595,6 +599,7 @@ const PATTERNS = {
   },
   clap: {
     name: "胸前拍手",
+    size: "small",
     beats: 8,
     left_upper:    [88, 55, 62, 88, 88, 55, 62, 88],
     left_forearm:  [125, 155, 148, 125, 125, 155, 148, 125],
@@ -602,6 +607,61 @@ const PATTERNS = {
     right_forearm: [125, 155, 148, 125, 125, 155, 148, 125],
   },
 };
+
+/** C1：過渡用中性手臂意圖（手自然下放；與 createArmIntentState 一致） */
+const REST_ARM_INTENT = patternToArmIntent(90, 100);
+
+function patternTransitionSize(key) {
+  return PATTERNS[key]?.size === "large" ? "large" : "small";
+}
+
+/** C2：pair 過渡拍數；同 pattern（lock）回傳 0 */
+function blendWindowBeatsForPair(fromKey, toKey) {
+  if (!fromKey || !toKey || fromKey === toKey) return 0;
+  if (
+    patternTransitionSize(fromKey) === "large" ||
+    patternTransitionSize(toKey) === "large"
+  ) {
+    return BLEND_WINDOW_BEATS_LARGE;
+  }
+  return BLEND_WINDOW_BEATS_SMALL;
+}
+
+/** C1：進出 large（如 surrender）走 rest bridge；small↔small 直接 intent 混 */
+function needsRestBridge(fromKey, toKey) {
+  return (
+    patternTransitionSize(fromKey) === "large" ||
+    patternTransitionSize(toKey) === "large"
+  );
+}
+
+function lerpArmIntent(a, b, t) {
+  return {
+    elevation: _lerp(a.elevation, b.elevation, t),
+    sweep: _lerp(a.sweep, b.sweep, t),
+    elbowFlex: _lerp(a.elbowFlex, b.elbowFlex, t),
+    humeralRot: _lerp(a.humeralRot, b.humeralRot, t),
+  };
+}
+
+/**
+ * C1：A → (Rest) → B 的 intent 路徑；w∈[0,1]
+ * viaRest：先收到中性，再接到 B（仍交給後續 springArmIntent）
+ */
+function bridgeArmIntent(from, to, w, viaRest) {
+  const wClamped = clamp(w, 0, 1);
+  if (!viaRest) {
+    return lerpArmIntent(from, to, smootherstep(wClamped));
+  }
+  if (wClamped < 0.5) {
+    return lerpArmIntent(from, REST_ARM_INTENT, smootherstep(wClamped * 2));
+  }
+  return lerpArmIntent(
+    REST_ARM_INTENT,
+    to,
+    smootherstep((wClamped - 0.5) * 2),
+  );
+}
 
 /** Mix／隨機池順序（固定輪巡與 UI 下拉共用） */
 const PATTERN_KEYS = Object.keys(PATTERNS);
@@ -782,25 +842,98 @@ export class ProceduralSkeleton {
   _sampleArmAngles(beatFloat, entry) {
     const pat = PATTERNS[entry.pattern];
     const localBeatFloat = beatFloat - entry.beatStart;
-    let angles = this._sampleAnglesForPattern(pat, localBeatFloat);
+    return this._sampleAnglesForPattern(pat, localBeatFloat);
+  }
 
-    if (localBeatFloat >= pat.beats - BLEND_WINDOW_BEATS) {
-      const w = smootherstep((localBeatFloat - (pat.beats - BLEND_WINDOW_BEATS)) / BLEND_WINDOW_BEATS);
-      const nextBeatStart = entry.beatStart + pat.beats;
-      this._ensureSchedule(nextBeatStart);
-      const nextEntry = this._getPatternAtBeat(nextBeatStart);
-      const nextPat = PATTERNS[nextEntry.pattern];
-      const nextLocal = localBeatFloat - (pat.beats - BLEND_WINDOW_BEATS);
-      const nextAngles = this._sampleAnglesForPattern(nextPat, nextLocal);
-      angles = {
-        lu: _lerp(angles.lu, nextAngles.lu, w),
-        lf: _lerp(angles.lf, nextAngles.lf, w),
-        ru: _lerp(angles.ru, nextAngles.ru, w),
-        rf: _lerp(angles.rf, nextAngles.rf, w),
-      };
+  /**
+   * C1/C2：在 intent 層做過渡（可走 rest bridge），再交給 springArmIntent。
+   * 不再對 raw upper/forearm 做硬 lerp。
+   */
+  _resolveArmIntents(beatFloat, entry, amp, t) {
+    const fromKey = entry.pattern;
+    const pat = PATTERNS[fromKey];
+    const localBeatFloat = beatFloat - entry.beatStart;
+    const raw = this._sampleAnglesForPattern(pat, localBeatFloat);
+
+    const noiseLu = NOISE_SCALE_DEG * perlin1d(t * 1.7);
+    const noiseLf = NOISE_SCALE_DEG * perlin1d(t * 2.3 + 100);
+    const noiseRu = NOISE_SCALE_DEG * perlin1d(t * 1.9 + 200);
+    const noiseRf = NOISE_SCALE_DEG * perlin1d(t * 2.1 + 300);
+
+    const toIntent = (u, f, nu, nf) =>
+      patternToArmIntent(90 + (u - 90) * amp + nu, 90 + (f - 90) * amp + nf);
+
+    let intentL = toIntent(raw.lu, raw.lf, noiseLu, noiseLf);
+    let intentR = toIntent(raw.ru, raw.rf, noiseRu, noiseRf);
+
+    const nextBeatStart = entry.beatStart + pat.beats;
+    this._ensureSchedule(nextBeatStart);
+    const nextEntry = this._getPatternAtBeat(nextBeatStart);
+    const toKey = nextEntry.pattern;
+
+    let blendBeats = blendWindowBeatsForPair(fromKey, toKey);
+    // 避免短 pattern 整段都被過渡吃掉
+    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.45));
+
+    let blending = false;
+    let blendProgress = 0;
+
+    if (blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats) {
+      blending = true;
+      blendProgress = (localBeatFloat - (pat.beats - blendBeats)) / blendBeats;
+      const nextPat = PATTERNS[toKey];
+      const nextLocal = localBeatFloat - (pat.beats - blendBeats);
+      const nextRaw = this._sampleAnglesForPattern(nextPat, nextLocal);
+      const nextL = toIntent(nextRaw.lu, nextRaw.lf, noiseLu, noiseLf);
+      const nextR = toIntent(nextRaw.ru, nextRaw.rf, noiseRu, noiseRf);
+      const viaRest = needsRestBridge(fromKey, toKey);
+      intentL = bridgeArmIntent(intentL, nextL, blendProgress, viaRest);
+      intentR = bridgeArmIntent(intentR, nextR, blendProgress, viaRest);
     }
 
-    return angles;
+    return {
+      intentL,
+      intentR,
+      fromKey,
+      toKey,
+      blending,
+      blendProgress,
+      blendBeats,
+    };
+  }
+
+  /** E4：查詢當下 pattern（不推進骨架） */
+  getPatternInfoAt(t) {
+    const elapsed = Math.max(0, t - this.startT);
+    const beatFloat = elapsed / this.beatSec + this.phaseOffsetBeats;
+    const beatIndex = Math.floor(beatFloat);
+    const entry = this._getPatternAtBeat(beatIndex);
+    const fromKey = entry.pattern;
+    const pat = PATTERNS[fromKey];
+    const localBeatFloat = beatFloat - entry.beatStart;
+    const nextBeatStart = entry.beatStart + pat.beats;
+    this._ensureSchedule(nextBeatStart);
+    const nextEntry = this._getPatternAtBeat(nextBeatStart);
+    const toKey = nextEntry.pattern;
+    let blendBeats = blendWindowBeatsForPair(fromKey, toKey);
+    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.45));
+    const blending =
+      blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats;
+    const blendProgress = blending
+      ? (localBeatFloat - (pat.beats - blendBeats)) / blendBeats
+      : 0;
+    return {
+      key: fromKey,
+      name: pat?.name || fromKey,
+      nextKey: toKey,
+      nextName: PATTERNS[toKey]?.name || toKey,
+      localBeat: localBeatFloat,
+      beats: pat.beats,
+      blending,
+      blendProgress,
+      blendBeats,
+      viaRest: blending ? needsRestBridge(fromKey, toKey) : false,
+    };
   }
 
   _resetArmDynamics() {
@@ -819,22 +952,11 @@ export class ProceduralSkeleton {
     const beatIndex = Math.floor(beatFloat);
 
     const entry = this._getPatternAtBeat(beatIndex);
-    const raw = this._sampleArmAngles(beatFloat, entry);
-    const patName = entry.pattern;
-
     const amp = this.amplitudeScale;
-    const luDeg = 90 + (raw.lu - 90) * amp;
-    const ruDeg = 90 + (raw.ru - 90) * amp;
-    const lfDeg = 90 + (raw.lf - 90) * amp;
-    const rfDeg = 90 + (raw.rf - 90) * amp;
-
-    const noiseLu = NOISE_SCALE_DEG * perlin1d(t * 1.7);
-    const noiseLf = NOISE_SCALE_DEG * perlin1d(t * 2.3 + 100);
-    const noiseRu = NOISE_SCALE_DEG * perlin1d(t * 1.9 + 200);
-    const noiseRf = NOISE_SCALE_DEG * perlin1d(t * 2.1 + 300);
-
-    const intentL = patternToArmIntent(luDeg + noiseLu, lfDeg + noiseLf);
-    const intentR = patternToArmIntent(ruDeg + noiseRu, rfDeg + noiseRf);
+    const resolved = this._resolveArmIntents(beatFloat, entry, amp, t);
+    const intentL = resolved.intentL;
+    const intentR = resolved.intentR;
+    const patName = entry.pattern;
 
     let dt = this._prevT == null ? 1 / 60 : clamp(t - this._prevT, 1 / 240, 0.05);
     if (this._prevT != null && (t < this._prevT - 1e-4 || t - this._prevT > 0.2)) {
@@ -1008,6 +1130,12 @@ export function createSyntheticTrace({
 export function getSyntheticLandmarksAtTime(trace, t) {
   if (!trace?._skeleton) return null;
   return trace._skeleton.generate(t);
+}
+
+/** E4：查詢當下 pattern 名稱／過渡狀態 */
+export function getSyntheticPatternInfoAtTime(trace, t) {
+  if (!trace?._skeleton?.getPatternInfoAt) return null;
+  return trace._skeleton.getPatternInfoAt(t);
 }
 
 export { PATTERNS, PATTERN_KEYS };
