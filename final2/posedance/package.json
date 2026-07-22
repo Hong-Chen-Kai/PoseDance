@@ -1,0 +1,10 @@
+{
+  "name": "posedance",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pose Dance procedural skeleton (Three arm FK)",
+  "dependencies": {
+    "three": "^0.170.0"
+  }
+}

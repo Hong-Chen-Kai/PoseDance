@@ -5,10 +5,14 @@
  *
  * 輸出格式與 MediaPipe Pose 33 點完全相同：lm[33] = [[x,y,z,visibility], ...]
  * 可直接餵入 posedanceTest.js 的 drawPoseConnections / drawPosePoints。
+ *
+ * 手臂 FK：隱形 Three.js Bone（armSkeletonThree.js）
  */
 
+import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
+
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "arm-fk5-v2";
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v2+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -1039,24 +1043,33 @@ export class ProceduralSkeleton {
 
     applyShoulderDrive(lm, smoothL, smoothR, amp);
 
-    const leftShoulder = [lm[11][0], lm[11][1]];
-    const rightShoulder = [lm[12][0], lm[12][1]];
+    const leftShoulder = [lm[11][0], lm[11][1], lm[11][2]];
+    const rightShoulder = [lm[12][0], lm[12][1], lm[12][2]];
 
-    let leftArm = solveArmAnatomical(
-      leftShoulder, L_UPPER_L, L_LOWER_L, smoothL, 1,
-    );
-    let rightArm = solveArmAnatomical(
-      rightShoulder, L_UPPER_R, L_LOWER_R, smoothR, -1,
-    );
+    const armFk = getArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R);
+    let leftArm = armFk.solve(leftShoulder, smoothL, 1);
+    let rightArm = armFk.solve(rightShoulder, smoothR, -1);
 
-    const leftGeo = enforceArmGeometry(leftShoulder, leftArm.elbow, leftArm.wrist, L_UPPER_L, L_LOWER_L);
+    const leftGeo = enforceArmGeometry(
+      [leftShoulder[0], leftShoulder[1]],
+      leftArm.elbow,
+      leftArm.wrist,
+      L_UPPER_L,
+      L_LOWER_L,
+    );
     leftArm = {
       ...leftArm,
       elbow: leftGeo.elbow,
       wrist: leftGeo.wrist,
       forearmAngle: Math.atan2(leftGeo.wrist[1] - leftGeo.elbow[1], leftGeo.wrist[0] - leftGeo.elbow[0]),
     };
-    const rightGeo = enforceArmGeometry(rightShoulder, rightArm.elbow, rightArm.wrist, L_UPPER_R, L_LOWER_R);
+    const rightGeo = enforceArmGeometry(
+      [rightShoulder[0], rightShoulder[1]],
+      rightArm.elbow,
+      rightArm.wrist,
+      L_UPPER_R,
+      L_LOWER_R,
+    );
     rightArm = {
       ...rightArm,
       elbow: rightGeo.elbow,
@@ -1090,8 +1103,8 @@ export class ProceduralSkeleton {
       lm[rightFingerIdx[i]][1] = lm[16][1] + ox * rSin + oy * rCos;
     }
 
-    applySimpleZ(lm, 13, 15, leftFingerIdx, leftShoulder, leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
-    applySimpleZ(lm, 14, 16, rightFingerIdx, rightShoulder, rightArm.wrist, L_UPPER_R, L_LOWER_R, rightArm, -1);
+    applySimpleZ(lm, 13, 15, leftFingerIdx, [leftShoulder[0], leftShoulder[1]], leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
+    applySimpleZ(lm, 14, 16, rightFingerIdx, [rightShoulder[0], rightShoulder[1]], rightArm.wrist, L_UPPER_R, L_LOWER_R, rightArm, -1);
 
     if (grooveEnablesBounce(this.grooveMode)) {
       applyBounce(lm, beatSin, amp);
