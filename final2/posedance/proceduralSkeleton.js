@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v2+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v3+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -78,11 +78,15 @@ function smootherstep(t) {
 
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
-const BLEND_WINDOW_BEATS_SMALL = 0.6;   // wave ↔ clap
-const BLEND_WINDOW_BEATS_LARGE = 1.35;  // 任一端為 surrender 等 large
+const BLEND_WINDOW_BEATS_SMALL = 0.85;  // wave ↔ clap
+const BLEND_WINDOW_BEATS_LARGE = 1.9;   // 任一端為 surrender 等 large（加長避免 via-rest 收放太急）
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
+const SPRING_HALF_LIFE_BLEND_MUL = 1.75; // 過渡中放慢 spring，減少「先垂再彈」
+const SPRING_HALF_LIFE_CATCHUP_MAX = 0.32; // 與目標 elevation 差大時再放慢
 const NOISE_SCALE_DEG = 1.0;
+/** C1 soft-rest：中段最多往中性靠這麼多（1=舊版完全收到 REST，易瞬移） */
+const REST_BRIDGE_PEAK = 0.38;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
 // elevation：0=垂下、90=水平、~160=過頭區
@@ -296,6 +300,21 @@ function solveArmAnatomical(shoulder, L1, L2, intent, side) {
 
 function springHalfLifeForPattern(_patternName, beatSec) {
   return Math.min(SPRING_HALF_LIFE_MAX, beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
+}
+
+/** 過渡／大角度追趕時加長 half-life，避免手臂「彈射」 */
+function springHalfLifeForArms(baseHalfLife, blending, stateL, stateR, intentL, intentR) {
+  let hl = baseHalfLife;
+  if (blending) hl *= SPRING_HALF_LIFE_BLEND_MUL;
+  const elevErr = Math.max(
+    Math.abs((stateL?.elevation ?? 0) - (intentL?.elevation ?? 0)),
+    Math.abs((stateR?.elevation ?? 0) - (intentR?.elevation ?? 0)),
+  );
+  if (elevErr > 35) {
+    const t = clamp((elevErr - 35) / 70, 0, 1);
+    hl = Math.max(hl, _lerp(baseHalfLife, SPRING_HALF_LIFE_CATCHUP_MAX, t));
+  }
+  return hl;
 }
 
 function criticalDampedSpring1D(state, key, vKey, target, halfLife, dt) {
@@ -707,22 +726,18 @@ function lerpArmIntent(a, b, t) {
 }
 
 /**
- * C1：A → (Rest) → B 的 intent 路徑；w∈[0,1]
- * viaRest：先收到中性，再接到 B（仍交給後續 springArmIntent）
+ * C1：A → B 的 intent 路徑；w∈[0,1]
+ * viaRest：在直通 lerp 上疊「柔和中性偏置」（中段最明顯），
+ * 不再走 A→REST→B 全垂手，避免影片中先收到腰再彈起的瞬移感。
  */
 function bridgeArmIntent(from, to, w, viaRest) {
   const wClamped = clamp(w, 0, 1);
-  if (!viaRest) {
-    return lerpArmIntent(from, to, smootherstep(wClamped));
-  }
-  if (wClamped < 0.5) {
-    return lerpArmIntent(from, REST_ARM_INTENT, smootherstep(wClamped * 2));
-  }
-  return lerpArmIntent(
-    REST_ARM_INTENT,
-    to,
-    smootherstep((wClamped - 0.5) * 2),
-  );
+  const direct = lerpArmIntent(from, to, smootherstep(wClamped));
+  if (!viaRest || REST_BRIDGE_PEAK <= 1e-6) return direct;
+  // 鐘形：中段偏 rest，兩端為 0，銜接 A／B 連續
+  const bell = Math.sin(Math.PI * wClamped);
+  const restW = REST_BRIDGE_PEAK * bell * bell;
+  return lerpArmIntent(direct, REST_ARM_INTENT, restW);
 }
 
 /** Mix／隨機池順序（固定輪巡與 UI 下拉共用） */
@@ -1000,6 +1015,11 @@ export class ProceduralSkeleton {
   _resetArmDynamics() {
     this._armState.L = createArmIntentState();
     this._armState.R = createArmIntentState();
+    try {
+      getArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R).resetContinuity();
+    } catch (_) {
+      /* FK 尚未建立時略過 */
+    }
   }
 
   /**
@@ -1024,7 +1044,14 @@ export class ProceduralSkeleton {
     }
     this._prevT = t;
 
-    const halfLife = springHalfLifeForPattern(patName, this.beatSec);
+    const halfLife = springHalfLifeForArms(
+      springHalfLifeForPattern(patName, this.beatSec),
+      !!resolved.blending,
+      this._armState.L,
+      this._armState.R,
+      intentL,
+      intentR,
+    );
 
     const beatSin = computeBeatSin(elapsed, this.beatSec);
     const bodyBob = BODY_BOB_AMP * amp * beatSin;

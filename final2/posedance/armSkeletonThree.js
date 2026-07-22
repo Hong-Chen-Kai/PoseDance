@@ -33,32 +33,38 @@ function solveUpperArmDir(elevationDeg, sweepDeg, humeralRotDeg, side) {
   return v3norm({ x, y, z });
 }
 
-/** 平面肘角兩解：依意圖選解 */
-function pickForearmAngleFromIntent(upperAngle, elbowFlex, humeralRot, side, elevation, sweep) {
+/** 平面肘角兩解：意圖優先；上一幀僅在「與意圖解接近」時用來防小跳解 */
+function pickForearmAngleFromIntent(upperAngle, elbowFlex, humeralRot, side, elevation, sweep, prevAngle) {
   const carrying = (28 + humeralRot * 0.42) * DEG * side;
   const flexRad = elbowFlex * DEG;
   const candA = upperAngle + carrying + side * flexRad;
   const candB = upperAngle + carrying - side * flexRad;
 
-  let picked;
+  let intentPick;
   if (elevation > 72 && elbowFlex > 68) {
-    picked = Math.sin(candA) < Math.sin(candB) ? candA : candB;
+    intentPick = Math.sin(candA) < Math.sin(candB) ? candA : candB;
   } else if (sweep > 12 && elbowFlex > 50) {
-    picked = side > 0
+    intentPick = side > 0
       ? (Math.cos(candA) < Math.cos(candB) ? candA : candB)
       : (Math.cos(candA) > Math.cos(candB) ? candA : candB);
   } else {
-    picked = candA;
+    intentPick = candA;
   }
 
   if (elevation > 72 && elbowFlex > 68) {
     const upAngle = -Math.PI / 2 + side * (0.12 + humeralRot * 0.004 * DEG);
     const blend = clamp((elevation - 72) / 48, 0, 1) * clamp((elbowFlex - 68) / 55, 0, 1);
-    const d = Math.atan2(Math.sin(picked - upAngle), Math.cos(picked - upAngle));
-    picked = picked - d * blend * 0.82;
+    const d = Math.atan2(Math.sin(intentPick - upAngle), Math.cos(intentPick - upAngle));
+    intentPick = intentPick - d * blend * 0.82;
   }
 
-  return picked;
+  if (prevAngle == null || !Number.isFinite(prevAngle)) return intentPick;
+
+  // 限速：每幀前臂角最多轉 ~12°，消除換解／過閾值造成的腕部瞬移
+  const delta = Math.atan2(Math.sin(intentPick - prevAngle), Math.cos(intentPick - prevAngle));
+  const maxStep = 12 * DEG;
+  if (Math.abs(delta) <= maxStep) return intentPick;
+  return prevAngle + Math.sign(delta) * maxStep;
 }
 
 function createArmChain(side, L1, L2) {
@@ -96,6 +102,13 @@ export class ArmFkThree {
     this.left = createArmChain(1, L1L, L2L);
     this.right = createArmChain(-1, L1R, L2R);
     this.scene.add(this.left.root, this.right.root);
+    this._prevForearmL = null;
+    this._prevForearmR = null;
+  }
+
+  resetContinuity() {
+    this._prevForearmL = null;
+    this._prevForearmR = null;
   }
 
   /**
@@ -110,10 +123,15 @@ export class ArmFkThree {
     const hum = intent.humeralRot || 0;
     const flex = intent.elbowFlex || 0;
     const twist = (intent.forearmTwist || 0) * DEG;
+    const prev = side > 0 ? this._prevForearmL : this._prevForearmR;
 
     const upperDir = solveUpperArmDir(elev, sweep, hum, side);
     const upperAngle = Math.atan2(upperDir.y, upperDir.x);
-    const forearmAngle = pickForearmAngleFromIntent(upperAngle, flex, hum, side, elev, sweep);
+    const forearmAngle = pickForearmAngleFromIntent(
+      upperAngle, flex, hum, side, elev, sweep, prev,
+    );
+    if (side > 0) this._prevForearmL = forearmAngle;
+    else this._prevForearmR = forearmAngle;
 
     // 前臂平面方向 + 少量深度（sweep／twist）
     const fz = -Math.sin(sweep * DEG) * 0.25 - Math.sin(twist) * 0.08;
@@ -187,4 +205,4 @@ export function getArmFkThree(L1L, L2L, L1R, L2R) {
   return _fk;
 }
 
-export const ARM_FK_THREE_BUILD = "three-arm-fk-v3";
+export const ARM_FK_THREE_BUILD = "three-arm-fk-v5";
