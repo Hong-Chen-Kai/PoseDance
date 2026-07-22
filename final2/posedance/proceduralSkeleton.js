@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-c1c2-v1";
+export const PROCEDURAL_SKELETON_BUILD = "pattern-pool-c1c2-v2";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -882,8 +882,8 @@ export class ProceduralSkeleton {
       blending = true;
       blendProgress = (localBeatFloat - (pat.beats - blendBeats)) / blendBeats;
       const nextPat = PATTERNS[toKey];
-      const nextLocal = localBeatFloat - (pat.beats - blendBeats);
-      const nextRaw = this._sampleAnglesForPattern(nextPat, nextLocal);
+      // 固定對準下一招第 0 拍（起手），避免過渡追到中段、進段又從開頭播造成瞬移／合不起來
+      const nextRaw = this._sampleAnglesForPattern(nextPat, 0);
       const nextL = toIntent(nextRaw.lu, nextRaw.lf, noiseLu, noiseLf);
       const nextR = toIntent(nextRaw.ru, nextRaw.rf, noiseRu, noiseRf);
       const viaRest = needsRestBridge(fromKey, toKey);
