@@ -8,7 +8,7 @@
  */
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = "arm-fk5-v1";
+export const PROCEDURAL_SKELETON_BUILD = "arm-fk5-v2";
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -140,36 +140,14 @@ function clampArmIntent(intent) {
   return { elevation, sweep, humeralRot, elbowFlex, forearmTwist };
 }
 
-function v3(x, y, z) { return { x, y, z }; }
-function v3len(v) { return Math.hypot(v.x, v.y, v.z) || 1e-8; }
 function v3norm(v) {
-  const L = v3len(v);
+  const L = Math.hypot(v.x, v.y, v.z) || 1e-8;
   return { x: v.x / L, y: v.y / L, z: v.z / L };
-}
-function v3scale(v, s) { return { x: v.x * s, y: v.y * s, z: v.z * s }; }
-function v3add(a, b) { return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }; }
-function v3cross(a, b) {
-  return {
-    x: a.y * b.z - a.z * b.y,
-    y: a.z * b.x - a.x * b.z,
-    z: a.x * b.y - a.y * b.x,
-  };
-}
-function v3dot(a, b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-/** Rodrigues：v 繞 unit axis 旋轉 ang（弧度） */
-function v3rotateAround(v, axis, ang) {
-  const a = v3norm(axis);
-  const c = Math.cos(ang);
-  const s = Math.sin(ang);
-  return v3add(
-    v3add(v3scale(v, c), v3scale(v3cross(a, v), s)),
-    v3scale(a, v3dot(a, v) * (1 - c)),
-  );
 }
 
 /**
  * 舊 pattern upper/forearm → 手臂 5 角（過渡期自動轉換；表暫不改）
- * elevation 0=垂下 … 160=過頭；sweep+ = 往胸前
+ * elevation 0=垂下 … 160=過頭；sweep+ = 往胸前（與舊 FK yaw 相容）
  */
 function patternToArmIntent(upperDeg, forearmDeg) {
   const elevation = clamp(90 - upperDeg, ELEVATION_MIN, ELEVATION_MAX);
@@ -177,17 +155,12 @@ function patternToArmIntent(upperDeg, forearmDeg) {
   if (elbowFlex > 170) elbowFlex = 360 - elbowFlex;
   elbowFlex = clampElbowFlexForElevation(elbowFlex, elevation);
 
-  // 基礎 sweep：前臂相對上臂愈「收」、上臂愈舉 → 愈往胸前
-  let sweep =
-    (90 - upperDeg) * 0.12 +
-    (forearmDeg - upperDeg - 28) * 0.22;
-  // 中高舉 + 明顯彎肘（拍手族）：加強往胸前
+  // 與改版前相容的 sweep 估測（拍手約為正值）
+  let sweep = (forearmDeg - 90) * 0.5 + (upperDeg - 90) * 0.35;
   if (elevation > 25 && elevation < 95 && elbowFlex > 55) {
-    sweep += 38 * clamp((elbowFlex - 55) / 50, 0, 1)
-      * clamp((95 - elevation) / 45, 0.35, 1);
+    sweep += 18 * clamp((elbowFlex - 55) / 50, 0, 1);
   }
-  // 過頭（投降族）：少往胸口、多留在上方
-  if (elevation > 95) sweep *= 0.3;
+  if (elevation > 95) sweep *= 0.45;
   sweep = clamp(sweep, SWEEP_MIN, SWEEP_MAX);
 
   const humeralRot = computeHumeralRotationDeg(elevation, elbowFlex, sweep);
@@ -198,137 +171,117 @@ function patternToArmIntent(upperDeg, forearmDeg) {
 function computeHumeralRotationDeg(elevation, elbowFlex, sweep) {
   let rot = HUMERAL_ROT_NEUTRAL;
 
-  // 側舉／過頭：外旋
-  rot += clamp(elevation * 0.28, 0, 38) * (1 - clamp(sweep, 0, 80) / 90);
+  rot += clamp(elevation * 0.28, 0, 38) * (1 - Math.abs(sweep) / 90);
   if (elevation > 78 && elevation < 130 && elbowFlex > 55) {
     rot += 28 * clamp((elevation - 70) / 45, 0, 1) * clamp((elbowFlex - 50) / 70, 0, 1);
   }
 
-  // 胸前彎肘（拍手，sweep+）：內旋
-  if (sweep > 12 && elbowFlex > 55) {
-    rot -= 48 * clamp((elbowFlex - 55) / 70, 0, 1) * clamp(sweep / 45, 0.35, 1);
+  // 胸前彎肘（拍手）：內旋
+  if (sweep > 8 && elbowFlex > 55) {
+    rot -= 42 * clamp((elbowFlex - 55) / 75, 0, 1) * clamp(sweep / 40, 0.35, 1);
   }
 
-  // 過頭直臂：略外旋
   if (elevation > 115 && elbowFlex < 35) rot += 12;
 
-  // 過頭彎肘：略內旋（手靠頭）
   if (elevation > 100 && elbowFlex > 55) {
-    rot -= 28 * clamp((elevation - 90) / 65, 0, 1) * clamp((elbowFlex - 45) / 85, 0, 1);
+    rot -= 35 * clamp((elevation - 90) / 65, 0, 1) * clamp((elbowFlex - 45) / 85, 0, 1);
   }
 
-  // 後方（sweep−）：外旋
-  if (sweep < -18) rot += 22 * clamp(-sweep / 55, 0, 1);
+  if (sweep < -18) rot += 24 * clamp(-sweep / 55, 0, 1);
 
   return clamp(rot, HUMERAL_ROT_MIN, HUMERAL_ROT_MAX);
 }
 
 function computeForearmTwistDeg(elevation, elbowFlex, sweep, humeralRot) {
   let twist = 0;
-  // 胸前合掌：旋前，掌心相對
-  if (sweep > 15 && elbowFlex > 55) {
-    twist -= 55 * clamp((elbowFlex - 55) / 65, 0, 1) * clamp(sweep / 50, 0.4, 1);
+  if (sweep > 10 && elbowFlex > 55) {
+    twist -= 50 * clamp((elbowFlex - 55) / 65, 0, 1) * clamp(sweep / 50, 0.4, 1);
   }
-  // 舉手／投降：略旋後，掌心偏前／上
   if (elevation > 85) {
     twist += 28 * clamp((elevation - 85) / 55, 0, 1);
   }
-  // 隨上臂內旋略帶一點前臂旋前
   twist += clamp(humeralRot, -40, 40) * 0.15;
   return clamp(twist, FOREARM_TWIST_MIN, FOREARM_TWIST_MAX);
 }
 
 /**
- * 上臂方向（影像：y 向下為正；sweep+ 往胸前／內側）
+ * 上臂方向（沿用改版前穩定公式：elevation 控制舉高，sweep 當 yaw）
  */
 function solveUpperArmDir(elevationDeg, sweepDeg, humeralRotDeg, side) {
-  const elev = elevationDeg * DEG;
-  const hang = REST_ABDUCTION_DEG * DEG;
-  const pitch = hang + elev * 0.96;
-  const chest = clamp(sweepDeg / 80, -1, 1); // +胸前 −後方
+  const pitch = (REST_ABDUCTION_DEG + elevationDeg * 0.96) * DEG;
+  const yaw = sweepDeg * DEG;
   const rot = humeralRotDeg * DEG;
+  const spread = 1 + clamp(elevationDeg / 100, 0, 0.35);
 
-  let y = Math.cos(pitch);
-  let x = side * Math.sin(pitch);
-  // 往胸前：收外側、拉向中線（拍手關鍵）
-  if (chest > 0) {
-    x *= 1 - 0.78 * chest;
-    x -= side * 0.85 * chest * Math.max(0.4, Math.sin(pitch + 0.1));
-    y += 0.06 * chest; // 略往下收到胸口高度
-  } else {
-    x *= 1 - 0.18 * chest;
-  }
-  let z = -0.72 * chest * Math.sin(pitch + 0.1) - Math.sin(rot) * 0.28;
+  const x = side * spread * (Math.sin(pitch) * Math.cos(yaw * 0.55) + Math.sin(rot) * 0.1);
+  const y = Math.cos(pitch) * Math.cos(yaw * 0.38);
+  const z = -Math.sin(yaw) * Math.sin(pitch) * 0.55 - Math.sin(rot) * 0.22;
 
   return v3norm({ x, y, z });
 }
 
 /**
- * 前臂方向：由肘屈角繞「彎曲軸」旋轉；彎曲軸再受 humeralRot 扭轉。
- * 不再使用平面雙解 + prev 黏著（避免肘鎖死）。
+ * 平面肘角兩解：依意圖選解，不黏上一幀（避免鎖死）。
+ * carrying 近似肩旋對肘窩方向的影響。
  */
-function solveForearmDir(upperDir, elbowFlexDeg, humeralRotDeg, side, elevationDeg, sweepDeg) {
-  const up = v3norm(upperDir);
-  const chest = clamp((sweepDeg || 0) / 80, -1, 1);
-  const towardChest = v3norm({
-    x: -side * (0.45 + 0.4 * Math.max(0, chest)),
-    y: -0.08 + 0.2 * Math.max(0, chest),
-    z: -0.82,
-  });
-  let bend = v3cross(up, towardChest);
-  if (v3len(bend) < 0.12) {
-    bend = v3cross(up, { x: 0, y: -1, z: 0 });
-  }
-  bend = v3norm(bend);
-  bend = v3norm(v3rotateAround(bend, up, humeralRotDeg * DEG));
+function pickForearmAngleFromIntent(upperAngle, elbowFlex, humeralRot, side, elevation, sweep) {
+  const carrying = (28 + humeralRot * 0.42) * DEG * side;
+  const flexRad = elbowFlex * DEG;
+  const candA = upperAngle + carrying + side * flexRad;
+  const candB = upperAngle + carrying - side * flexRad;
 
-  const flex = elbowFlexDeg * DEG;
-  let forearm = v3norm(v3add(v3scale(up, Math.cos(flex)), v3scale(bend, Math.sin(flex))));
-
-  // 胸前彎肘：再往中線收一點
-  if (chest > 0.2 && elbowFlexDeg > 50) {
-    const pull = 0.4 * chest * clamp((elbowFlexDeg - 50) / 60, 0, 1);
-    const medial = v3norm({ x: -side, y: 0.15, z: -0.25 });
-    forearm = v3norm(v3add(v3scale(forearm, 1 - pull), v3scale(medial, pull)));
+  let picked;
+  if (elevation > 72 && elbowFlex > 68) {
+    // 投降：選腕較朝上（影像 y 較小 → sin 較小）
+    picked = Math.sin(candA) < Math.sin(candB) ? candA : candB;
+  } else if (sweep > 12 && elbowFlex > 50) {
+    // 拍手：選較往中線（左臂要 cos 較小、右臂要 cos 較大）
+    picked = side > 0
+      ? (Math.cos(candA) < Math.cos(candB) ? candA : candB)
+      : (Math.cos(candA) > Math.cos(candB) ? candA : candB);
+  } else {
+    picked = candA;
   }
 
-  // 過頭彎肘：柔和偏往螢幕上方（投降）
-  if (elevationDeg > 72 && elbowFlexDeg > 68) {
-    const upBias = clamp((elevationDeg - 72) / 48, 0, 1)
-      * clamp((elbowFlexDeg - 68) / 55, 0, 1);
-    const prefer = v3norm({ x: -side * 0.12, y: -1, z: 0.08 });
-    forearm = v3norm(v3add(
-      v3scale(forearm, 1 - 0.58 * upBias),
-      v3scale(prefer, 0.58 * upBias),
-    ));
+  if (elevation > 72 && elbowFlex > 68) {
+    const upAngle = -Math.PI / 2 + side * (0.12 + humeralRot * 0.004 * DEG);
+    const blend = clamp((elevation - 72) / 48, 0, 1) * clamp((elbowFlex - 68) / 55, 0, 1);
+    const d = Math.atan2(Math.sin(picked - upAngle), Math.cos(picked - upAngle));
+    picked = picked - d * blend * 0.82;
   }
-  return forearm;
+
+  return picked;
 }
 
-/** 純 FK：固定 L1/L2；輸出 2D 肘腕 + 方向（供 z／手指） */
+/** FK：固定 L1/L2；上臂 3D 方向 + 平面肘角（穩定可視結果） */
 function solveArmAnatomical(shoulder, L1, L2, intent, side) {
   const inv = clampArmIntent(intent);
   const upperDir = solveUpperArmDir(inv.elevation, inv.sweep, inv.humeralRot, side);
-  const forearmDir = solveForearmDir(
-    upperDir, inv.elbowFlex, inv.humeralRot, side, inv.elevation, inv.sweep,
+  const upperAngle = Math.atan2(upperDir.y, upperDir.x);
+  const forearmAngle = pickForearmAngleFromIntent(
+    upperAngle, inv.elbowFlex, inv.humeralRot, side, inv.elevation, inv.sweep,
   );
 
   const elbow = [
     shoulder[0] + L1 * upperDir.x,
     shoulder[1] + L1 * upperDir.y,
   ];
-  const wrist = [
-    elbow[0] + L2 * forearmDir.x,
-    elbow[1] + L2 * forearmDir.y,
+  let wrist = [
+    elbow[0] + L2 * Math.cos(forearmAngle),
+    elbow[1] + L2 * Math.sin(forearmAngle),
   ];
-  const forearmAngle = Math.atan2(forearmDir.y, forearmDir.x);
+
+  // 拍手：腕再略往中線收
+  if (inv.sweep > 15 && inv.elbowFlex > 50) {
+    const pull = 0.028 * clamp(inv.sweep / 50, 0, 1) * clamp((inv.elbowFlex - 50) / 50, 0, 1);
+    wrist[0] += -side * pull;
+  }
 
   return {
     elbow,
     wrist,
     forearmAngle,
     upperDir,
-    forearmDir,
     elevation: inv.elevation,
     sweep: inv.sweep,
     elbowFlex: inv.elbowFlex,
