@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v3+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v4+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -78,15 +78,21 @@ function smootherstep(t) {
 
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
-const BLEND_WINDOW_BEATS_SMALL = 0.85;  // wave ↔ clap
-const BLEND_WINDOW_BEATS_LARGE = 1.9;   // 任一端為 surrender 等 large（加長避免 via-rest 收放太急）
+const BLEND_WINDOW_BEATS_SMALL = 1.0;   // wave ↔ clap
+const BLEND_WINDOW_BEATS_LARGE = 2.2;   // 任一端為 surrender 等 large
+/** 高 BPM 時過渡真實秒數下限，避免「拍數夠但牆上時鐘太短→瞬間加速」 */
+const MIN_BLEND_SEC_SMALL = 0.70;
+const MIN_BLEND_SEC_LARGE = 1.15;
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
-const SPRING_HALF_LIFE_BLEND_MUL = 1.75; // 過渡中放慢 spring，減少「先垂再彈」
-const SPRING_HALF_LIFE_CATCHUP_MAX = 0.32; // 與目標 elevation 差大時再放慢
+const SPRING_HALF_LIFE_BLEND_MUL = 1.85;
+const SPRING_HALF_LIFE_CATCHUP_MAX = 0.34;
 const NOISE_SCALE_DEG = 1.0;
-/** C1 soft-rest：中段最多往中性靠這麼多（1=舊版完全收到 REST，易瞬移） */
-const REST_BRIDGE_PEAK = 0.38;
+/** C1 soft-rest：中段偏置（過大 → 中段／尾段兩次加速感） */
+const REST_BRIDGE_PEAK = 0.20;
+/** 意圖目標角速度上限（°/s）：過渡較嚴、一般動作較寬 */
+const INTENT_MAX_DEG_PER_SEC_BLEND = 95;
+const INTENT_MAX_DEG_PER_SEC_NORMAL = 200;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
 // elevation：0=垂下、90=水平、~160=過頭區
@@ -302,7 +308,7 @@ function springHalfLifeForPattern(_patternName, beatSec) {
   return Math.min(SPRING_HALF_LIFE_MAX, beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
 }
 
-/** 過渡／大角度追趕時加長 half-life，避免手臂「彈射」 */
+/** 過渡／大角度追趕時加長 half-life（誤差連續加權，避免過閾值突然變快） */
 function springHalfLifeForArms(baseHalfLife, blending, stateL, stateR, intentL, intentR) {
   let hl = baseHalfLife;
   if (blending) hl *= SPRING_HALF_LIFE_BLEND_MUL;
@@ -310,10 +316,8 @@ function springHalfLifeForArms(baseHalfLife, blending, stateL, stateR, intentL, 
     Math.abs((stateL?.elevation ?? 0) - (intentL?.elevation ?? 0)),
     Math.abs((stateR?.elevation ?? 0) - (intentR?.elevation ?? 0)),
   );
-  if (elevErr > 35) {
-    const t = clamp((elevErr - 35) / 70, 0, 1);
-    hl = Math.max(hl, _lerp(baseHalfLife, SPRING_HALF_LIFE_CATCHUP_MAX, t));
-  }
+  const t = clamp(elevErr / 90, 0, 1);
+  hl = _lerp(hl, Math.max(hl, SPRING_HALF_LIFE_CATCHUP_MAX), t * t);
   return hl;
 }
 
@@ -695,16 +699,23 @@ function patternTransitionSize(key) {
   return PATTERNS[key]?.size === "large" ? "large" : "small";
 }
 
-/** C2：pair 過渡拍數；同 pattern（lock）回傳 0 */
-function blendWindowBeatsForPair(fromKey, toKey) {
+/** C2：pair 過渡拍數；同 pattern（lock）回傳 0；並保證最短真實秒數 */
+function blendWindowBeatsForPair(fromKey, toKey, beatSec = 0.5) {
   if (!fromKey || !toKey || fromKey === toKey) return 0;
-  if (
+  const large =
     patternTransitionSize(fromKey) === "large" ||
-    patternTransitionSize(toKey) === "large"
-  ) {
-    return BLEND_WINDOW_BEATS_LARGE;
-  }
-  return BLEND_WINDOW_BEATS_SMALL;
+    patternTransitionSize(toKey) === "large";
+  let beats = large ? BLEND_WINDOW_BEATS_LARGE : BLEND_WINDOW_BEATS_SMALL;
+  const minSec = large ? MIN_BLEND_SEC_LARGE : MIN_BLEND_SEC_SMALL;
+  const bs = Math.max(1e-6, beatSec || 0.5);
+  beats = Math.max(beats, minSec / bs);
+  return beats;
+}
+
+/** 比 smootherstep 中段更平：用 cosine ease，降低「突然加速」感 */
+function easeInOutCosine(t) {
+  t = clamp(t, 0, 1);
+  return 0.5 - 0.5 * Math.cos(Math.PI * t);
 }
 
 /** C1：進出 large（如 surrender）走 rest bridge；small↔small 直接 intent 混 */
@@ -727,17 +738,30 @@ function lerpArmIntent(a, b, t) {
 
 /**
  * C1：A → B 的 intent 路徑；w∈[0,1]
- * viaRest：在直通 lerp 上疊「柔和中性偏置」（中段最明顯），
- * 不再走 A→REST→B 全垂手，避免影片中先收到腰再彈起的瞬移感。
+ * viaRest：輕量中性偏置（峰值已降低）；ease 用 cosine，避免中段暴衝。
  */
 function bridgeArmIntent(from, to, w, viaRest) {
   const wClamped = clamp(w, 0, 1);
-  const direct = lerpArmIntent(from, to, smootherstep(wClamped));
+  const direct = lerpArmIntent(from, to, easeInOutCosine(wClamped));
   if (!viaRest || REST_BRIDGE_PEAK <= 1e-6) return direct;
-  // 鐘形：中段偏 rest，兩端為 0，銜接 A／B 連續
-  const bell = Math.sin(Math.PI * wClamped);
-  const restW = REST_BRIDGE_PEAK * bell * bell;
+  // 更寬、更矮的偏置：sin^4，中段加速感比 sin^2 弱
+  const s = Math.sin(Math.PI * wClamped);
+  const restW = REST_BRIDGE_PEAK * s * s * s * s;
   return lerpArmIntent(direct, REST_ARM_INTENT, restW);
+}
+
+/** 限制意圖目標每幀變化，壓住過渡尾段／過閾值時的瞬間加速 */
+function rateLimitArmIntent(prev, next, dt, maxDegPerSec) {
+  if (!prev || !(dt > 0) || !(maxDegPerSec > 0)) return clampArmIntent(next);
+  const maxStep = maxDegPerSec * dt;
+  const lim = (a, b) => a + clamp(b - a, -maxStep, maxStep);
+  return clampArmIntent({
+    elevation: lim(prev.elevation, next.elevation),
+    sweep: lim(prev.sweep, next.sweep),
+    elbowFlex: lim(prev.elbowFlex, next.elbowFlex),
+    humeralRot: lim(prev.humeralRot, next.humeralRot),
+    forearmTwist: lim(prev.forearmTwist ?? 0, next.forearmTwist ?? 0),
+  });
 }
 
 /** Mix／隨機池順序（固定輪巡與 UI 下拉共用） */
@@ -838,6 +862,8 @@ export class ProceduralSkeleton {
       L: createArmIntentState(),
       R: createArmIntentState(),
     };
+    this._limitedIntentL = null;
+    this._limitedIntentR = null;
     this._prevT = null;
   }
 
@@ -947,9 +973,10 @@ export class ProceduralSkeleton {
     const nextEntry = this._getPatternAtBeat(nextBeatStart);
     const toKey = nextEntry.pattern;
 
-    let blendBeats = blendWindowBeatsForPair(fromKey, toKey);
-    // 避免短 pattern 整段都被過渡吃掉
-    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.45));
+    let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
+    // 避免短 pattern 整段都被過渡吃掉（仍保留最短秒數對應的拍數）
+    const maxByPat = pat.beats * 0.55;
+    blendBeats = Math.min(blendBeats, Math.max(0, maxByPat));
 
     let blending = false;
     let blendProgress = 0;
@@ -991,8 +1018,8 @@ export class ProceduralSkeleton {
     this._ensureSchedule(nextBeatStart);
     const nextEntry = this._getPatternAtBeat(nextBeatStart);
     const toKey = nextEntry.pattern;
-    let blendBeats = blendWindowBeatsForPair(fromKey, toKey);
-    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.45));
+    let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
+    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.55));
     const blending =
       blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats;
     const blendProgress = blending
@@ -1015,6 +1042,8 @@ export class ProceduralSkeleton {
   _resetArmDynamics() {
     this._armState.L = createArmIntentState();
     this._armState.R = createArmIntentState();
+    this._limitedIntentL = null;
+    this._limitedIntentR = null;
     try {
       getArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R).resetContinuity();
     } catch (_) {
@@ -1033,8 +1062,6 @@ export class ProceduralSkeleton {
     const entry = this._getPatternAtBeat(beatIndex);
     const amp = this.amplitudeScale;
     const resolved = this._resolveArmIntents(beatFloat, entry, amp, t);
-    const intentL = resolved.intentL;
-    const intentR = resolved.intentR;
     const patName = entry.pattern;
 
     let dt = this._prevT == null ? 1 / 60 : clamp(t - this._prevT, 1 / 240, 0.05);
@@ -1043,6 +1070,18 @@ export class ProceduralSkeleton {
       dt = 1 / 60;
     }
     this._prevT = t;
+
+    const maxDeg = resolved.blending
+      ? INTENT_MAX_DEG_PER_SEC_BLEND
+      : INTENT_MAX_DEG_PER_SEC_NORMAL;
+    const intentL = rateLimitArmIntent(
+      this._limitedIntentL, resolved.intentL, dt, maxDeg,
+    );
+    const intentR = rateLimitArmIntent(
+      this._limitedIntentR, resolved.intentR, dt, maxDeg,
+    );
+    this._limitedIntentL = intentL;
+    this._limitedIntentR = intentR;
 
     const halfLife = springHalfLifeForArms(
       springHalfLifeForPattern(patName, this.beatSec),
