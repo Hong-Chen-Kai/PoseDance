@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v9+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v10+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -78,26 +78,25 @@ function smootherstep(t) {
 
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
-const BLEND_WINDOW_BEATS_SMALL = 1.4;   // wave ↔ clap
-const BLEND_WINDOW_BEATS_LARGE = 2.4;   // 進出 large
+const BLEND_WINDOW_BEATS_SMALL = 1.85;  // wave ↔ clap（略放慢）
+const BLEND_WINDOW_BEATS_LARGE = 2.9;   // 進出 large
 /** 高 BPM 時過渡真實秒數下限 */
-const MIN_BLEND_SEC_SMALL = 0.90;
-const MIN_BLEND_SEC_LARGE = 1.25;
-const SPRING_HALF_LIFE_MAX = 0.18;
-const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
-const SPRING_HALF_LIFE_CATCHUP_MAX = 0.36;
+const MIN_BLEND_SEC_SMALL = 1.15;
+const MIN_BLEND_SEC_LARGE = 1.55;
+const SPRING_HALF_LIFE_MAX = 0.20;
+const SPRING_HALF_LIFE_BEAT_RATIO = 0.28;
+const SPRING_HALF_LIFE_CATCHUP_MAX = 0.40;
 const NOISE_SCALE_DEG = 1.0;
 /**
  * C1 soft-rest 峰值。0 = 關閉（Direct pose-to-pose，不經腰部下潛）。
- * 舊值 >0 會在 large 過渡中段混 REST，造成「先收回再舉起」折返。
  */
 const REST_BRIDGE_PEAK = 0.0;
-/** 意圖角速度上限（°/s）：全時連續，避免 blending 開關造成暴衝 */
-const INTENT_MAX_DEG_PER_SEC = 125;
-const INTENT_MAX_DEG_PER_SEC_LARGE = 105;
+/** 意圖角速度上限（°/s）：全時連續；v9 略快，這裡再收一點 */
+const INTENT_MAX_DEG_PER_SEC = 95;
+const INTENT_MAX_DEG_PER_SEC_LARGE = 80;
 /** 腕／肘：只擋單幀暴衝 */
-const ARM_POINT_MAX_STEP_JUMP = 0.085;
-const ARM_POINT_MAX_SPEED_NORMAL = 0.85;
+const ARM_POINT_MAX_STEP_JUMP = 0.075;
+const ARM_POINT_MAX_SPEED_NORMAL = 0.70;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
 // elevation：0=垂下、90=水平、~160=過頭區
