@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v8+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v9+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -79,26 +79,24 @@ function smootherstep(t) {
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
 const BLEND_WINDOW_BEATS_SMALL = 1.4;   // wave ↔ clap
-const BLEND_WINDOW_BEATS_LARGE = 2.4;   // 進出 large（不可太長，否則舉手段被吃光）
+const BLEND_WINDOW_BEATS_LARGE = 2.4;   // 進出 large
 /** 高 BPM 時過渡真實秒數下限 */
 const MIN_BLEND_SEC_SMALL = 0.90;
 const MIN_BLEND_SEC_LARGE = 1.25;
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
-const SPRING_HALF_LIFE_BLEND_MUL = 2.0;
 const SPRING_HALF_LIFE_CATCHUP_MAX = 0.36;
 const NOISE_SCALE_DEG = 1.0;
-/** C1 soft-rest：中段偏置 */
-const REST_BRIDGE_PEAK = 0.16;
-/** 意圖角速度上限（°/s）— 舉手需夠快才能在 blend 前舉過頭 */
-const INTENT_MAX_DEG_PER_SEC_BLEND = 70;
-const INTENT_MAX_DEG_PER_SEC_BLEND_LARGE = 55;
-const INTENT_MAX_DEG_PER_SEC_RAISE = 85;
-const INTENT_MAX_DEG_PER_SEC_NORMAL = 160;
-/** large 進場僅前段略慢，之後讓 keyframe 帶到位 */
-const LARGE_ENTRY_SLOW_BEATS = 1.2;
-/** 腕／肘：只擋單幀暴衝，不擋正常舉手（v7 過嚴導致舉不起） */
-const ARM_POINT_MAX_STEP_JUMP = 0.085; // 單幀最大位移（正規化）
+/**
+ * C1 soft-rest 峰值。0 = 關閉（Direct pose-to-pose，不經腰部下潛）。
+ * 舊值 >0 會在 large 過渡中段混 REST，造成「先收回再舉起」折返。
+ */
+const REST_BRIDGE_PEAK = 0.0;
+/** 意圖角速度上限（°/s）：全時連續，避免 blending 開關造成暴衝 */
+const INTENT_MAX_DEG_PER_SEC = 125;
+const INTENT_MAX_DEG_PER_SEC_LARGE = 105;
+/** 腕／肘：只擋單幀暴衝 */
+const ARM_POINT_MAX_STEP_JUMP = 0.085;
 const ARM_POINT_MAX_SPEED_NORMAL = 0.85;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
@@ -315,17 +313,15 @@ function springHalfLifeForPattern(_patternName, beatSec) {
   return Math.min(SPRING_HALF_LIFE_MAX, beatSec * SPRING_HALF_LIFE_BEAT_RATIO);
 }
 
-/** 過渡／大角度追趕時加長 half-life（誤差連續加權，避免過閾值突然變快） */
-function springHalfLifeForArms(baseHalfLife, blending, stateL, stateR, intentL, intentR) {
+/** 依角度誤差平滑調 half-life；不再用 blending 開關翻倍（避免硬度驟變） */
+function springHalfLifeForArms(baseHalfLife, _blending, stateL, stateR, intentL, intentR) {
   let hl = baseHalfLife;
-  if (blending) hl *= SPRING_HALF_LIFE_BLEND_MUL;
   const elevErr = Math.max(
     Math.abs((stateL?.elevation ?? 0) - (intentL?.elevation ?? 0)),
     Math.abs((stateR?.elevation ?? 0) - (intentR?.elevation ?? 0)),
   );
   const t = clamp(elevErr / 90, 0, 1);
-  hl = _lerp(hl, Math.max(hl, SPRING_HALF_LIFE_CATCHUP_MAX), t * t);
-  return hl;
+  return _lerp(hl, Math.max(hl, SPRING_HALF_LIFE_CATCHUP_MAX), t * t);
 }
 
 function criticalDampedSpring1D(state, key, vKey, target, halfLife, dt) {
@@ -720,17 +716,17 @@ function blendWindowBeatsForPair(fromKey, toKey, beatSec = 0.5) {
   return beats;
 }
 
-/** 比 smootherstep 中段更平：用 cosine ease，降低「突然加速」感 */
-function easeInOutCosine(t) {
+/** 三次 Ease-In-Out：啟動慢 → 中段快 → 抵達減速 */
+function easeInOutCubic(t) {
   t = clamp(t, 0, 1);
-  return 0.5 - 0.5 * Math.cos(Math.PI * t);
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-/** C1：進出 large（如 surrender）走 rest bridge；small↔small 直接 intent 混 */
-function needsRestBridge(fromKey, toKey) {
-  return (
-    patternTransitionSize(fromKey) === "large" ||
-    patternTransitionSize(toKey) === "large"
+/** 已關閉 rest bridge（REST_BRIDGE_PEAK=0）；保留函式以免呼叫端改動過大 */
+function needsRestBridge(_fromKey, _toKey) {
+  return REST_BRIDGE_PEAK > 1e-6 && (
+    patternTransitionSize(_fromKey) === "large" ||
+    patternTransitionSize(_toKey) === "large"
   );
 }
 
@@ -745,14 +741,13 @@ function lerpArmIntent(a, b, t) {
 }
 
 /**
- * C1：A → B 的 intent 路徑；w∈[0,1]
- * viaRest：輕量中性偏置（峰值已降低）；ease 用 cosine，避免中段暴衝。
+ * A → B 直接 intent 混合（Direct pose-to-pose）。
+ * viaRest 僅在 REST_BRIDGE_PEAK>0 時生效；預設關閉。
  */
 function bridgeArmIntent(from, to, w, viaRest) {
   const wClamped = clamp(w, 0, 1);
-  const direct = lerpArmIntent(from, to, easeInOutCosine(wClamped));
+  const direct = lerpArmIntent(from, to, easeInOutCubic(wClamped));
   if (!viaRest || REST_BRIDGE_PEAK <= 1e-6) return direct;
-  // 更寬、更矮的偏置：sin^4，中段加速感比 sin^2 弱
   const s = Math.sin(Math.PI * wClamped);
   const restW = REST_BRIDGE_PEAK * s * s * s * s;
   return lerpArmIntent(direct, REST_ARM_INTENT, restW);
@@ -785,12 +780,10 @@ function rateLimitPoint2d(prev, next, dt, maxSpeed) {
 }
 
 /**
- * 依過渡／舉手落差選角速度上限。
- * 可擴充：未來新 large／舉手類只要標 size:"large" 或 elevation 高，就會自動變慢。
+ * 全時連續角速度上限（無 blending 開關斷層）。
+ * large／舉手落差大時略降，仍保持平滑。
  */
 function intentRateLimitDegPerSec({
-  blending,
-  viaRest,
   toLarge,
   enteringLarge,
   intentL,
@@ -798,20 +791,14 @@ function intentRateLimitDegPerSec({
   stateL,
   stateR,
 }) {
-  let max = blending
-    ? INTENT_MAX_DEG_PER_SEC_BLEND
-    : INTENT_MAX_DEG_PER_SEC_NORMAL;
-  if (blending && (viaRest || toLarge)) {
-    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_BLEND_LARGE);
-  }
-  if (enteringLarge) {
-    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_RAISE);
+  let max = INTENT_MAX_DEG_PER_SEC;
+  if (toLarge || enteringLarge) {
+    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_LARGE);
   }
   const elevTarget = Math.max(intentL?.elevation ?? 0, intentR?.elevation ?? 0);
   const elevNow = Math.max(stateL?.elevation ?? 0, stateR?.elevation ?? 0);
-  // 明顯往上舉：不限是否在 blend（覆蓋進 surrender 後 keyframe 衝高）
-  if (elevTarget > elevNow + 22 && elevTarget > 50) {
-    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_RAISE);
+  if (elevTarget > elevNow + 35 && elevTarget > 70) {
+    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_LARGE);
   }
   return max;
 }
@@ -1133,12 +1120,11 @@ export class ProceduralSkeleton {
 
     const localBeat = beatFloat - entry.beatStart;
     const enteringLarge =
-      patternTransitionSize(patName) === "large" &&
-      localBeat < LARGE_ENTRY_SLOW_BEATS;
+      patternTransitionSize(patName) === "large" && localBeat < 1.5;
     const maxDeg = intentRateLimitDegPerSec({
-      blending: !!resolved.blending,
-      viaRest: !!resolved.blending && needsRestBridge(resolved.fromKey, resolved.toKey),
-      toLarge: patternTransitionSize(resolved.toKey) === "large",
+      toLarge:
+        patternTransitionSize(resolved.toKey) === "large" ||
+        patternTransitionSize(patName) === "large",
       enteringLarge,
       intentL: resolved.intentL,
       intentR: resolved.intentR,
