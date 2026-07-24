@@ -1,7 +1,7 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
 
 // 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
-const PROCEDURAL_IMPORT_BUILD = "three-arm-v5";
+const PROCEDURAL_IMPORT_BUILD = "three-arm-v6";
 let _synthModule = null;
 const _synthReady = import(`./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`)
   .then((m) => {

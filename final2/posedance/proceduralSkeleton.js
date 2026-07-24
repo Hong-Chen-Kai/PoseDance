@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v5+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v6+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -78,21 +78,25 @@ function smootherstep(t) {
 
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
-const BLEND_WINDOW_BEATS_SMALL = 1.6;   // wave ↔ clap（再放慢）
-const BLEND_WINDOW_BEATS_LARGE = 3.2;   // 任一端為 surrender 等 large
-/** 高 BPM 時過渡真實秒數下限，避免「拍數夠但牆上時鐘太短→瞬間加速」 */
+const BLEND_WINDOW_BEATS_SMALL = 1.6;   // wave ↔ clap
+const BLEND_WINDOW_BEATS_LARGE = 3.6;   // 接到／離開 surrender 等 large（再放慢）
+/** 高 BPM 時過渡真實秒數下限 */
 const MIN_BLEND_SEC_SMALL = 1.10;
-const MIN_BLEND_SEC_LARGE = 1.70;
+const MIN_BLEND_SEC_LARGE = 2.00;
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
 const SPRING_HALF_LIFE_BLEND_MUL = 2.2;
-const SPRING_HALF_LIFE_CATCHUP_MAX = 0.38;
+const SPRING_HALF_LIFE_CATCHUP_MAX = 0.42;
 const NOISE_SCALE_DEG = 1.0;
 /** C1 soft-rest：中段偏置（過大 → 中段／尾段兩次加速感） */
-const REST_BRIDGE_PEAK = 0.18;
-/** 意圖目標角速度上限（°/s）：過渡較嚴、一般動作較寬 */
-const INTENT_MAX_DEG_PER_SEC_BLEND = 60;
-const INTENT_MAX_DEG_PER_SEC_NORMAL = 180;
+const REST_BRIDGE_PEAK = 0.16;
+/** 意圖角速度上限（°/s） */
+const INTENT_MAX_DEG_PER_SEC_BLEND = 55;
+const INTENT_MAX_DEG_PER_SEC_BLEND_LARGE = 42; // 進出 large／舉手過渡更慢
+const INTENT_MAX_DEG_PER_SEC_RAISE = 48;       // 往上舉（含進 surrender 後前幾拍）
+const INTENT_MAX_DEG_PER_SEC_NORMAL = 160;
+/** large 進場後這幾拍仍用較慢限速（避免 blend 結束後 keyframe 暴衝） */
+const LARGE_ENTRY_SLOW_BEATS = 2.8;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
 // elevation：0=垂下、90=水平、~160=過頭區
@@ -764,6 +768,38 @@ function rateLimitArmIntent(prev, next, dt, maxDegPerSec) {
   });
 }
 
+/**
+ * 依過渡／舉手落差選角速度上限。
+ * 可擴充：未來新 large／舉手類只要標 size:"large" 或 elevation 高，就會自動變慢。
+ */
+function intentRateLimitDegPerSec({
+  blending,
+  viaRest,
+  toLarge,
+  enteringLarge,
+  intentL,
+  intentR,
+  stateL,
+  stateR,
+}) {
+  let max = blending
+    ? INTENT_MAX_DEG_PER_SEC_BLEND
+    : INTENT_MAX_DEG_PER_SEC_NORMAL;
+  if (blending && (viaRest || toLarge)) {
+    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_BLEND_LARGE);
+  }
+  if (enteringLarge) {
+    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_RAISE);
+  }
+  const elevTarget = Math.max(intentL?.elevation ?? 0, intentR?.elevation ?? 0);
+  const elevNow = Math.max(stateL?.elevation ?? 0, stateR?.elevation ?? 0);
+  // 明顯往上舉：不限是否在 blend（覆蓋進 surrender 後 keyframe 衝高）
+  if (elevTarget > elevNow + 22 && elevTarget > 50) {
+    max = Math.min(max, INTENT_MAX_DEG_PER_SEC_RAISE);
+  }
+  return max;
+}
+
 /** Mix／隨機池順序（固定輪巡與 UI 下拉共用） */
 const PATTERN_KEYS = Object.keys(PATTERNS);
 
@@ -1071,9 +1107,20 @@ export class ProceduralSkeleton {
     }
     this._prevT = t;
 
-    const maxDeg = resolved.blending
-      ? INTENT_MAX_DEG_PER_SEC_BLEND
-      : INTENT_MAX_DEG_PER_SEC_NORMAL;
+    const localBeat = beatFloat - entry.beatStart;
+    const enteringLarge =
+      patternTransitionSize(patName) === "large" &&
+      localBeat < LARGE_ENTRY_SLOW_BEATS;
+    const maxDeg = intentRateLimitDegPerSec({
+      blending: !!resolved.blending,
+      viaRest: !!resolved.blending && needsRestBridge(resolved.fromKey, resolved.toKey),
+      toLarge: patternTransitionSize(resolved.toKey) === "large",
+      enteringLarge,
+      intentL: resolved.intentL,
+      intentR: resolved.intentR,
+      stateL: this._armState.L,
+      stateR: this._armState.R,
+    });
     const intentL = rateLimitArmIntent(
       this._limitedIntentL, resolved.intentL, dt, maxDeg,
     );
