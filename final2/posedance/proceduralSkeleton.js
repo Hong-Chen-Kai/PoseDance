@@ -12,17 +12,35 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v10+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v11+${ARM_FK_THREE_BUILD}`;
 
-// ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
+// ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
+// Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
+const _PERLIN_PERM = new Uint8Array([
+  151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225,
+  140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148,
+  247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32,
+  57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175,
+  74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122,
+  60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54,
+  65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169,
+  200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64,
+  52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212,
+  207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213,
+  119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+  129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104,
+  218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241,
+  81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157,
+  184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93,
+  222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
+]);
 const _perlinGrad = (() => {
-  const p = [];
-  for (let i = 0; i < 256; i++) p[i] = i;
-  for (let i = 255; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [p[i], p[j]] = [p[j], p[i]];
+  const p = new Uint8Array(512);
+  for (let i = 0; i < 256; i++) {
+    p[i] = _PERLIN_PERM[i];
+    p[i + 256] = _PERLIN_PERM[i];
   }
-  return p.concat(p);
+  return p;
 })();
 
 function _fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
@@ -632,14 +650,17 @@ function measureLegRest(hipIdx, kneeIdx, ankleIdx, L1, L2) {
 const LEG_REST_L = measureLegRest(23, 25, 27, L_THIGH_L, L_SHIN_L);
 const LEG_REST_R = measureLegRest(24, 26, 28, L_THIGH_R, L_SHIN_R);
 
-const FINGER_OFFSETS_L = [17, 19, 21].map(i => [
+const LEFT_FINGER_IDXS = [17, 19, 21];
+const RIGHT_FINGER_IDXS = [18, 20, 22];
+const FINGER_OFFSETS_L = LEFT_FINGER_IDXS.map(i => [
   BASE_POSE[i][0] - BASE_POSE[15][0],
   BASE_POSE[i][1] - BASE_POSE[15][1],
 ]);
-const FINGER_OFFSETS_R = [18, 20, 22].map(i => [
+const FINGER_OFFSETS_R = RIGHT_FINGER_IDXS.map(i => [
   BASE_POSE[i][0] - BASE_POSE[16][0],
   BASE_POSE[i][1] - BASE_POSE[16][1],
 ]);
+const BASE_FOREARM_ANGLE = Math.PI / 2;
 
 function applySimpleZ(lm, elbowIdx, wristIdx, fingerIdxs, shoulder, wrist, L1, L2, armResult, sideSign) {
   const reachNorm = clamp(dist2d(shoulder, wrist) / (L1 + L2), 0, 1);
@@ -907,6 +928,10 @@ export class ProceduralSkeleton {
     this._prevWristL = null;
     this._prevWristR = null;
     this._prevT = null;
+    // 每幀重用，避免 BASE_POSE.map 造成 GC 微卡頓（呼叫端勿跨幀留存回傳值）
+    this._lmBuffer = Array.from({ length: 33 }, () => [0, 0, 0, 1]);
+    this._tmpShoulderL = [0, 0, 0];
+    this._tmpShoulderR = [0, 0, 0];
   }
 
   _makeRng(seed) {
@@ -1152,7 +1177,14 @@ export class ProceduralSkeleton {
     const bodyBob = BODY_BOB_AMP * amp * beatSin;
     const headTilt = HEAD_TILT_AMP * amp * Math.sin((2 * Math.PI * elapsed) / (this.beatSec * 2));
 
-    const lm = BASE_POSE.map(p => [p[0], p[1], p[2], p[3]]);
+    const lm = this._lmBuffer;
+    for (let i = 0; i < 33; i++) {
+      const base = BASE_POSE[i];
+      lm[i][0] = base[0];
+      lm[i][1] = base[1];
+      lm[i][2] = base[2];
+      lm[i][3] = base[3];
+    }
 
     for (let i = 0; i <= 22; i++) lm[i][1] += bodyBob;
     for (let i = 0; i <= 10; i++) lm[i][0] += headTilt;
@@ -1165,29 +1197,35 @@ export class ProceduralSkeleton {
 
     applyShoulderDrive(lm, smoothL, smoothR, amp);
 
-    const leftShoulder = [lm[11][0], lm[11][1], lm[11][2]];
-    const rightShoulder = [lm[12][0], lm[12][1], lm[12][2]];
+    const leftShoulder = this._tmpShoulderL;
+    leftShoulder[0] = lm[11][0];
+    leftShoulder[1] = lm[11][1];
+    leftShoulder[2] = lm[11][2];
+    const rightShoulder = this._tmpShoulderR;
+    rightShoulder[0] = lm[12][0];
+    rightShoulder[1] = lm[12][1];
+    rightShoulder[2] = lm[12][2];
 
     const armFk = getArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R);
-    let leftArm = armFk.solve(leftShoulder, smoothL, 1);
-    let rightArm = armFk.solve(rightShoulder, smoothR, -1);
+    const leftArm = armFk.solve(leftShoulder, smoothL, 1);
+    const rightArm = armFk.solve(rightShoulder, smoothR, -1);
 
     const leftGeo = enforceArmGeometry(
-      [leftShoulder[0], leftShoulder[1]],
+      leftShoulder,
       leftArm.elbow,
       leftArm.wrist,
       L_UPPER_L,
       L_LOWER_L,
     );
     const rightGeo = enforceArmGeometry(
-      [rightShoulder[0], rightShoulder[1]],
+      rightShoulder,
       rightArm.elbow,
       rightArm.wrist,
       L_UPPER_R,
       L_LOWER_R,
     );
 
-    // 螢幕座標：擋單幀暴衝；舉手不再用超慢 RAISE 速度（會舉不起來）
+    // 螢幕座標：擋單幀暴衝
     const pointSpeed = ARM_POINT_MAX_SPEED_NORMAL;
     const elbowL = rateLimitPoint2d(this._prevElbowL, leftGeo.elbow, dt, pointSpeed);
     const wristL = rateLimitPoint2d(this._prevWristL, leftGeo.wrist, dt, pointSpeed);
@@ -1198,47 +1236,40 @@ export class ProceduralSkeleton {
     this._prevElbowR = elbowR;
     this._prevWristR = wristR;
 
-    leftArm = {
-      ...leftArm,
-      elbow: elbowL,
-      wrist: wristL,
-      forearmAngle: Math.atan2(wristL[1] - elbowL[1], wristL[0] - elbowL[0]),
-    };
-    rightArm = {
-      ...rightArm,
-      elbow: elbowR,
-      wrist: wristR,
-      forearmAngle: Math.atan2(wristR[1] - elbowR[1], wristR[0] - elbowR[0]),
-    };
+    leftArm.elbow = elbowL;
+    leftArm.wrist = wristL;
+    leftArm.forearmAngle = Math.atan2(wristL[1] - elbowL[1], wristL[0] - elbowL[0]);
+    rightArm.elbow = elbowR;
+    rightArm.wrist = wristR;
+    rightArm.forearmAngle = Math.atan2(wristR[1] - elbowR[1], wristR[0] - elbowR[0]);
 
     lm[13][0] = leftArm.elbow[0];  lm[13][1] = leftArm.elbow[1];
     lm[14][0] = rightArm.elbow[0]; lm[14][1] = rightArm.elbow[1];
     lm[15][0] = leftArm.wrist[0];  lm[15][1] = leftArm.wrist[1];
     lm[16][0] = rightArm.wrist[0]; lm[16][1] = rightArm.wrist[1];
 
-    // 手指：隨前臂平面角 + forearmTwist（小手臂旋轉）
-    const BASE_FOREARM_ANGLE = Math.PI / 2;
-    const leftFingerIdx = [17, 19, 21];
+    // 手指：隨前臂平面角 + forearmTwist
     const lTwist = (leftArm.forearmTwist || 0) * DEG * 0.55;
     const lRot = leftArm.forearmAngle - BASE_FOREARM_ANGLE + lTwist;
     const lCos = Math.cos(lRot), lSin = Math.sin(lRot);
     for (let i = 0; i < 3; i++) {
+      const fi = LEFT_FINGER_IDXS[i];
       const ox = FINGER_OFFSETS_L[i][0], oy = FINGER_OFFSETS_L[i][1];
-      lm[leftFingerIdx[i]][0] = lm[15][0] + ox * lCos - oy * lSin;
-      lm[leftFingerIdx[i]][1] = lm[15][1] + ox * lSin + oy * lCos;
+      lm[fi][0] = lm[15][0] + ox * lCos - oy * lSin;
+      lm[fi][1] = lm[15][1] + ox * lSin + oy * lCos;
     }
-    const rightFingerIdx = [18, 20, 22];
     const rTwist = (rightArm.forearmTwist || 0) * DEG * 0.55;
     const rRot = rightArm.forearmAngle - BASE_FOREARM_ANGLE - rTwist;
     const rCos = Math.cos(rRot), rSin = Math.sin(rRot);
     for (let i = 0; i < 3; i++) {
+      const fi = RIGHT_FINGER_IDXS[i];
       const ox = FINGER_OFFSETS_R[i][0], oy = FINGER_OFFSETS_R[i][1];
-      lm[rightFingerIdx[i]][0] = lm[16][0] + ox * rCos - oy * rSin;
-      lm[rightFingerIdx[i]][1] = lm[16][1] + ox * rSin + oy * rCos;
+      lm[fi][0] = lm[16][0] + ox * rCos - oy * rSin;
+      lm[fi][1] = lm[16][1] + ox * rSin + oy * rCos;
     }
 
-    applySimpleZ(lm, 13, 15, leftFingerIdx, [leftShoulder[0], leftShoulder[1]], leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
-    applySimpleZ(lm, 14, 16, rightFingerIdx, [rightShoulder[0], rightShoulder[1]], rightArm.wrist, L_UPPER_R, L_LOWER_R, rightArm, -1);
+    applySimpleZ(lm, 13, 15, LEFT_FINGER_IDXS, leftShoulder, leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
+    applySimpleZ(lm, 14, 16, RIGHT_FINGER_IDXS, rightShoulder, rightArm.wrist, L_UPPER_R, L_LOWER_R, rightArm, -1);
 
     if (grooveEnablesBounce(this.grooveMode)) {
       applyBounce(lm, beatSin, amp);
