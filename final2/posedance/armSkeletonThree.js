@@ -60,9 +60,9 @@ function pickForearmAngleFromIntent(upperAngle, elbowFlex, humeralRot, side, ele
 
   if (prevAngle == null || !Number.isFinite(prevAngle)) return intentPick;
 
-  // 限速：每幀前臂角最多轉 ~12°，消除換解／過閾值造成的腕部瞬移
+  // 限速：舉手時更慢，避免肘解切換造成腕部瞬移
   const delta = Math.atan2(Math.sin(intentPick - prevAngle), Math.cos(intentPick - prevAngle));
-  const maxStep = 12 * DEG;
+  const maxStep = (elevation > 50 ? 5 : 12) * DEG;
   if (Math.abs(delta) <= maxStep) return intentPick;
   return prevAngle + Math.sign(delta) * maxStep;
 }
@@ -205,4 +205,4 @@ export function getArmFkThree(L1L, L2L, L1R, L2R) {
   return _fk;
 }
 
-export const ARM_FK_THREE_BUILD = "three-arm-fk-v5";
+export const ARM_FK_THREE_BUILD = "three-arm-fk-v6";

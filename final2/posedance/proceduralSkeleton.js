@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v6+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v7+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -79,24 +79,27 @@ function smootherstep(t) {
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
 const BLEND_WINDOW_BEATS_SMALL = 1.6;   // wave ↔ clap
-const BLEND_WINDOW_BEATS_LARGE = 3.6;   // 接到／離開 surrender 等 large（再放慢）
+const BLEND_WINDOW_BEATS_LARGE = 3.8;   // 接到／離開 surrender 等 large
 /** 高 BPM 時過渡真實秒數下限 */
 const MIN_BLEND_SEC_SMALL = 1.10;
-const MIN_BLEND_SEC_LARGE = 2.00;
+const MIN_BLEND_SEC_LARGE = 2.20;
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
-const SPRING_HALF_LIFE_BLEND_MUL = 2.2;
-const SPRING_HALF_LIFE_CATCHUP_MAX = 0.42;
+const SPRING_HALF_LIFE_BLEND_MUL = 2.4;
+const SPRING_HALF_LIFE_CATCHUP_MAX = 0.45;
 const NOISE_SCALE_DEG = 1.0;
 /** C1 soft-rest：中段偏置（過大 → 中段／尾段兩次加速感） */
-const REST_BRIDGE_PEAK = 0.16;
-/** 意圖角速度上限（°/s） */
-const INTENT_MAX_DEG_PER_SEC_BLEND = 55;
-const INTENT_MAX_DEG_PER_SEC_BLEND_LARGE = 42; // 進出 large／舉手過渡更慢
-const INTENT_MAX_DEG_PER_SEC_RAISE = 48;       // 往上舉（含進 surrender 後前幾拍）
-const INTENT_MAX_DEG_PER_SEC_NORMAL = 160;
-/** large 進場後這幾拍仍用較慢限速（避免 blend 結束後 keyframe 暴衝） */
-const LARGE_ENTRY_SLOW_BEATS = 2.8;
+const REST_BRIDGE_PEAK = 0.14;
+/** 意圖角速度上限（°/s）— 舉手再壓慢 */
+const INTENT_MAX_DEG_PER_SEC_BLEND = 48;
+const INTENT_MAX_DEG_PER_SEC_BLEND_LARGE = 32;
+const INTENT_MAX_DEG_PER_SEC_RAISE = 28;
+const INTENT_MAX_DEG_PER_SEC_NORMAL = 140;
+/** large 進場後這幾拍仍用較慢限速 */
+const LARGE_ENTRY_SLOW_BEATS = 4.0;
+/** 腕／肘螢幕座標最大速度（正規化／秒）— 最後一道防瞬移 */
+const ARM_POINT_MAX_SPEED_RAISE = 0.16;
+const ARM_POINT_MAX_SPEED_NORMAL = 0.50;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
 // elevation：0=垂下、90=水平、~160=過頭區
@@ -680,10 +683,11 @@ const PATTERNS = {
     name: "雙手投降舉",
     size: "large",
     beats: 8,
-    left_upper:    [90, 35, 5, -20, -20, 5, 35, 90],
-    left_forearm:  [120, 155, 185, 195, 195, 185, 155, 120],
-    right_upper:   [90, 35, 5, -20, -20, 5, 35, 90],
-    right_forearm: [120, 155, 185, 195, 195, 185, 155, 120],
+    // 放慢起手舉高（舊版 90→35 一拍內落差太大，易覺瞬移）
+    left_upper:    [88, 72, 55, 38, 18, -8, -20, 45],
+    left_forearm:  [120, 138, 155, 170, 185, 195, 195, 150],
+    right_upper:   [88, 72, 55, 38, 18, -8, -20, 45],
+    right_forearm: [120, 138, 155, 170, 185, 195, 195, 150],
   },
   clap: {
     name: "胸前拍手",
@@ -766,6 +770,17 @@ function rateLimitArmIntent(prev, next, dt, maxDegPerSec) {
     humeralRot: lim(prev.humeralRot, next.humeralRot),
     forearmTwist: lim(prev.forearmTwist ?? 0, next.forearmTwist ?? 0),
   });
+}
+
+function rateLimitPoint2d(prev, next, dt, maxSpeed) {
+  if (!prev || !(dt > 0) || !(maxSpeed > 0)) return [next[0], next[1]];
+  const dx = next[0] - prev[0];
+  const dy = next[1] - prev[1];
+  const dist = Math.hypot(dx, dy);
+  const maxStep = maxSpeed * dt;
+  if (dist <= maxStep || dist < 1e-9) return [next[0], next[1]];
+  const s = maxStep / dist;
+  return [prev[0] + dx * s, prev[1] + dy * s];
 }
 
 /**
@@ -900,6 +915,10 @@ export class ProceduralSkeleton {
     };
     this._limitedIntentL = null;
     this._limitedIntentR = null;
+    this._prevElbowL = null;
+    this._prevElbowR = null;
+    this._prevWristL = null;
+    this._prevWristR = null;
     this._prevT = null;
   }
 
@@ -1080,6 +1099,10 @@ export class ProceduralSkeleton {
     this._armState.R = createArmIntentState();
     this._limitedIntentL = null;
     this._limitedIntentR = null;
+    this._prevElbowL = null;
+    this._prevElbowR = null;
+    this._prevWristL = null;
+    this._prevWristR = null;
     try {
       getArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R).resetContinuity();
     } catch (_) {
@@ -1151,6 +1174,10 @@ export class ProceduralSkeleton {
       applySwing(lm, beatSin, amp);
     }
 
+    const elevBefore = Math.max(
+      this._armState.L.elevation,
+      this._armState.R.elevation,
+    );
     const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
     const smoothR = springArmIntent(this._armState.R, intentR, halfLife, dt);
 
@@ -1170,12 +1197,6 @@ export class ProceduralSkeleton {
       L_UPPER_L,
       L_LOWER_L,
     );
-    leftArm = {
-      ...leftArm,
-      elbow: leftGeo.elbow,
-      wrist: leftGeo.wrist,
-      forearmAngle: Math.atan2(leftGeo.wrist[1] - leftGeo.elbow[1], leftGeo.wrist[0] - leftGeo.elbow[0]),
-    };
     const rightGeo = enforceArmGeometry(
       [rightShoulder[0], rightShoulder[1]],
       rightArm.elbow,
@@ -1183,11 +1204,36 @@ export class ProceduralSkeleton {
       L_UPPER_R,
       L_LOWER_R,
     );
+
+    // 螢幕座標限速：舉手／large 進場時腕肘不能瞬間飛到位
+    const elevNow = Math.max(smoothL.elevation, smoothR.elevation);
+    const elevRising = elevNow > elevBefore + 0.5;
+    const pointSpeed =
+      enteringLarge ||
+      (elevRising && elevNow > 40) ||
+      resolved.blending
+        ? ARM_POINT_MAX_SPEED_RAISE
+        : ARM_POINT_MAX_SPEED_NORMAL;
+    const elbowL = rateLimitPoint2d(this._prevElbowL, leftGeo.elbow, dt, pointSpeed);
+    const wristL = rateLimitPoint2d(this._prevWristL, leftGeo.wrist, dt, pointSpeed);
+    const elbowR = rateLimitPoint2d(this._prevElbowR, rightGeo.elbow, dt, pointSpeed);
+    const wristR = rateLimitPoint2d(this._prevWristR, rightGeo.wrist, dt, pointSpeed);
+    this._prevElbowL = elbowL;
+    this._prevWristL = wristL;
+    this._prevElbowR = elbowR;
+    this._prevWristR = wristR;
+
+    leftArm = {
+      ...leftArm,
+      elbow: elbowL,
+      wrist: wristL,
+      forearmAngle: Math.atan2(wristL[1] - elbowL[1], wristL[0] - elbowL[0]),
+    };
     rightArm = {
       ...rightArm,
-      elbow: rightGeo.elbow,
-      wrist: rightGeo.wrist,
-      forearmAngle: Math.atan2(rightGeo.wrist[1] - rightGeo.elbow[1], rightGeo.wrist[0] - rightGeo.elbow[0]),
+      elbow: elbowR,
+      wrist: wristR,
+      forearmAngle: Math.atan2(wristR[1] - elbowR[1], wristR[0] - elbowR[0]),
     };
 
     lm[13][0] = leftArm.elbow[0];  lm[13][1] = leftArm.elbow[1];
