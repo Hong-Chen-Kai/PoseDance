@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v7+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v8+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -78,28 +78,28 @@ function smootherstep(t) {
 
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
-const BLEND_WINDOW_BEATS_SMALL = 1.6;   // wave ↔ clap
-const BLEND_WINDOW_BEATS_LARGE = 3.8;   // 接到／離開 surrender 等 large
+const BLEND_WINDOW_BEATS_SMALL = 1.4;   // wave ↔ clap
+const BLEND_WINDOW_BEATS_LARGE = 2.4;   // 進出 large（不可太長，否則舉手段被吃光）
 /** 高 BPM 時過渡真實秒數下限 */
-const MIN_BLEND_SEC_SMALL = 1.10;
-const MIN_BLEND_SEC_LARGE = 2.20;
+const MIN_BLEND_SEC_SMALL = 0.90;
+const MIN_BLEND_SEC_LARGE = 1.25;
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
-const SPRING_HALF_LIFE_BLEND_MUL = 2.4;
-const SPRING_HALF_LIFE_CATCHUP_MAX = 0.45;
+const SPRING_HALF_LIFE_BLEND_MUL = 2.0;
+const SPRING_HALF_LIFE_CATCHUP_MAX = 0.36;
 const NOISE_SCALE_DEG = 1.0;
-/** C1 soft-rest：中段偏置（過大 → 中段／尾段兩次加速感） */
-const REST_BRIDGE_PEAK = 0.14;
-/** 意圖角速度上限（°/s）— 舉手再壓慢 */
-const INTENT_MAX_DEG_PER_SEC_BLEND = 48;
-const INTENT_MAX_DEG_PER_SEC_BLEND_LARGE = 32;
-const INTENT_MAX_DEG_PER_SEC_RAISE = 28;
-const INTENT_MAX_DEG_PER_SEC_NORMAL = 140;
-/** large 進場後這幾拍仍用較慢限速 */
-const LARGE_ENTRY_SLOW_BEATS = 4.0;
-/** 腕／肘螢幕座標最大速度（正規化／秒）— 最後一道防瞬移 */
-const ARM_POINT_MAX_SPEED_RAISE = 0.16;
-const ARM_POINT_MAX_SPEED_NORMAL = 0.50;
+/** C1 soft-rest：中段偏置 */
+const REST_BRIDGE_PEAK = 0.16;
+/** 意圖角速度上限（°/s）— 舉手需夠快才能在 blend 前舉過頭 */
+const INTENT_MAX_DEG_PER_SEC_BLEND = 70;
+const INTENT_MAX_DEG_PER_SEC_BLEND_LARGE = 55;
+const INTENT_MAX_DEG_PER_SEC_RAISE = 85;
+const INTENT_MAX_DEG_PER_SEC_NORMAL = 160;
+/** large 進場僅前段略慢，之後讓 keyframe 帶到位 */
+const LARGE_ENTRY_SLOW_BEATS = 1.2;
+/** 腕／肘：只擋單幀暴衝，不擋正常舉手（v7 過嚴導致舉不起） */
+const ARM_POINT_MAX_STEP_JUMP = 0.085; // 單幀最大位移（正規化）
+const ARM_POINT_MAX_SPEED_NORMAL = 0.85;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
 // elevation：0=垂下、90=水平、~160=過頭區
@@ -683,11 +683,11 @@ const PATTERNS = {
     name: "雙手投降舉",
     size: "large",
     beats: 8,
-    // 放慢起手舉高（舊版 90→35 一拍內落差太大，易覺瞬移）
-    left_upper:    [88, 72, 55, 38, 18, -8, -20, 45],
-    left_forearm:  [120, 138, 155, 170, 185, 195, 195, 150],
-    right_upper:   [88, 72, 55, 38, 18, -8, -20, 45],
-    right_forearm: [120, 138, 155, 170, 185, 195, 195, 150],
+    // 前半就要舉高（後半常被換招 blend 吃掉）；仍比最初版緩一點
+    left_upper:    [90, 48, 12, -18, -20, 8, 42, 90],
+    left_forearm:  [120, 150, 175, 195, 195, 175, 145, 120],
+    right_upper:   [90, 48, 12, -18, -20, 8, 42, 90],
+    right_forearm: [120, 150, 175, 195, 195, 175, 145, 120],
   },
   clap: {
     name: "胸前拍手",
@@ -777,7 +777,8 @@ function rateLimitPoint2d(prev, next, dt, maxSpeed) {
   const dx = next[0] - prev[0];
   const dy = next[1] - prev[1];
   const dist = Math.hypot(dx, dy);
-  const maxStep = maxSpeed * dt;
+  // 正常速度上限 + 單幀暴衝上限（防瞬移，但不擋舉手到位）
+  const maxStep = Math.min(maxSpeed * dt, ARM_POINT_MAX_STEP_JUMP);
   if (dist <= maxStep || dist < 1e-9) return [next[0], next[1]];
   const s = maxStep / dist;
   return [prev[0] + dx * s, prev[1] + dy * s];
@@ -1030,7 +1031,7 @@ export class ProceduralSkeleton {
 
     let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
     // 避免短 pattern 整段都被過渡吃掉（仍保留最短秒數對應的拍數）
-    const maxByPat = pat.beats * 0.70;
+    const maxByPat = pat.beats * 0.42; // 保留過半拍給動作本體（尤其 surrender 舉手）
     blendBeats = Math.min(blendBeats, Math.max(0, maxByPat));
 
     let blending = false;
@@ -1074,7 +1075,7 @@ export class ProceduralSkeleton {
     const nextEntry = this._getPatternAtBeat(nextBeatStart);
     const toKey = nextEntry.pattern;
     let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
-    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.70));
+    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.42));
     const blending =
       blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats;
     const blendProgress = blending
@@ -1174,10 +1175,6 @@ export class ProceduralSkeleton {
       applySwing(lm, beatSin, amp);
     }
 
-    const elevBefore = Math.max(
-      this._armState.L.elevation,
-      this._armState.R.elevation,
-    );
     const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
     const smoothR = springArmIntent(this._armState.R, intentR, halfLife, dt);
 
@@ -1205,15 +1202,8 @@ export class ProceduralSkeleton {
       L_LOWER_R,
     );
 
-    // 螢幕座標限速：舉手／large 進場時腕肘不能瞬間飛到位
-    const elevNow = Math.max(smoothL.elevation, smoothR.elevation);
-    const elevRising = elevNow > elevBefore + 0.5;
-    const pointSpeed =
-      enteringLarge ||
-      (elevRising && elevNow > 40) ||
-      resolved.blending
-        ? ARM_POINT_MAX_SPEED_RAISE
-        : ARM_POINT_MAX_SPEED_NORMAL;
+    // 螢幕座標：擋單幀暴衝；舉手不再用超慢 RAISE 速度（會舉不起來）
+    const pointSpeed = ARM_POINT_MAX_SPEED_NORMAL;
     const elbowL = rateLimitPoint2d(this._prevElbowL, leftGeo.elbow, dt, pointSpeed);
     const wristL = rateLimitPoint2d(this._prevWristL, leftGeo.wrist, dt, pointSpeed);
     const elbowR = rateLimitPoint2d(this._prevElbowR, rightGeo.elbow, dt, pointSpeed);
