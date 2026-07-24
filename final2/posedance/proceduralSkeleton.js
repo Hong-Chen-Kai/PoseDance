@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v4+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `three-arm-v5+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D，用於微抖）──────────────────────────
 const _perlinGrad = (() => {
@@ -78,21 +78,21 @@ function smootherstep(t) {
 
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
-const BLEND_WINDOW_BEATS_SMALL = 1.0;   // wave ↔ clap
-const BLEND_WINDOW_BEATS_LARGE = 2.2;   // 任一端為 surrender 等 large
+const BLEND_WINDOW_BEATS_SMALL = 1.6;   // wave ↔ clap（再放慢）
+const BLEND_WINDOW_BEATS_LARGE = 3.2;   // 任一端為 surrender 等 large
 /** 高 BPM 時過渡真實秒數下限，避免「拍數夠但牆上時鐘太短→瞬間加速」 */
-const MIN_BLEND_SEC_SMALL = 0.70;
-const MIN_BLEND_SEC_LARGE = 1.15;
+const MIN_BLEND_SEC_SMALL = 1.10;
+const MIN_BLEND_SEC_LARGE = 1.70;
 const SPRING_HALF_LIFE_MAX = 0.18;
 const SPRING_HALF_LIFE_BEAT_RATIO = 0.25;
-const SPRING_HALF_LIFE_BLEND_MUL = 1.85;
-const SPRING_HALF_LIFE_CATCHUP_MAX = 0.34;
+const SPRING_HALF_LIFE_BLEND_MUL = 2.2;
+const SPRING_HALF_LIFE_CATCHUP_MAX = 0.38;
 const NOISE_SCALE_DEG = 1.0;
 /** C1 soft-rest：中段偏置（過大 → 中段／尾段兩次加速感） */
-const REST_BRIDGE_PEAK = 0.20;
+const REST_BRIDGE_PEAK = 0.18;
 /** 意圖目標角速度上限（°/s）：過渡較嚴、一般動作較寬 */
-const INTENT_MAX_DEG_PER_SEC_BLEND = 95;
-const INTENT_MAX_DEG_PER_SEC_NORMAL = 200;
+const INTENT_MAX_DEG_PER_SEC_BLEND = 60;
+const INTENT_MAX_DEG_PER_SEC_NORMAL = 180;
 
 // ─── 手臂 5 角 ROM（略保守／長輩友善；對應臨床活動度）────────
 // elevation：0=垂下、90=水平、~160=過頭區
@@ -975,7 +975,7 @@ export class ProceduralSkeleton {
 
     let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
     // 避免短 pattern 整段都被過渡吃掉（仍保留最短秒數對應的拍數）
-    const maxByPat = pat.beats * 0.55;
+    const maxByPat = pat.beats * 0.70;
     blendBeats = Math.min(blendBeats, Math.max(0, maxByPat));
 
     let blending = false;
@@ -1019,7 +1019,7 @@ export class ProceduralSkeleton {
     const nextEntry = this._getPatternAtBeat(nextBeatStart);
     const toKey = nextEntry.pattern;
     let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
-    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.55));
+    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.70));
     const blending =
       blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats;
     const blendProgress = blending
