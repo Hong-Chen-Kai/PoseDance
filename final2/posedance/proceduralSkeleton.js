@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v4e+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `torso-t11-v1+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -148,17 +148,16 @@ function normalizeBounceDir(dir) {
     : BOUNCE_DIRS.DOWN;
 }
 
-// Swing：肩對角 Y + X 圓弧 + 骨盆重心橫移 + 頭延遲／極限微沉（2D 可見；不做 Z twist）
+// Swing：肩對角 Y + X 圓弧；髖僅同高橫移（T11：不左右高低差，避免拉長骨盆）
 /** 完整左右一輪佔幾拍（2＝一拍偏一邊、下一拍換邊） */
 const SWING_PERIOD_BEATS = 2;
 const SWING_AMP = 0.0055;
 const SWING_ARC = 0.0014;
-const SWING_HIP_FOLLOW = 0.002;
-const SWING_HIP_WEIGHT_X = 0.002;
+const SWING_HIP_WEIGHT_X = 0.0025;
 const SWING_HEAD_FOLLOW = 0.0022;
 const SWING_HEAD_DROP = 0.0012;
 const SWING_KNEE_OUT_MAX = 0.0015;
-// Bounce：非對稱下沉 + 動能鏈 + 小重心（腳釘地）
+// Bounce：非對稱下沉 + 動能鏈 + 小重心（腳釘地；雙髖同高）
 const BOUNCE_HIP_DROP = 0.015;
 const BOUNCE_SHOULDER_DROP = 0.007;
 const BOUNCE_HEAD_DROP = 0.005;
@@ -167,6 +166,13 @@ const BOUNCE_HIP_SWAY_X = 0.0055;
 /** 動能鏈延遲（以「拍」為單位，跟 BPM） */
 const CHAIN_LAG_SHOULDER_BEATS = 0.06;
 const CHAIN_LAG_HEAD_BEATS = 0.12;
+
+// T11：軀幹／髖耦合（與律動同相位；肩反相延遲 → S 曲線；雙髖強制同高）
+const TORSO_SHOULDER_COUNTER_X = 0.0022;
+const TORSO_HEAD_COUNTER_X = 0.0016;
+const TORSO_LAG_SHOULDER_BEATS = 0.2;
+const TORSO_LAG_HEAD_BEATS = 0.4;
+
 // 腳底貼地：29→31（MP 左腳）、30→32（MP 右腳）
 const FOOT_GROUND_Y_OFFSET = 0.017;
 const FOOT_TOE_SPAN_X = 0.026;
@@ -343,9 +349,41 @@ function grooveWaveAt(elapsed, beatSec, lagBeats) {
 }
 
 /**
- * Swing：肩 Y 對角 + X 反相圓弧、骨盆重心橫移、頭延遲＋極限微沉。
- * 週期預設 2 拍一輪（一拍偏一邊），比 Bounce 跟拍更從容。
- * 髖位移後以釘地腿解；不做 Z twist。
+ * T11：雙髖強制同一 y，避免左右高低差拉長骨盆寬；再釘地重解膝。
+ */
+function enforcePelvisSameHeightAndPlant(lm, kneeOutMax) {
+  const y = (lm[23][1] + lm[24][1]) * 0.5;
+  const leftHip = [lm[23][0], y];
+  const rightHip = [lm[24][0], y];
+  writePlantedLegsFromHips(lm, leftHip, rightHip, Math.max(0, kneeOutMax));
+}
+
+/**
+ * T11：肩／頭相對髖相位延遲的胸廓反相 → 脊椎 S（非竹竿同步平移）。
+ * periodSec／phase 與當前律動同一套。
+ */
+function applyTorsoSCurve(lm, elapsed, beatSec, periodSec, amp) {
+  const shSin = computeBeatSin(
+    elapsed - TORSO_LAG_SHOULDER_BEATS * beatSec,
+    periodSec,
+  );
+  const shX = TORSO_SHOULDER_COUNTER_X * amp * shSin;
+  // 左右肩微反相（延遲後相對髖形成 S）
+  lm[11][0] += shX;
+  lm[12][0] -= shX;
+
+  const headSin = computeBeatSin(
+    elapsed - TORSO_LAG_HEAD_BEATS * beatSec,
+    periodSec,
+  );
+  const headX = TORSO_HEAD_COUNTER_X * amp * headSin;
+  for (let i = 0; i <= 10; i++) {
+    lm[i][0] += headX;
+  }
+}
+
+/**
+ * Swing：肩 Y 對角 + X 圓弧；髖同高橫移 + T11 軀幹 S；釘地腿解。
  */
 function applySwing(lm, elapsed, beatSec, amp) {
   const periodSec = Math.max(1e-6, beatSec * SWING_PERIOD_BEATS);
@@ -353,7 +391,6 @@ function applySwing(lm, elapsed, beatSec, amp) {
   const swingCos = Math.cos((2 * Math.PI / periodSec) * elapsed);
 
   const swingY = SWING_AMP * amp * swingSin;
-  // 與 Y 正交：左右肩反相 X → 橢圓軌跡（升起側略往中線／對側略外）
   const swingArc = SWING_ARC * amp * swingCos;
 
   lm[11][1] -= swingY;
@@ -361,15 +398,17 @@ function applySwing(lm, elapsed, beatSec, amp) {
   lm[11][0] += swingArc;
   lm[12][0] -= swingArc;
 
-  // 骨盆：Y 對角 + 雙髖同向 X 重心（左肩上 → 重心略往左）
-  const hipY = SWING_HIP_FOLLOW * amp * swingSin;
+  // 雙髖同高：只做同向 X（重心），不做左右 Y 對角
   const hipX = SWING_HIP_WEIGHT_X * amp * swingSin;
-  const leftHip = [BASE_POSE[23][0] + hipX, BASE_POSE[23][1] + hipY];
-  const rightHip = [BASE_POSE[24][0] + hipX, BASE_POSE[24][1] - hipY];
+  const hipY = BASE_POSE[23][1];
+  const leftHip = [BASE_POSE[23][0] + hipX, hipY];
+  const rightHip = [BASE_POSE[24][0] + hipX, hipY];
   const kneeOut = SWING_KNEE_OUT_MAX * amp * Math.abs(swingSin);
   writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
+  enforcePelvisSameHeightAndPlant(lm, kneeOut);
 
-  // 頭：相對音樂拍延遲；左右極限處微沉（abs）
+  applyTorsoSCurve(lm, elapsed, beatSec, periodSec, amp);
+
   const headSin = computeBeatSin(
     elapsed - CHAIN_LAG_HEAD_BEATS * beatSec,
     periodSec,
@@ -383,7 +422,7 @@ function applySwing(lm, elapsed, beatSec, amp) {
 }
 
 /**
- * Bounce：非對稱下沉 + 動能鏈（髖→肩→頭）+ 小左右重心；踝釘地。
+ * Bounce：雙髖同高下沉 + 動能鏈；T11 軀幹 S 跟 sway。
  */
 function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
   const dropHip = bounceDropAmount(elapsed, beatSec, bounceDir);
@@ -396,25 +435,24 @@ function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
 
   const hipDrop = BOUNCE_HIP_DROP * amp * dropHip;
   const kneeOut = BOUNCE_KNEE_OUT_MAX * amp * dropHip;
-  const swaySin = Math.sin((Math.PI / Math.max(1e-6, beatSec)) * elapsed);
+  // 與 Bounce 垂直節奏分離的左右（週期 2 拍，跟 sway 同相）
+  const swayPeriod = Math.max(1e-6, beatSec * 2);
+  const swaySin = computeBeatSin(elapsed, swayPeriod);
   const hipSwayX = BOUNCE_HIP_SWAY_X * amp * swaySin;
 
-  const leftHip = [
-    BASE_POSE[23][0] + hipSwayX,
-    BASE_POSE[23][1] + hipDrop,
-  ];
-  const rightHip = [
-    BASE_POSE[24][0] + hipSwayX,
-    BASE_POSE[24][1] + hipDrop,
-  ];
+  const hipY = BASE_POSE[23][1] + hipDrop;
+  const leftHip = [BASE_POSE[23][0] + hipSwayX, hipY];
+  const rightHip = [BASE_POSE[24][0] + hipSwayX, hipY];
   writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
+  enforcePelvisSameHeightAndPlant(lm, kneeOut);
 
-  // 肩／上胸隨鏈延遲下沉；左右隨重心極輕同向
   const shDrop = BOUNCE_SHOULDER_DROP * amp * dropShoulder;
   lm[11][1] += shDrop;
   lm[12][1] += shDrop;
   lm[11][0] += hipSwayX * 0.35;
   lm[12][0] += hipSwayX * 0.35;
+
+  applyTorsoSCurve(lm, elapsed, beatSec, swayPeriod, amp);
 
   const hDrop = BOUNCE_HEAD_DROP * amp * dropHead;
   for (let i = 0; i <= 10; i++) {
