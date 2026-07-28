@@ -12,7 +12,7 @@
 import { ArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `fk-per-dancer-v1+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `raise-hold-v1+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -163,6 +163,11 @@ const BOUNCE_SHOULDER_DROP = 0.007;
 const BOUNCE_HEAD_DROP = 0.005;
 const BOUNCE_KNEE_OUT_MAX = 0.007;
 const BOUNCE_HIP_SWAY_X = 0.0055;
+/** 舉手時壓低肩垂直 bounce（避免 UP 把舉臂視覺扯下來） */
+const BOUNCE_SHOULDER_ELEV_DAMP_START = 70;
+const BOUNCE_SHOULDER_ELEV_DAMP_FULL = 125;
+const BOUNCE_SHOULDER_ELEV_DAMP_MAX = 0.9; // 高舉時最多保留 10% 肩上下
+const BOUNCE_SHOULDER_ELEV_DAMP_MAX_UP = 0.96; // UP 再壓一點
 /** 動能鏈延遲（以「拍」為單位，跟 BPM） */
 const CHAIN_LAG_SHOULDER_BEATS = 0.06;
 const CHAIN_LAG_HEAD_BEATS = 0.12;
@@ -423,8 +428,9 @@ function applySwing(lm, elapsed, beatSec, amp) {
 
 /**
  * Bounce：雙髖同高下沉 + 動能鏈；T11 軀幹 S 跟 sway。
+ * @param {number} [elevationHint] 上一幀手臂 elevation（壓低高舉時肩垂直律動）
  */
-function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
+function applyBounce(lm, elapsed, beatSec, amp, bounceDir, elevationHint = 0) {
   const dropHip = bounceDropAmount(elapsed, beatSec, bounceDir);
   const dropShoulder = bounceDir === BOUNCE_DIRS.UP
     ? 1 - grooveWaveAt(elapsed, beatSec, CHAIN_LAG_SHOULDER_BEATS)
@@ -446,7 +452,15 @@ function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
   writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
   enforcePelvisSameHeightAndPlant(lm, kneeOut);
 
-  const shDrop = BOUNCE_SHOULDER_DROP * amp * dropShoulder;
+  const elev = Math.max(0, elevationHint || 0);
+  const dampSpan = Math.max(1e-6, BOUNCE_SHOULDER_ELEV_DAMP_FULL - BOUNCE_SHOULDER_ELEV_DAMP_START);
+  const dampT = clamp((elev - BOUNCE_SHOULDER_ELEV_DAMP_START) / dampSpan, 0, 1);
+  const dampMax = bounceDir === BOUNCE_DIRS.UP
+    ? BOUNCE_SHOULDER_ELEV_DAMP_MAX_UP
+    : BOUNCE_SHOULDER_ELEV_DAMP_MAX;
+  const shElevScale = 1 - dampMax * dampT * dampT;
+
+  const shDrop = BOUNCE_SHOULDER_DROP * amp * dropShoulder * shElevScale;
   lm[11][1] += shDrop;
   lm[12][1] += shDrop;
   lm[11][0] += hipSwayX * 0.35;
@@ -454,7 +468,7 @@ function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
 
   applyTorsoSCurve(lm, elapsed, beatSec, swayPeriod, amp);
 
-  const hDrop = BOUNCE_HEAD_DROP * amp * dropHead;
+  const hDrop = BOUNCE_HEAD_DROP * amp * dropHead * (0.35 + 0.65 * shElevScale);
   for (let i = 0; i <= 10; i++) {
     lm[i][1] += hDrop;
     lm[i][0] += hipSwayX * 0.25;
@@ -723,11 +737,11 @@ const PATTERNS = {
     name: "雙手投降舉",
     size: "large",
     beats: 8,
-    // 前半就要舉高（後半常被換招 blend 吃掉）；仍比最初版緩一點
-    left_upper:    [90, 48, 12, -18, -20, 8, 42, 90],
-    left_forearm:  [120, 150, 175, 195, 195, 175, 145, 120],
-    right_upper:   [90, 48, 12, -18, -20, 8, 42, 90],
-    right_forearm: [120, 150, 175, 195, 195, 175, 145, 120],
+    // 高峰拉長到中後段，避免剛舉滿就被 blend／下放吃掉（尤其 bounce↑）
+    left_upper:    [90, 42, 8, -18, -20, -18, 28, 90],
+    left_forearm:  [120, 150, 175, 195, 198, 190, 155, 120],
+    right_upper:   [90, 42, 8, -18, -20, -18, 28, 90],
+    right_forearm: [120, 150, 175, 195, 198, 190, 155, 120],
   },
   clap: {
     name: "胸前拍手",
@@ -1071,8 +1085,8 @@ export class ProceduralSkeleton {
     const toKey = nextEntry.pattern;
 
     let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
-    // 避免短 pattern 整段都被過渡吃掉（仍保留最短秒數對應的拍數）
-    const maxByPat = pat.beats * 0.42; // 保留過半拍給動作本體（尤其 surrender 舉手）
+    // large 多留本體（舉手高峰）；small 仍約四成可過渡
+    const maxByPat = pat.beats * (pat.size === "large" ? 0.30 : 0.42);
     blendBeats = Math.min(blendBeats, Math.max(0, maxByPat));
 
     let blending = false;
@@ -1117,7 +1131,10 @@ export class ProceduralSkeleton {
     const nextEntry = this._getPatternAtBeat(nextBeatStart);
     const toKey = nextEntry.pattern;
     let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
-    blendBeats = Math.min(blendBeats, Math.max(0, pat.beats * 0.42));
+    blendBeats = Math.min(
+      blendBeats,
+      Math.max(0, pat.beats * (pat.size === "large" ? 0.30 : 0.42)),
+    );
     const blending =
       blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats;
     const blendProgress = blending
@@ -1214,7 +1231,11 @@ export class ProceduralSkeleton {
       applySwing(lm, elapsed, this.beatSec, amp);
     }
     if (grooveEnablesBounce(this.grooveMode)) {
-      applyBounce(lm, elapsed, this.beatSec, amp, this.bounceDir);
+      const elevHint = Math.max(
+        this._armState.L?.elevation ?? 0,
+        this._armState.R?.elevation ?? 0,
+      );
+      applyBounce(lm, elapsed, this.beatSec, amp, this.bounceDir, elevHint);
     }
 
     const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
