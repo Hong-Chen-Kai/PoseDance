@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v2+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v3+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -149,6 +149,8 @@ function normalizeBounceDir(dir) {
 }
 
 // Swing：肩對角 Y + X 圓弧 + 骨盆重心橫移 + 頭延遲／極限微沉（2D 可見；不做 Z twist）
+/** 完整左右一輪佔幾拍（2＝一拍偏一邊、下一拍換邊） */
+const SWING_PERIOD_BEATS = 2;
 const SWING_AMP = 0.009;
 const SWING_ARC = 0.0028;
 const SWING_HIP_FOLLOW = 0.0035;
@@ -342,12 +344,13 @@ function grooveWaveAt(elapsed, beatSec, lagBeats) {
 
 /**
  * Swing：肩 Y 對角 + X 反相圓弧、骨盆重心橫移、頭延遲＋極限微沉。
- * 髖位移後以釘地腿解，避免大腿被拉歪。不做 Z twist（2D 主畫面幾乎看不見）。
+ * 週期預設 2 拍一輪（一拍偏一邊），比 Bounce 跟拍更從容。
+ * 髖位移後以釘地腿解；不做 Z twist。
  */
 function applySwing(lm, elapsed, beatSec, amp) {
-  const bs = Math.max(1e-6, beatSec);
-  const swingSin = computeBeatSin(elapsed, beatSec);
-  const swingCos = Math.cos((2 * Math.PI / bs) * elapsed);
+  const periodSec = Math.max(1e-6, beatSec * SWING_PERIOD_BEATS);
+  const swingSin = computeBeatSin(elapsed, periodSec);
+  const swingCos = Math.cos((2 * Math.PI / periodSec) * elapsed);
 
   const swingY = SWING_AMP * amp * swingSin;
   // 與 Y 正交：左右肩反相 X → 橢圓軌跡（升起側略往中線／對側略外）
@@ -366,8 +369,11 @@ function applySwing(lm, elapsed, beatSec, amp) {
   const kneeOut = SWING_KNEE_OUT_MAX * amp * Math.abs(swingSin);
   writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
 
-  // 頭：相位延遲橫移；左右極限處微沉（abs）
-  const headSin = computeBeatSin(elapsed - CHAIN_LAG_HEAD_BEATS * beatSec, beatSec);
+  // 頭：相對音樂拍延遲；左右極限處微沉（abs）
+  const headSin = computeBeatSin(
+    elapsed - CHAIN_LAG_HEAD_BEATS * beatSec,
+    periodSec,
+  );
   const headX = SWING_HEAD_FOLLOW * amp * headSin;
   const headY = SWING_HEAD_DROP * amp * Math.abs(headSin);
   for (let i = 0; i <= 10; i++) {
