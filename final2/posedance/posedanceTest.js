@@ -1,7 +1,7 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
 
 // 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
-const PROCEDURAL_IMPORT_BUILD = "raise-hold-v2";
+const PROCEDURAL_IMPORT_BUILD = "foot-d4-v1";
 let _synthModule = null;
 const _synthReady = import(`./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`)
   .then((m) => {
@@ -269,6 +269,7 @@ function initDomRefs() {
   els.synthBpmInput = $("synthBpmInput");
   els.synthGrooveSelect = $("synthGrooveSelect");
   els.synthBounceDirSelect = $("synthBounceDirSelect");
+  els.synthFootSelect = $("synthFootSelect");
   els.synthPatternSelect = $("synthPatternSelect");
   els.addSynthTraceButton = $("addSynthTraceButton");
   els.startCameraButton = $("startCameraButton");
@@ -3602,8 +3603,9 @@ async function main() {
       const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
       const grooveMode = els.synthGrooveSelect?.value || "bounce";
       const bounceDir = els.synthBounceDirSelect?.value || "down";
+      const footMode = els.synthFootSelect?.value || "plant";
       const patternMode = els.synthPatternSelect?.value || "random";
-      const trace = createSyntheticTrace({ bpm, grooveMode, bounceDir, patternMode });
+      const trace = createSyntheticTrace({ bpm, grooveMode, bounceDir, footMode, patternMode });
       if (!trace) return;
       state.mode2.traces.push(trace);
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
@@ -3614,6 +3616,7 @@ async function main() {
         bpm,
         grooveMode,
         bounceDir,
+        footMode,
         patternMode,
         build: _synthModule?.PROCEDURAL_SKELETON_BUILD,
       });
