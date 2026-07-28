@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v3+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v4+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -151,13 +151,13 @@ function normalizeBounceDir(dir) {
 // Swing：肩對角 Y + X 圓弧 + 骨盆重心橫移 + 頭延遲／極限微沉（2D 可見；不做 Z twist）
 /** 完整左右一輪佔幾拍（2＝一拍偏一邊、下一拍換邊） */
 const SWING_PERIOD_BEATS = 2;
-const SWING_AMP = 0.009;
-const SWING_ARC = 0.0028;
-const SWING_HIP_FOLLOW = 0.0035;
-const SWING_HIP_WEIGHT_X = 0.004;
-const SWING_HEAD_FOLLOW = 0.004;
-const SWING_HEAD_DROP = 0.0022;
-const SWING_KNEE_OUT_MAX = 0.003;
+const SWING_AMP = 0.0055;
+const SWING_ARC = 0.0014;
+const SWING_HIP_FOLLOW = 0.002;
+const SWING_HIP_WEIGHT_X = 0.002;
+const SWING_HEAD_FOLLOW = 0.0022;
+const SWING_HEAD_DROP = 0.0012;
+const SWING_KNEE_OUT_MAX = 0.0015;
 // Bounce：非對稱下沉 + 動能鏈 + 小重心（腳釘地）
 const BOUNCE_HIP_DROP = 0.015;
 const BOUNCE_SHOULDER_DROP = 0.007;
