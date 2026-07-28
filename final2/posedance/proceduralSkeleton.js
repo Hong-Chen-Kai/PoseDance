@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `groove-d2-v1+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v4e+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -148,42 +148,25 @@ function normalizeBounceDir(dir) {
     : BOUNCE_DIRS.DOWN;
 }
 
-// Swing：肩對角 Y + X 圓弧 + 輕髖跟（慢速重心改由 D2 Weight Shift）
+// Swing：肩對角 Y + X 圓弧 + 骨盆重心橫移 + 頭延遲／極限微沉（2D 可見；不做 Z twist）
 /** 完整左右一輪佔幾拍（2＝一拍偏一邊、下一拍換邊） */
 const SWING_PERIOD_BEATS = 2;
 const SWING_AMP = 0.0055;
 const SWING_ARC = 0.0014;
 const SWING_HIP_FOLLOW = 0.002;
-/** 快橫移改小，避免與 D2 慢重心打架 */
-const SWING_HIP_WEIGHT_X = 0.0008;
+const SWING_HIP_WEIGHT_X = 0.002;
 const SWING_HEAD_FOLLOW = 0.0022;
 const SWING_HEAD_DROP = 0.0012;
 const SWING_KNEE_OUT_MAX = 0.0015;
-// Bounce：非對稱下沉 + 動能鏈；左右慢重心交給 D2
+// Bounce：非對稱下沉 + 動能鏈 + 小重心（腳釘地）
 const BOUNCE_HIP_DROP = 0.015;
 const BOUNCE_SHOULDER_DROP = 0.007;
 const BOUNCE_HEAD_DROP = 0.005;
 const BOUNCE_KNEE_OUT_MAX = 0.007;
-const BOUNCE_HIP_SWAY_X = 0.0015;
+const BOUNCE_HIP_SWAY_X = 0.0055;
 /** 動能鏈延遲（以「拍」為單位，跟 BPM） */
 const CHAIN_LAG_SHOULDER_BEATS = 0.06;
 const CHAIN_LAG_HEAD_BEATS = 0.12;
-
-// D2：慢速 Weight Shift（腳釘地；承重側微沉 + 脊椎相位延遲）
-const WEIGHT_SHIFT_BEATS = 7;
-const WEIGHT_SHIFT_PERIOD_MIN = 4;
-const WEIGHT_SHIFT_PERIOD_MAX = 7;
-const WEIGHT_SHIFT_X = 0.005;
-const WEIGHT_LOAD_DROP = 0.004;
-const WEIGHT_KNEE_OUT = 0.0025;
-const WEIGHT_SHOULDER_X = 0.0028;
-const WEIGHT_HEAD_X = 0.002;
-const SPINE_LAG_SHOULDER_BEATS = 0.25;
-const SPINE_LAG_HEAD_BEATS = 0.5;
-/** 無 groove 時仍保留極弱呼吸感 */
-const WEIGHT_ACTIVITY_IDLE = 0.25;
-const WEIGHT_ACTIVITY_GROOVE = 1.0;
-
 // 腳底貼地：29→31（MP 左腳）、30→32（MP 右腳）
 const FOOT_GROUND_Y_OFFSET = 0.017;
 const FOOT_TOE_SPAN_X = 0.026;
@@ -359,66 +342,10 @@ function grooveWaveAt(elapsed, beatSec, lagBeats) {
   return computeSnappyDrop01(elapsed - lagBeats * beatSec, beatSec);
 }
 
-function weightShiftPeriodSec(beatSec) {
-  return clamp(
-    WEIGHT_SHIFT_BEATS * Math.max(1e-6, beatSec),
-    WEIGHT_SHIFT_PERIOD_MIN,
-    WEIGHT_SHIFT_PERIOD_MAX,
-  );
-}
-
 /**
- * D2：慢速左右重心。w>0 → 偏左承重（本專案左髖 x 較大）。
- * 肩／頭用延遲 sine，避免與髖同步平移成竹竿。
- */
-function computeWeightShift(elapsed, beatSec, weightAmp) {
-  const periodSec = weightShiftPeriodSec(beatSec);
-  const twoPi = 2 * Math.PI;
-  const wHip = Math.sin((twoPi / periodSec) * elapsed);
-  const wShoulder = Math.sin(
-    (twoPi / periodSec) * (elapsed - SPINE_LAG_SHOULDER_BEATS * beatSec),
-  );
-  const wHead = Math.sin(
-    (twoPi / periodSec) * (elapsed - SPINE_LAG_HEAD_BEATS * beatSec),
-  );
-  return {
-    periodSec,
-    wHip,
-    hipX: WEIGHT_SHIFT_X * weightAmp * wHip,
-    dropL: WEIGHT_LOAD_DROP * weightAmp * Math.max(0, wHip),
-    dropR: WEIGHT_LOAD_DROP * weightAmp * Math.max(0, -wHip),
-    shoulderX: WEIGHT_SHOULDER_X * weightAmp * wShoulder,
-    headX: WEIGHT_HEAD_X * weightAmp * wHead,
-    kneeOut: WEIGHT_KNEE_OUT * weightAmp * Math.abs(wHip),
-  };
-}
-
-/**
- * 常駐 Weight Shift：腳釘地、承重側髖微沉、肩頭相位延遲。
- * 須在 Swing／Bounce 之前呼叫；後者應疊加在已寫入的髖上。
- */
-function applyWeightShift(lm, elapsed, beatSec, weightAmp) {
-  if (!(weightAmp > 1e-6)) return;
-  const ws = computeWeightShift(elapsed, beatSec, weightAmp);
-  const leftHip = [
-    BASE_POSE[23][0] + ws.hipX,
-    BASE_POSE[23][1] + ws.dropL,
-  ];
-  const rightHip = [
-    BASE_POSE[24][0] + ws.hipX,
-    BASE_POSE[24][1] + ws.dropR,
-  ];
-  writePlantedLegsFromHips(lm, leftHip, rightHip, ws.kneeOut);
-
-  lm[11][0] += ws.shoulderX;
-  lm[12][0] += ws.shoulderX;
-  for (let i = 0; i <= 10; i++) {
-    lm[i][0] += ws.headX;
-  }
-}
-
-/**
- * Swing：肩 Y 對角 + X 反相圓弧 + 輕髖跟；疊在 D2 髖上。
+ * Swing：肩 Y 對角 + X 反相圓弧、骨盆重心橫移、頭延遲＋極限微沉。
+ * 週期預設 2 拍一輪（一拍偏一邊），比 Bounce 跟拍更從容。
+ * 髖位移後以釘地腿解；不做 Z twist。
  */
 function applySwing(lm, elapsed, beatSec, amp) {
   const periodSec = Math.max(1e-6, beatSec * SWING_PERIOD_BEATS);
@@ -426,6 +353,7 @@ function applySwing(lm, elapsed, beatSec, amp) {
   const swingCos = Math.cos((2 * Math.PI / periodSec) * elapsed);
 
   const swingY = SWING_AMP * amp * swingSin;
+  // 與 Y 正交：左右肩反相 X → 橢圓軌跡（升起側略往中線／對側略外）
   const swingArc = SWING_ARC * amp * swingCos;
 
   lm[11][1] -= swingY;
@@ -433,16 +361,15 @@ function applySwing(lm, elapsed, beatSec, amp) {
   lm[11][0] += swingArc;
   lm[12][0] -= swingArc;
 
+  // 骨盆：Y 對角 + 雙髖同向 X 重心（左肩上 → 重心略往左）
   const hipY = SWING_HIP_FOLLOW * amp * swingSin;
   const hipX = SWING_HIP_WEIGHT_X * amp * swingSin;
-  const leftHip = [lm[23][0] + hipX, lm[23][1] + hipY];
-  const rightHip = [lm[24][0] + hipX, lm[24][1] - hipY];
-  const kneeOut = Math.max(
-    SWING_KNEE_OUT_MAX * amp * Math.abs(swingSin),
-    0.001,
-  );
+  const leftHip = [BASE_POSE[23][0] + hipX, BASE_POSE[23][1] + hipY];
+  const rightHip = [BASE_POSE[24][0] + hipX, BASE_POSE[24][1] - hipY];
+  const kneeOut = SWING_KNEE_OUT_MAX * amp * Math.abs(swingSin);
   writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
 
+  // 頭：相對音樂拍延遲；左右極限處微沉（abs）
   const headSin = computeBeatSin(
     elapsed - CHAIN_LAG_HEAD_BEATS * beatSec,
     periodSec,
@@ -456,7 +383,7 @@ function applySwing(lm, elapsed, beatSec, amp) {
 }
 
 /**
- * Bounce：非對稱下沉 + 動能鏈；疊在 D2 髖上，快橫移已縮小。
+ * Bounce：非對稱下沉 + 動能鏈（髖→肩→頭）+ 小左右重心；踝釘地。
  */
 function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
   const dropHip = bounceDropAmount(elapsed, beatSec, bounceDir);
@@ -473,15 +400,16 @@ function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
   const hipSwayX = BOUNCE_HIP_SWAY_X * amp * swaySin;
 
   const leftHip = [
-    lm[23][0] + hipSwayX,
-    lm[23][1] + hipDrop,
+    BASE_POSE[23][0] + hipSwayX,
+    BASE_POSE[23][1] + hipDrop,
   ];
   const rightHip = [
-    lm[24][0] + hipSwayX,
-    lm[24][1] + hipDrop,
+    BASE_POSE[24][0] + hipSwayX,
+    BASE_POSE[24][1] + hipDrop,
   ];
   writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
 
+  // 肩／上胸隨鏈延遲下沉；左右隨重心極輕同向
   const shDrop = BOUNCE_SHOULDER_DROP * amp * dropShoulder;
   lm[11][1] += shDrop;
   lm[12][1] += shDrop;
@@ -1241,13 +1169,7 @@ export class ProceduralSkeleton {
       lm[i][3] = base[3];
     }
 
-    // D2 慢重心常駐 → 再疊 Swing／Bounce（後者髖從 lm 疊加，勿回 BASE）
-    const activity =
-      grooveEnablesSwing(this.grooveMode) || grooveEnablesBounce(this.grooveMode)
-        ? WEIGHT_ACTIVITY_GROOVE
-        : WEIGHT_ACTIVITY_IDLE;
-    applyWeightShift(lm, elapsed, this.beatSec, amp * activity);
-
+    // 律動先於手臂 FK，讓肩／髖位移帶動手臂根點
     if (grooveEnablesSwing(this.grooveMode)) {
       applySwing(lm, elapsed, this.beatSec, amp);
     }
