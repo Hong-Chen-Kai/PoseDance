@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `three-arm-v11+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v1+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -136,24 +136,46 @@ const FOREARM_TWIST_MAX = 80;
 // 靜止站姿上臂略外展（對齊 BASE_POSE）
 const REST_ABDUCTION_DEG = 12;
 
-// ─── 街舞律動：Swing（上身）/ Bounce（下身）────────────────────
-/** @typedef {'swing' | 'bounce' | 'both'} GrooveMode */
+// ─── 律動：Swing（上身）/ Bounce（下沉）；無 both、無獨立 bodyBob／headTilt ──
+/** @typedef {'swing' | 'bounce'} GrooveMode */
+/** @typedef {'down' | 'up'} BounceDir */
 export const GROOVE_MODES = Object.freeze({
   SWING: "swing",
   BOUNCE: "bounce",
-  BOTH: "both",
+});
+export const BOUNCE_DIRS = Object.freeze({
+  DOWN: "down",
+  UP: "up",
 });
 
-// 與拍同相：sin(ωt) 峰值 = 下沉最深（bounce 與 swing 共用）
-const BODY_BOB_AMP = 0.008;
-const HEAD_TILT_AMP = 0.006;
-// Swing：左右肩一上一下（街舞上身，不作用於腿）
-const SWING_AMP = 0.004;
-// Bounce：骨盆/膝隨拍下沉；膝小幅外開；踝/腳跟貼地不橫移；腳掌外八僅旋轉趾跟
-const BOUNCE_HIP_DROP = 0.008;
-const BOUNCE_KNEE_OUT_MAX = 0.0045;
-// 腳底貼地：29→31（MP 左腳）、30→32（MP 右腳）；外八 = 腳尖遠離骨盆中線（影像 x）
-// posedanceTest #overlay_canvas 有 CSS scaleX(-1)，但整張 canvas 一起鏡像，腳跟→腳尖相對方向不變
+/** 正規化舊值 both → bounce */
+function normalizeGrooveMode(mode) {
+  const m = String(mode || "").toLowerCase();
+  if (m === GROOVE_MODES.SWING) return GROOVE_MODES.SWING;
+  if (m === "both") return GROOVE_MODES.BOUNCE;
+  return GROOVE_MODES.BOUNCE;
+}
+
+function normalizeBounceDir(dir) {
+  return String(dir || "").toLowerCase() === BOUNCE_DIRS.UP
+    ? BOUNCE_DIRS.UP
+    : BOUNCE_DIRS.DOWN;
+}
+
+// Swing：肩對角 + 輕跟骨盆／頭
+const SWING_AMP = 0.009;
+const SWING_HIP_FOLLOW = 0.0035;
+const SWING_HEAD_FOLLOW = 0.004;
+// Bounce：非對稱下沉 + 動能鏈 + 小重心（腳釘地）
+const BOUNCE_HIP_DROP = 0.015;
+const BOUNCE_SHOULDER_DROP = 0.007;
+const BOUNCE_HEAD_DROP = 0.005;
+const BOUNCE_KNEE_OUT_MAX = 0.007;
+const BOUNCE_HIP_SWAY_X = 0.0055;
+/** 動能鏈延遲（以「拍」為單位，跟 BPM） */
+const CHAIN_LAG_SHOULDER_BEATS = 0.06;
+const CHAIN_LAG_HEAD_BEATS = 0.12;
+// 腳底貼地：29→31（MP 左腳）、30→32（MP 右腳）
 const FOOT_GROUND_Y_OFFSET = 0.017;
 const FOOT_TOE_SPAN_X = 0.026;
 const FOOT_TOE_FORWARD_Y = 0.006;
@@ -392,18 +414,125 @@ function computeBeatSin(elapsed, beatSec) {
   return Math.sin((2 * Math.PI / beatSec) * elapsed);
 }
 
-/** sin 峰值 = 1 → 下沉最深（與拍點對齊） */
-function bounceDown01(beatSin) {
-  return clamp((beatSin + 1) * 0.5, 0, 1);
+/**
+ * 非對稱 Bounce 波形：0=站高、1=最沉。
+ * 前段快速下沉、後段緩衝回彈（避免純 sin 機械感）。
+ */
+function computeSnappyDrop01(elapsed, beatSec) {
+  const bs = Math.max(1e-6, beatSec);
+  let phase = (elapsed / bs) % 1;
+  if (phase < 0) phase += 1;
+  if (phase < 0.38) {
+    const t = phase / 0.38;
+    return t * t;
+  }
+  const t = (phase - 0.38) / 0.62;
+  // 平滑回彈到 0
+  return Math.cos(t * Math.PI * 0.5);
+}
+
+/** down：拍點偏沉；up：拍點偏高（沉量反相） */
+function bounceDropAmount(elapsed, beatSec, bounceDir) {
+  const drop = computeSnappyDrop01(elapsed, beatSec);
+  return bounceDir === BOUNCE_DIRS.UP ? 1 - drop : drop;
+}
+
+function grooveWaveAt(elapsed, beatSec, lagBeats) {
+  return computeSnappyDrop01(elapsed - lagBeats * beatSec, beatSec);
 }
 
 /**
- * Swing（街舞上身）：左肩下、右肩上 ↔ 反相，僅 11/12，不動腿。
+ * Swing：肩左右反相 + 骨盆／頭輕跟（無獨立 bodyBob／headTilt）。
  */
-function applySwing(lm, beatSin, amp) {
-  const swing = SWING_AMP * amp * beatSin;
+function applySwing(lm, elapsed, beatSec, amp) {
+  const swingSin = computeBeatSin(elapsed, beatSec);
+  const swing = SWING_AMP * amp * swingSin;
   lm[11][1] -= swing;
   lm[12][1] += swing;
+
+  // 骨盆輕反相，形成上身對角律動
+  const hip = SWING_HIP_FOLLOW * amp * swingSin;
+  lm[23][1] += hip;
+  lm[24][1] -= hip;
+
+  // 頭略滯後跟隨肩的平均擺感
+  const headSin = computeBeatSin(elapsed - CHAIN_LAG_HEAD_BEATS * beatSec, beatSec);
+  const headY = SWING_HEAD_FOLLOW * amp * headSin * 0.35;
+  const headX = SWING_HEAD_FOLLOW * amp * headSin;
+  for (let i = 0; i <= 10; i++) {
+    lm[i][0] += headX;
+    lm[i][1] += headY;
+  }
+}
+
+/**
+ * Bounce：非對稱下沉 + 動能鏈（髖→肩→頭）+ 小左右重心；踝釘地。
+ */
+function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
+  const dropHip = bounceDropAmount(elapsed, beatSec, bounceDir);
+  const dropShoulder = bounceDir === BOUNCE_DIRS.UP
+    ? 1 - grooveWaveAt(elapsed, beatSec, CHAIN_LAG_SHOULDER_BEATS)
+    : grooveWaveAt(elapsed, beatSec, CHAIN_LAG_SHOULDER_BEATS);
+  const dropHead = bounceDir === BOUNCE_DIRS.UP
+    ? 1 - grooveWaveAt(elapsed, beatSec, CHAIN_LAG_HEAD_BEATS)
+    : grooveWaveAt(elapsed, beatSec, CHAIN_LAG_HEAD_BEATS);
+
+  const hipDrop = BOUNCE_HIP_DROP * amp * dropHip;
+  const kneeOut = BOUNCE_KNEE_OUT_MAX * amp * dropHip;
+  const swaySin = Math.sin((Math.PI / Math.max(1e-6, beatSec)) * elapsed);
+  const hipSwayX = BOUNCE_HIP_SWAY_X * amp * swaySin;
+
+  const leftHip = [
+    BASE_POSE[23][0] + hipSwayX,
+    BASE_POSE[23][1] + hipDrop,
+  ];
+  const rightHip = [
+    BASE_POSE[24][0] + hipSwayX,
+    BASE_POSE[24][1] + hipDrop,
+  ];
+  const leftAnkle = [BASE_POSE[27][0], BASE_POSE[27][1]];
+  const rightAnkle = [BASE_POSE[28][0], BASE_POSE[28][1]];
+
+  const leftLeg = solveLegFromPlantedFoot(
+    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L", kneeOut,
+  );
+  const rightLeg = solveLegFromPlantedFoot(
+    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R", kneeOut,
+  );
+
+  lm[23][0] = leftHip[0];
+  lm[23][1] = leftHip[1];
+  lm[24][0] = rightHip[0];
+  lm[24][1] = rightHip[1];
+  lm[25][0] = leftLeg.knee[0];
+  lm[25][1] = leftLeg.knee[1];
+  lm[26][0] = rightLeg.knee[0];
+  lm[26][1] = rightLeg.knee[1];
+  lm[27][0] = leftLeg.ankle[0];
+  lm[27][1] = leftLeg.ankle[1];
+  lm[28][0] = rightLeg.ankle[0];
+  lm[28][1] = rightLeg.ankle[1];
+
+  // 肩／上胸隨鏈延遲下沉；左右隨重心極輕同向
+  const shDrop = BOUNCE_SHOULDER_DROP * amp * dropShoulder;
+  lm[11][1] += shDrop;
+  lm[12][1] += shDrop;
+  lm[11][0] += hipSwayX * 0.35;
+  lm[12][0] += hipSwayX * 0.35;
+
+  const hDrop = BOUNCE_HEAD_DROP * amp * dropHead;
+  for (let i = 0; i <= 10; i++) {
+    lm[i][1] += hDrop;
+    lm[i][0] += hipSwayX * 0.25;
+  }
+}
+
+function grooveEnablesSwing(mode) {
+  return normalizeGrooveMode(mode) === GROOVE_MODES.SWING;
+}
+
+function grooveEnablesBounce(mode) {
+  return normalizeGrooveMode(mode) === GROOVE_MODES.BOUNCE;
 }
 
 /**
@@ -457,48 +586,6 @@ function solveLegFromPlantedFoot(hip, ankleFixed, baseKnee, L1, L2, side, kneeOu
     ankleFixed[0] - knee[0],
   );
   return { knee, ankle: [ankleFixed[0], ankleFixed[1]], shinAngle };
-}
-
-/**
- * Bounce：骨盆 y 下沉；膝微外；踝固定；腳底 29–31 / 30–32 貼地橫線不隨律動動。
- */
-function applyBounce(lm, beatSin, amp) {
-  const down = bounceDown01(beatSin);
-  const hipDrop = BOUNCE_HIP_DROP * amp * down;
-  const kneeOut = BOUNCE_KNEE_OUT_MAX * amp * down;
-
-  const leftHip = [BASE_POSE[23][0], BASE_POSE[23][1] + hipDrop];
-  const rightHip = [BASE_POSE[24][0], BASE_POSE[24][1] + hipDrop];
-  const leftAnkle = [BASE_POSE[27][0], BASE_POSE[27][1]];
-  const rightAnkle = [BASE_POSE[28][0], BASE_POSE[28][1]];
-
-  const leftLeg = solveLegFromPlantedFoot(
-    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L", kneeOut,
-  );
-  const rightLeg = solveLegFromPlantedFoot(
-    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R", kneeOut,
-  );
-
-  lm[23][0] = leftHip[0];
-  lm[23][1] = leftHip[1];
-  lm[24][0] = rightHip[0];
-  lm[24][1] = rightHip[1];
-  lm[25][0] = leftLeg.knee[0];
-  lm[25][1] = leftLeg.knee[1];
-  lm[26][0] = rightLeg.knee[0];
-  lm[26][1] = rightLeg.knee[1];
-  lm[27][0] = leftLeg.ankle[0];
-  lm[27][1] = leftLeg.ankle[1];
-  lm[28][0] = rightLeg.ankle[0];
-  lm[28][1] = rightLeg.ankle[1];
-}
-
-function grooveEnablesSwing(mode) {
-  return mode === GROOVE_MODES.SWING || mode === GROOVE_MODES.BOTH;
-}
-
-function grooveEnablesBounce(mode) {
-  return mode === GROOVE_MODES.BOUNCE || mode === GROOVE_MODES.BOTH;
 }
 
 function applyShoulderDrive(lm, intentL, intentR, amp) {
@@ -879,7 +966,9 @@ export class ProceduralSkeleton {
     phaseOffsetBeats = 0,
     rhythmMul = 1.0,
     /** @type {GrooveMode} */
-    grooveMode = GROOVE_MODES.SWING,
+    grooveMode = GROOVE_MODES.BOUNCE,
+    /** @type {BounceDir} */
+    bounceDir = BOUNCE_DIRS.DOWN,
     /**
      * 動作編排：
      * - random：同池加權隨機（禁連續重複＋近期降權＋缺席補償）
@@ -895,9 +984,8 @@ export class ProceduralSkeleton {
     this.amplitudeScale = clamp(amplitudeScale, 0.4, 1.6);
     this.phaseOffsetBeats = phaseOffsetBeats;
     this.rhythmMul = rhythmMul;
-    this.grooveMode = Object.values(GROOVE_MODES).includes(grooveMode)
-      ? grooveMode
-      : GROOVE_MODES.SWING;
+    this.grooveMode = normalizeGrooveMode(grooveMode);
+    this.bounceDir = normalizeBounceDir(bounceDir);
 
     const mode = String(patternMode || "random");
     if (mode === "random" || mode === "mix") {
@@ -1173,10 +1261,6 @@ export class ProceduralSkeleton {
       intentR,
     );
 
-    const beatSin = computeBeatSin(elapsed, this.beatSec);
-    const bodyBob = BODY_BOB_AMP * amp * beatSin;
-    const headTilt = HEAD_TILT_AMP * amp * Math.sin((2 * Math.PI * elapsed) / (this.beatSec * 2));
-
     const lm = this._lmBuffer;
     for (let i = 0; i < 33; i++) {
       const base = BASE_POSE[i];
@@ -1186,10 +1270,12 @@ export class ProceduralSkeleton {
       lm[i][3] = base[3];
     }
 
-    for (let i = 0; i <= 22; i++) lm[i][1] += bodyBob;
-    for (let i = 0; i <= 10; i++) lm[i][0] += headTilt;
+    // 律動先於手臂 FK，讓肩／髖位移帶動手臂根點
     if (grooveEnablesSwing(this.grooveMode)) {
-      applySwing(lm, beatSin, amp);
+      applySwing(lm, elapsed, this.beatSec, amp);
+    }
+    if (grooveEnablesBounce(this.grooveMode)) {
+      applyBounce(lm, elapsed, this.beatSec, amp, this.bounceDir);
     }
 
     const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
@@ -1271,10 +1357,6 @@ export class ProceduralSkeleton {
     applySimpleZ(lm, 13, 15, LEFT_FINGER_IDXS, leftShoulder, leftArm.wrist, L_UPPER_L, L_LOWER_L, leftArm, 1);
     applySimpleZ(lm, 14, 16, RIGHT_FINGER_IDXS, rightShoulder, rightArm.wrist, L_UPPER_R, L_LOWER_R, rightArm, -1);
 
-    if (grooveEnablesBounce(this.grooveMode)) {
-      applyBounce(lm, beatSin, amp);
-    }
-
     // 腳底每幀覆寫，避免 BASE 複製的垂直腳尖或 bounce 拉動腳跟
     applyFeetPlantedOnGround(lm);
 
@@ -1308,10 +1390,13 @@ function patternModeLabel(patternMode) {
   return "";
 }
 
-function grooveModeLabel(grooveMode) {
-  if (grooveMode === GROOVE_MODES.BOTH) return " ·swing + bounce";
-  if (grooveMode === GROOVE_MODES.BOUNCE) return " ·bounce";
-  return "";
+function grooveModeLabel(grooveMode, bounceDir) {
+  const mode = normalizeGrooveMode(grooveMode);
+  if (mode === GROOVE_MODES.BOUNCE) {
+    const dir = normalizeBounceDir(bounceDir);
+    return dir === BOUNCE_DIRS.UP ? " ·bounce↑" : " ·bounce";
+  }
+  return " ·swing";
 }
 
 // ─── 便利方法：建立一個 synthetic trace 物件 ──────────────────
@@ -1319,7 +1404,8 @@ export function createSyntheticTrace({
   bpm = 120,
   name = null,
   seed = null,
-  grooveMode = GROOVE_MODES.SWING,
+  grooveMode = GROOVE_MODES.BOUNCE,
+  bounceDir = BOUNCE_DIRS.DOWN,
   /** @type {PatternMode} */
   patternMode = "random",
 } = {}) {
@@ -1336,15 +1422,18 @@ export function createSyntheticTrace({
     };
   }
 
+  const mode = normalizeGrooveMode(grooveMode);
+  const dir = normalizeBounceDir(bounceDir);
   const skeleton = new ProceduralSkeleton({
     bpm,
     seed,
     ...preset,
-    grooveMode,
+    grooveMode: mode,
+    bounceDir: dir,
     patternMode,
   });
   const modeTag = patternModeLabel(patternMode);
-  const grooveTag = grooveModeLabel(grooveMode);
+  const grooveTag = grooveModeLabel(mode, dir);
   return {
     id: `synth_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
     name: name || `舞者 #${idx + 1}${modeTag}${grooveTag} (${bpm} BPM)`,
@@ -1352,7 +1441,8 @@ export function createSyntheticTrace({
     enabled: true,
     bpm,
     patternMode,
-    grooveMode,
+    grooveMode: mode,
+    bounceDir: dir,
     _skeleton: skeleton,
   };
 }

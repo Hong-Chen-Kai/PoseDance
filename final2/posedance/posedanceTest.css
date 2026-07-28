@@ -365,7 +365,15 @@
 
 .topbar__groove-select {
   width: auto;
-  min-width: 9.5em;
+  min-width: 7.5em;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.topbar__bounce-dir-select {
+  width: auto;
+  min-width: 5.5em;
   flex: 0 0 auto;
   padding: 4px 8px;
   cursor: pointer;

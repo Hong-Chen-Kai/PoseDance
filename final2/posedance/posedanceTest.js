@@ -1,7 +1,7 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
 
 // 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
-const PROCEDURAL_IMPORT_BUILD = "three-arm-v11";
+const PROCEDURAL_IMPORT_BUILD = "groove-d1-v1";
 let _synthModule = null;
 const _synthReady = import(`./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`)
   .then((m) => {
@@ -266,6 +266,7 @@ function initDomRefs() {
   els.synthControls = $("synthControls");
   els.synthBpmInput = $("synthBpmInput");
   els.synthGrooveSelect = $("synthGrooveSelect");
+  els.synthBounceDirSelect = $("synthBounceDirSelect");
   els.synthPatternSelect = $("synthPatternSelect");
   els.addSynthTraceButton = $("addSynthTraceButton");
   els.startCameraButton = $("startCameraButton");
@@ -3572,6 +3573,14 @@ async function main() {
 
   // Mode2：生成舞者
   if (els.addSynthTraceButton) {
+    const syncBounceDirVisibility = () => {
+      if (!els.synthBounceDirSelect) return;
+      const isBounce = (els.synthGrooveSelect?.value || "bounce") === "bounce";
+      els.synthBounceDirSelect.style.display = isBounce ? "" : "none";
+    };
+    syncBounceDirVisibility();
+    els.synthGrooveSelect?.addEventListener("change", syncBounceDirVisibility);
+
     els.addSynthTraceButton.addEventListener("click", () => {
       if (state.ui.mode !== "mode2") return;
       if (!_synthModule) {
@@ -3579,9 +3588,10 @@ async function main() {
         return;
       }
       const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
-      const grooveMode = els.synthGrooveSelect?.value || "swing";
+      const grooveMode = els.synthGrooveSelect?.value || "bounce";
+      const bounceDir = els.synthBounceDirSelect?.value || "down";
       const patternMode = els.synthPatternSelect?.value || "random";
-      const trace = createSyntheticTrace({ bpm, grooveMode, patternMode });
+      const trace = createSyntheticTrace({ bpm, grooveMode, bounceDir, patternMode });
       if (!trace) return;
       state.mode2.traces.push(trace);
       state.interact.selectedId = mode2TraceSkeletonId(trace.id);
@@ -3591,6 +3601,7 @@ async function main() {
         id: trace.id,
         bpm,
         grooveMode,
+        bounceDir,
         patternMode,
         build: _synthModule?.PROCEDURAL_SKELETON_BUILD,
       });
