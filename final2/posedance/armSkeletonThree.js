@@ -186,13 +186,16 @@ export class ArmFkThree {
   }
 }
 
+/**
+ * @deprecated 多舞者請各自 `new ArmFkThree`；單例會共用 _prevForearm 互相污染。
+ * 保留給舊呼叫端／單機除錯。
+ */
 let _fk = null;
 
 export function getArmFkThree(L1L, L2L, L1R, L2R) {
   if (!_fk) {
     _fk = new ArmFkThree(L1L, L2L, L1R, L2R);
   } else {
-    // 長度若變（理論上固定）仍重用階層
     _fk.left.L1 = L1L;
     _fk.left.L2 = L2L;
     _fk.left.lower.position.y = L1L;
@@ -205,4 +208,4 @@ export function getArmFkThree(L1L, L2L, L1R, L2R) {
   return _fk;
 }
 
-export const ARM_FK_THREE_BUILD = "three-arm-fk-v7";
+export const ARM_FK_THREE_BUILD = "three-arm-fk-v8";

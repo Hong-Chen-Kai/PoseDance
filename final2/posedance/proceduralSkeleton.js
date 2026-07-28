@@ -9,10 +9,10 @@
  * 手臂 FK：隱形 Three.js Bone（armSkeletonThree.js）
  */
 
-import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
+import { ArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `blend-xfade-v1+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `fk-per-dancer-v1+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -953,6 +953,8 @@ export class ProceduralSkeleton {
     this._prevWristL = null;
     this._prevWristR = null;
     this._prevT = null;
+    // 每位舞者獨立 FK，避免多實例共用 _prevForearm 造成舉手卡住
+    this._armFk = new ArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R);
     // 每幀重用，避免 BASE_POSE.map 造成 GC 微卡頓（呼叫端勿跨幀留存回傳值）
     this._lmBuffer = Array.from({ length: 33 }, () => [0, 0, 0, 1]);
     this._tmpShoulderL = [0, 0, 0];
@@ -1144,11 +1146,7 @@ export class ProceduralSkeleton {
     this._prevElbowR = null;
     this._prevWristL = null;
     this._prevWristR = null;
-    try {
-      getArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R).resetContinuity();
-    } catch (_) {
-      /* FK 尚未建立時略過 */
-    }
+    this._armFk?.resetContinuity();
   }
 
   /**
@@ -1233,9 +1231,8 @@ export class ProceduralSkeleton {
     rightShoulder[1] = lm[12][1];
     rightShoulder[2] = lm[12][2];
 
-    const armFk = getArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R);
-    const leftArm = armFk.solve(leftShoulder, smoothL, 1);
-    const rightArm = armFk.solve(rightShoulder, smoothR, -1);
+    const leftArm = this._armFk.solve(leftShoulder, smoothL, 1);
+    const rightArm = this._armFk.solve(rightShoulder, smoothR, -1);
 
     const leftGeo = enforceArmGeometry(
       leftShoulder,
