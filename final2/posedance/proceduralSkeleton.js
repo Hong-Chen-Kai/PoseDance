@@ -12,7 +12,7 @@
 import { ArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `raise-hold-v1+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `raise-hold-v2+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -101,6 +101,12 @@ const REST_BRIDGE_PEAK = 0.0;
 /** 意圖角速度上限（°/s）：全時連續；v9 略快，這裡再收一點 */
 const INTENT_MAX_DEG_PER_SEC = 95;
 const INTENT_MAX_DEG_PER_SEC_LARGE = 80;
+/** 高舉往下放時更慢，避免「上去一下子就下來」 */
+const INTENT_MAX_DEG_PER_SEC_DESCEND = 48;
+/** large 高峰：至少撐到此 localBeat，且自高峰起算最短真實秒數 */
+const LARGE_PEAK_START_BEAT = 3.0;
+const LARGE_HOLD_UNTIL_BEAT = 6.15;
+const LARGE_HOLD_MIN_SEC = 1.15;
 /** 腕／肘：只擋單幀暴衝 */
 const ARM_POINT_MAX_STEP_JUMP = 0.075;
 const ARM_POINT_MAX_SPEED_NORMAL = 0.70;
@@ -737,11 +743,13 @@ const PATTERNS = {
     name: "雙手投降舉",
     size: "large",
     beats: 8,
-    // 高峰拉長到中後段，避免剛舉滿就被 blend／下放吃掉（尤其 bounce↑）
-    left_upper:    [90, 42, 8, -18, -20, -18, 28, 90],
-    left_forearm:  [120, 150, 175, 195, 198, 190, 155, 120],
-    right_upper:   [90, 42, 8, -18, -20, -18, 28, 90],
-    right_forearm: [120, 150, 175, 195, 198, 190, 155, 120],
+    /** 換招不得早於此 localBeat（與 LARGE_HOLD_* 取較嚴） */
+    holdUntilBeat: 6.2,
+    // 高峰拉長；尾拍再收，避免剛舉滿就被 blend 吃掉
+    left_upper:    [90, 42, 8, -18, -20, -18, -8, 55],
+    left_forearm:  [120, 150, 175, 195, 198, 192, 170, 130],
+    right_upper:   [90, 42, 8, -18, -20, -18, -8, 55],
+    right_forearm: [120, 150, 175, 195, 198, 192, 170, 130],
   },
   clap: {
     name: "胸前拍手",
@@ -772,6 +780,33 @@ function blendWindowBeatsForPair(fromKey, toKey, beatSec = 0.5) {
   const bs = Math.max(1e-6, beatSec || 0.5);
   beats = Math.max(beats, minSec / bs);
   return beats;
+}
+
+/**
+ * large 出招：延後 blend 起點，保證高峰有穩定停留（拍數 + 真實秒數）。
+ * @returns {{ blendStart: number, blendBeats: number }}
+ */
+function resolveBlendWindow(pat, fromKey, toKey, beatSec) {
+  let blendBeats = blendWindowBeatsForPair(fromKey, toKey, beatSec);
+  const maxByPat = pat.beats * (pat.size === "large" ? 0.30 : 0.42);
+  blendBeats = Math.min(blendBeats, Math.max(0, maxByPat));
+  if (blendBeats <= 1e-6) {
+    return { blendStart: pat.beats, blendBeats: 0 };
+  }
+
+  let blendStart = pat.beats - blendBeats;
+  if (pat.size === "large") {
+    const bs = Math.max(1e-6, beatSec || 0.5);
+    const holdUntil = Math.max(
+      pat.holdUntilBeat ?? LARGE_HOLD_UNTIL_BEAT,
+      LARGE_PEAK_START_BEAT + LARGE_HOLD_MIN_SEC / bs,
+    );
+    // 至少留 0.85 拍給交疊，避免完全接不上
+    const latestStart = Math.max(0, pat.beats - 0.85);
+    blendStart = Math.min(latestStart, Math.max(blendStart, holdUntil));
+    blendBeats = Math.max(0.85, pat.beats - blendStart);
+  }
+  return { blendStart, blendBeats };
 }
 
 /** 三次 Ease-In-Out：啟動慢 → 中段快 → 抵達減速 */
@@ -815,13 +850,18 @@ function bridgeArmIntent(from, to, w, viaRest) {
 function rateLimitArmIntent(prev, next, dt, maxDegPerSec) {
   if (!prev || !(dt > 0) || !(maxDegPerSec > 0)) return clampArmIntent(next);
   const maxStep = maxDegPerSec * dt;
-  const lim = (a, b) => a + clamp(b - a, -maxStep, maxStep);
+  const lim = (a, b, step) => a + clamp(b - a, -step, step);
+  // 高舉下放單獨限速（對稱限速會讓「收手」跟「舉手」一樣快）
+  let elevStep = maxStep;
+  if (next.elevation < prev.elevation - 0.5 && prev.elevation > 72) {
+    elevStep = Math.min(elevStep, INTENT_MAX_DEG_PER_SEC_DESCEND * dt);
+  }
   return clampArmIntent({
-    elevation: lim(prev.elevation, next.elevation),
-    sweep: lim(prev.sweep, next.sweep),
-    elbowFlex: lim(prev.elbowFlex, next.elbowFlex),
-    humeralRot: lim(prev.humeralRot, next.humeralRot),
-    forearmTwist: lim(prev.forearmTwist ?? 0, next.forearmTwist ?? 0),
+    elevation: lim(prev.elevation, next.elevation, elevStep),
+    sweep: lim(prev.sweep, next.sweep, maxStep),
+    elbowFlex: lim(prev.elbowFlex, next.elbowFlex, maxStep),
+    humeralRot: lim(prev.humeralRot, next.humeralRot, maxStep),
+    forearmTwist: lim(prev.forearmTwist ?? 0, next.forearmTwist ?? 0, maxStep),
   });
 }
 
@@ -1084,17 +1124,16 @@ export class ProceduralSkeleton {
     const nextEntry = this._getPatternAtBeat(nextBeatStart);
     const toKey = nextEntry.pattern;
 
-    let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
-    // large 多留本體（舉手高峰）；small 仍約四成可過渡
-    const maxByPat = pat.beats * (pat.size === "large" ? 0.30 : 0.42);
-    blendBeats = Math.min(blendBeats, Math.max(0, maxByPat));
+    const { blendStart, blendBeats } = resolveBlendWindow(
+      pat, fromKey, toKey, this.beatSec,
+    );
 
     let blending = false;
     let blendProgress = 0;
 
-    if (blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats) {
+    if (blendBeats > 1e-6 && localBeatFloat >= blendStart) {
       blending = true;
-      blendProgress = (localBeatFloat - (pat.beats - blendBeats)) / blendBeats;
+      blendProgress = (localBeatFloat - blendStart) / blendBeats;
       const nextPat = PATTERNS[toKey];
       // 動態交疊：對準「進入下一招第 0 拍前」的軌跡（負時間），避免鎖死靜止起手造成速度斷層
       const nextLocalBeat = localBeatFloat - pat.beats;
@@ -1130,15 +1169,13 @@ export class ProceduralSkeleton {
     this._ensureSchedule(nextBeatStart);
     const nextEntry = this._getPatternAtBeat(nextBeatStart);
     const toKey = nextEntry.pattern;
-    let blendBeats = blendWindowBeatsForPair(fromKey, toKey, this.beatSec);
-    blendBeats = Math.min(
-      blendBeats,
-      Math.max(0, pat.beats * (pat.size === "large" ? 0.30 : 0.42)),
+    const { blendStart, blendBeats } = resolveBlendWindow(
+      pat, fromKey, toKey, this.beatSec,
     );
     const blending =
-      blendBeats > 1e-6 && localBeatFloat >= pat.beats - blendBeats;
+      blendBeats > 1e-6 && localBeatFloat >= blendStart;
     const blendProgress = blending
-      ? (localBeatFloat - (pat.beats - blendBeats)) / blendBeats
+      ? (localBeatFloat - blendStart) / blendBeats
       : 0;
     return {
       key: fromKey,
