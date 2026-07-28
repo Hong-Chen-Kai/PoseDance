@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v1+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `groove-d1-v2+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -83,17 +83,6 @@ function enforceArmGeometry(shoulder, elbow, wrist, L1, L2) {
   return { elbow: elbow2, wrist: wrist2 };
 }
 
-function enforceLegGeometry(hip, knee, ankle, L1, L2) {
-  const knee2 = placeAtLength(hip, knee, L1);
-  const ankle2 = placeAtLength(knee2, ankle, L2);
-  return { knee: knee2, ankle: ankle2 };
-}
-
-function smootherstep(t) {
-  t = clamp(t, 0, 1);
-  return t * t * t * (t * (t * 6 - 15) + 10);
-}
-
 // ─── 調參預設 ────────────────────────────────────────────────
 // C2：依過渡「幅度」分兩檔（之後可擴充 size / elevation 差）
 const BLEND_WINDOW_BEATS_SMALL = 1.85;  // wave ↔ clap（略放慢）
@@ -133,9 +122,6 @@ const ELBOW_FLEX_MIN = 10;
 const ELBOW_FLEX_MAX = 145;
 const FOREARM_TWIST_MIN = -80;
 const FOREARM_TWIST_MAX = 80;
-// 靜止站姿上臂略外展（對齊 BASE_POSE）
-const REST_ABDUCTION_DEG = 12;
-
 // ─── 律動：Swing（上身）/ Bounce（下沉）；無 both、無獨立 bodyBob／headTilt ──
 /** @typedef {'swing' | 'bounce'} GrooveMode */
 /** @typedef {'down' | 'up'} BounceDir */
@@ -162,10 +148,14 @@ function normalizeBounceDir(dir) {
     : BOUNCE_DIRS.DOWN;
 }
 
-// Swing：肩對角 + 輕跟骨盆／頭
+// Swing：肩對角 Y + X 圓弧 + 骨盆重心橫移 + 頭延遲／極限微沉（2D 可見；不做 Z twist）
 const SWING_AMP = 0.009;
+const SWING_ARC = 0.0028;
 const SWING_HIP_FOLLOW = 0.0035;
+const SWING_HIP_WEIGHT_X = 0.004;
 const SWING_HEAD_FOLLOW = 0.004;
+const SWING_HEAD_DROP = 0.0022;
+const SWING_KNEE_OUT_MAX = 0.003;
 // Bounce：非對稱下沉 + 動能鏈 + 小重心（腳釘地）
 const BOUNCE_HIP_DROP = 0.015;
 const BOUNCE_SHOULDER_DROP = 0.007;
@@ -196,11 +186,6 @@ function clampArmIntent(intent) {
   const elbowFlex = clampElbowFlexForElevation(intent.elbowFlex ?? 30, elevation);
   const forearmTwist = clamp(intent.forearmTwist ?? 0, FOREARM_TWIST_MIN, FOREARM_TWIST_MAX);
   return { elevation, sweep, humeralRot, elbowFlex, forearmTwist };
-}
-
-function v3norm(v) {
-  const L = Math.hypot(v.x, v.y, v.z) || 1e-8;
-  return { x: v.x / L, y: v.y / L, z: v.z / L };
 }
 
 /**
@@ -260,92 +245,6 @@ function computeForearmTwistDeg(elevation, elbowFlex, sweep, humeralRot) {
   }
   twist += clamp(humeralRot, -40, 40) * 0.15;
   return clamp(twist, FOREARM_TWIST_MIN, FOREARM_TWIST_MAX);
-}
-
-/**
- * 上臂方向（沿用改版前穩定公式：elevation 控制舉高，sweep 當 yaw）
- */
-function solveUpperArmDir(elevationDeg, sweepDeg, humeralRotDeg, side) {
-  const pitch = (REST_ABDUCTION_DEG + elevationDeg * 0.96) * DEG;
-  const yaw = sweepDeg * DEG;
-  const rot = humeralRotDeg * DEG;
-  const spread = 1 + clamp(elevationDeg / 100, 0, 0.35);
-
-  const x = side * spread * (Math.sin(pitch) * Math.cos(yaw * 0.55) + Math.sin(rot) * 0.1);
-  const y = Math.cos(pitch) * Math.cos(yaw * 0.38);
-  const z = -Math.sin(yaw) * Math.sin(pitch) * 0.55 - Math.sin(rot) * 0.22;
-
-  return v3norm({ x, y, z });
-}
-
-/**
- * 平面肘角兩解：依意圖選解，不黏上一幀（避免鎖死）。
- * carrying 近似肩旋對肘窩方向的影響。
- */
-function pickForearmAngleFromIntent(upperAngle, elbowFlex, humeralRot, side, elevation, sweep) {
-  const carrying = (28 + humeralRot * 0.42) * DEG * side;
-  const flexRad = elbowFlex * DEG;
-  const candA = upperAngle + carrying + side * flexRad;
-  const candB = upperAngle + carrying - side * flexRad;
-
-  let picked;
-  if (elevation > 72 && elbowFlex > 68) {
-    // 投降：選腕較朝上（影像 y 較小 → sin 較小）
-    picked = Math.sin(candA) < Math.sin(candB) ? candA : candB;
-  } else if (sweep > 12 && elbowFlex > 50) {
-    // 拍手：選較往中線（左臂要 cos 較小、右臂要 cos 較大）
-    picked = side > 0
-      ? (Math.cos(candA) < Math.cos(candB) ? candA : candB)
-      : (Math.cos(candA) > Math.cos(candB) ? candA : candB);
-  } else {
-    picked = candA;
-  }
-
-  if (elevation > 72 && elbowFlex > 68) {
-    const upAngle = -Math.PI / 2 + side * (0.12 + humeralRot * 0.004 * DEG);
-    const blend = clamp((elevation - 72) / 48, 0, 1) * clamp((elbowFlex - 68) / 55, 0, 1);
-    const d = Math.atan2(Math.sin(picked - upAngle), Math.cos(picked - upAngle));
-    picked = picked - d * blend * 0.82;
-  }
-
-  return picked;
-}
-
-/** FK：固定 L1/L2；上臂 3D 方向 + 平面肘角（穩定可視結果） */
-function solveArmAnatomical(shoulder, L1, L2, intent, side) {
-  const inv = clampArmIntent(intent);
-  const upperDir = solveUpperArmDir(inv.elevation, inv.sweep, inv.humeralRot, side);
-  const upperAngle = Math.atan2(upperDir.y, upperDir.x);
-  const forearmAngle = pickForearmAngleFromIntent(
-    upperAngle, inv.elbowFlex, inv.humeralRot, side, inv.elevation, inv.sweep,
-  );
-
-  const elbow = [
-    shoulder[0] + L1 * upperDir.x,
-    shoulder[1] + L1 * upperDir.y,
-  ];
-  let wrist = [
-    elbow[0] + L2 * Math.cos(forearmAngle),
-    elbow[1] + L2 * Math.sin(forearmAngle),
-  ];
-
-  // 拍手：腕再略往中線收
-  if (inv.sweep > 15 && inv.elbowFlex > 50) {
-    const pull = 0.028 * clamp(inv.sweep / 50, 0, 1) * clamp((inv.elbowFlex - 50) / 50, 0, 1);
-    wrist[0] += -side * pull;
-  }
-
-  return {
-    elbow,
-    wrist,
-    forearmAngle,
-    upperDir,
-    elevation: inv.elevation,
-    sweep: inv.sweep,
-    elbowFlex: inv.elbowFlex,
-    humeralRot: inv.humeralRot,
-    forearmTwist: inv.forearmTwist,
-  };
 }
 
 function springHalfLifeForPattern(_patternName, beatSec) {
@@ -420,8 +319,8 @@ function computeBeatSin(elapsed, beatSec) {
  */
 function computeSnappyDrop01(elapsed, beatSec) {
   const bs = Math.max(1e-6, beatSec);
-  let phase = (elapsed / bs) % 1;
-  if (phase < 0) phase += 1;
+  const p = elapsed / bs;
+  const phase = p - Math.floor(p); // [0, 1)，含負 lag
   if (phase < 0.38) {
     const t = phase / 0.38;
     return t * t;
@@ -442,23 +341,35 @@ function grooveWaveAt(elapsed, beatSec, lagBeats) {
 }
 
 /**
- * Swing：肩左右反相 + 骨盆／頭輕跟（無獨立 bodyBob／headTilt）。
+ * Swing：肩 Y 對角 + X 反相圓弧、骨盆重心橫移、頭延遲＋極限微沉。
+ * 髖位移後以釘地腿解，避免大腿被拉歪。不做 Z twist（2D 主畫面幾乎看不見）。
  */
 function applySwing(lm, elapsed, beatSec, amp) {
+  const bs = Math.max(1e-6, beatSec);
   const swingSin = computeBeatSin(elapsed, beatSec);
-  const swing = SWING_AMP * amp * swingSin;
-  lm[11][1] -= swing;
-  lm[12][1] += swing;
+  const swingCos = Math.cos((2 * Math.PI / bs) * elapsed);
 
-  // 骨盆輕反相，形成上身對角律動
-  const hip = SWING_HIP_FOLLOW * amp * swingSin;
-  lm[23][1] += hip;
-  lm[24][1] -= hip;
+  const swingY = SWING_AMP * amp * swingSin;
+  // 與 Y 正交：左右肩反相 X → 橢圓軌跡（升起側略往中線／對側略外）
+  const swingArc = SWING_ARC * amp * swingCos;
 
-  // 頭略滯後跟隨肩的平均擺感
+  lm[11][1] -= swingY;
+  lm[12][1] += swingY;
+  lm[11][0] += swingArc;
+  lm[12][0] -= swingArc;
+
+  // 骨盆：Y 對角 + 雙髖同向 X 重心（左肩上 → 重心略往左）
+  const hipY = SWING_HIP_FOLLOW * amp * swingSin;
+  const hipX = SWING_HIP_WEIGHT_X * amp * swingSin;
+  const leftHip = [BASE_POSE[23][0] + hipX, BASE_POSE[23][1] + hipY];
+  const rightHip = [BASE_POSE[24][0] + hipX, BASE_POSE[24][1] - hipY];
+  const kneeOut = SWING_KNEE_OUT_MAX * amp * Math.abs(swingSin);
+  writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
+
+  // 頭：相位延遲橫移；左右極限處微沉（abs）
   const headSin = computeBeatSin(elapsed - CHAIN_LAG_HEAD_BEATS * beatSec, beatSec);
-  const headY = SWING_HEAD_FOLLOW * amp * headSin * 0.35;
   const headX = SWING_HEAD_FOLLOW * amp * headSin;
+  const headY = SWING_HEAD_DROP * amp * Math.abs(headSin);
   for (let i = 0; i <= 10; i++) {
     lm[i][0] += headX;
     lm[i][1] += headY;
@@ -490,28 +401,7 @@ function applyBounce(lm, elapsed, beatSec, amp, bounceDir) {
     BASE_POSE[24][0] + hipSwayX,
     BASE_POSE[24][1] + hipDrop,
   ];
-  const leftAnkle = [BASE_POSE[27][0], BASE_POSE[27][1]];
-  const rightAnkle = [BASE_POSE[28][0], BASE_POSE[28][1]];
-
-  const leftLeg = solveLegFromPlantedFoot(
-    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L", kneeOut,
-  );
-  const rightLeg = solveLegFromPlantedFoot(
-    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R", kneeOut,
-  );
-
-  lm[23][0] = leftHip[0];
-  lm[23][1] = leftHip[1];
-  lm[24][0] = rightHip[0];
-  lm[24][1] = rightHip[1];
-  lm[25][0] = leftLeg.knee[0];
-  lm[25][1] = leftLeg.knee[1];
-  lm[26][0] = rightLeg.knee[0];
-  lm[26][1] = rightLeg.knee[1];
-  lm[27][0] = leftLeg.ankle[0];
-  lm[27][1] = leftLeg.ankle[1];
-  lm[28][0] = rightLeg.ankle[0];
-  lm[28][1] = rightLeg.ankle[1];
+  writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
 
   // 肩／上胸隨鏈延遲下沉；左右隨重心極輕同向
   const shDrop = BOUNCE_SHOULDER_DROP * amp * dropShoulder;
@@ -581,11 +471,31 @@ function solveLegFromPlantedFoot(hip, ankleFixed, baseKnee, L1, L2, side, kneeOu
   } else {
     knee[0] = clamp(knee[0], baseKnee[0] - kneeOutMax, baseKnee[0]);
   }
-  const shinAngle = Math.atan2(
-    ankleFixed[1] - knee[1],
-    ankleFixed[0] - knee[0],
+  return { knee, ankle: [ankleFixed[0], ankleFixed[1]] };
+}
+
+/** Swing／Bounce 共用：寫入髖＋釘地膝踝 */
+function writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOutMax) {
+  const leftAnkle = [BASE_POSE[27][0], BASE_POSE[27][1]];
+  const rightAnkle = [BASE_POSE[28][0], BASE_POSE[28][1]];
+  const leftLeg = solveLegFromPlantedFoot(
+    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L", kneeOutMax,
   );
-  return { knee, ankle: [ankleFixed[0], ankleFixed[1]], shinAngle };
+  const rightLeg = solveLegFromPlantedFoot(
+    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R", kneeOutMax,
+  );
+  lm[23][0] = leftHip[0];
+  lm[23][1] = leftHip[1];
+  lm[24][0] = rightHip[0];
+  lm[24][1] = rightHip[1];
+  lm[25][0] = leftLeg.knee[0];
+  lm[25][1] = leftLeg.knee[1];
+  lm[26][0] = rightLeg.knee[0];
+  lm[26][1] = rightLeg.knee[1];
+  lm[27][0] = leftLeg.ankle[0];
+  lm[27][1] = leftLeg.ankle[1];
+  lm[28][0] = rightLeg.ankle[0];
+  lm[28][1] = rightLeg.ankle[1];
 }
 
 function applyShoulderDrive(lm, intentL, intentR, amp) {
@@ -719,23 +629,6 @@ function applyFeetPlantedOnGround(lm) {
   lm[32][2] = PLANTED_FOOT_R.toe[2];
   lm[32][3] = PLANTED_FOOT_R.toe[3];
 }
-
-function measureLegRest(hipIdx, kneeIdx, ankleIdx, L1, L2) {
-  const hip = BASE_POSE[hipIdx];
-  const knee = BASE_POSE[kneeIdx];
-  const ankle = BASE_POSE[ankleIdx];
-  const thighAngle = Math.atan2(knee[1] - hip[1], knee[0] - hip[0]);
-  const shinAngle = Math.atan2(ankle[1] - knee[1], ankle[0] - knee[0]);
-  const vUp = [hip[0] - knee[0], hip[1] - knee[1]];
-  const vDown = [ankle[0] - knee[0], ankle[1] - knee[1]];
-  const dot = vUp[0] * vDown[0] + vUp[1] * vDown[1];
-  const interior = Math.acos(clamp(dot / (L1 * L2), -1, 1));
-  const kneeFlexRestDeg = (Math.PI - interior) / DEG;
-  return { thighAngle, shinAngle, interior, kneeFlexRestDeg };
-}
-
-const LEG_REST_L = measureLegRest(23, 25, 27, L_THIGH_L, L_SHIN_L);
-const LEG_REST_R = measureLegRest(24, 26, 28, L_THIGH_R, L_SHIN_R);
 
 const LEFT_FINGER_IDXS = [17, 19, 21];
 const RIGHT_FINGER_IDXS = [18, 20, 22];
