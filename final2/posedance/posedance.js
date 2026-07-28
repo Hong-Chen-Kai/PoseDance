@@ -817,7 +817,7 @@ function initYouTubePlayerIfPossible() {
   state.player = new YT.Player("player", {
     height: "180",
     width: "320",
-    videoId: state.videoId || "dQw4w9WgXcQ",
+    videoId: state.videoId || "Gb8AZbpnzy4",
     playerVars: {
       playsinline: 1,
       enablejsapi: 1,

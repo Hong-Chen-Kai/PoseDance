@@ -1,7 +1,7 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
 
 // 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
-const PROCEDURAL_IMPORT_BUILD = "groove-d1-v4";
+const PROCEDURAL_IMPORT_BUILD = "groove-d1-v4d";
 let _synthModule = null;
 const _synthReady = import(`./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`)
   .then((m) => {
@@ -26,6 +26,8 @@ function getSyntheticPatternInfoAtTime(trace, t) {
 
 
 const DEMO_SOURCE_ASPECT = 16 / 9;
+/** 預設歌曲：小蘋果舞蹈用版本（與 demo / song-skeletons 一致；勿再用 rickroll placeholder） */
+const DEFAULT_YOUTUBE_VIDEO_ID = "Gb8AZbpnzy4";
 /** 以模組 URL 解析，避免部署子路徑或與 HTML 不同層級時 fetch 404 */
 const DEMO_TRACE_PATHS = {
   easy: new URL(
@@ -90,7 +92,7 @@ const state = {
   },
 
   ui: {
-    mode: "mode1",
+    mode: "mode2",
     hintMode: "easy",
     demoScale: { l1: 1, l2: 1, r1: 1, r2: 1 },
     mode1DemoEnabled: true,
@@ -801,7 +803,7 @@ function setUi({
 
   // UI 狀態改用 console 顯示（節流 + 只有變更才輸出）
   const now = performance.now();
-  const mode = state.ui?.mode === "mode2" ? "Mode 2" : "Mode 1";
+  const mode = modeDisplayLabel();
   const sig = `${mode}|${easy}|${overallEasy}|${hard}|${overallHard}|${loaded}|${overallLoaded}`;
   if (sig !== consoleUiStatus.lastSig && now - consoleUiStatus.lastLogAt >= 250) {
     consoleUiStatus.lastSig = sig;
@@ -812,10 +814,15 @@ function setUi({
   }
 }
 
+/** 畫面標籤：內部 mode2（生成舞者）顯示為 Mode 1；mode1 顯示為 Mode 2 */
+function modeDisplayLabel(mode = state.ui?.mode) {
+  return mode === "mode2" ? "Mode 1" : "Mode 2";
+}
+
 function setModeUiText() {
   // 原本頁面會顯示 modeText；現在改為不佔版面（仍可在 console / 下拉選單看模式）
   if (!els.modeText) return;
-  els.modeText.textContent = state.ui.mode === "mode2" ? "Mode 2" : "Mode 1";
+  els.modeText.textContent = modeDisplayLabel();
 }
 
 function clearOverlayCanvas() {
@@ -1794,7 +1801,7 @@ function initYouTubePlayerIfPossible() {
   state.player = new YT.Player("player", {
     height: "180",
     width: "320",
-    videoId: state.videoId || "dQw4w9WgXcQ",
+    videoId: state.videoId || DEFAULT_YOUTUBE_VIDEO_ID,
     playerVars: {
       playsinline: 1,
       enablejsapi: 1,
@@ -3402,6 +3409,11 @@ async function main() {
   bindDemoScaleSlider(els.demoScaleR1, "r1");
   bindDemoScaleSlider(els.demoScaleR2, "r2");
   setupYtFloatingWindow();
+  // 先設預設 videoId，避免 YT API 先就緒時用舊 placeholder 建播放器
+  if (!state.videoId) {
+    state.videoId = DEFAULT_YOUTUBE_VIDEO_ID;
+    if (els.videoUrlInput) els.videoUrlInput.value = DEFAULT_YOUTUBE_VIDEO_ID;
+  }
   initYouTubePlayerIfPossible();
 
   try {
@@ -3459,7 +3471,7 @@ async function main() {
     });
     applyMode(els.modeSelect.value);
   } else {
-    applyMode("mode1");
+    applyMode("mode2");
   }
 
   if (els.loadVideoButton) {
