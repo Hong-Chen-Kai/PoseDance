@@ -12,7 +12,7 @@
 import { getArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `torso-t11-v1+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `blend-xfade-v1+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -1022,9 +1022,12 @@ export class ProceduralSkeleton {
 
   _sampleAnglesForPattern(pat, localBeatFloat) {
     const beats = pat.beats;
-    const idx = Math.floor(localBeatFloat) % beats;
+    // 支援負 localBeat（過渡倒數進下一招第 0 拍）；修正 JS % 負餘數
+    let normBeat = localBeatFloat % beats;
+    if (normBeat < 0) normBeat += beats;
+    const idx = Math.floor(normBeat);
     const next = (idx + 1) % beats;
-    const frac = cosEase(localBeatFloat - Math.floor(localBeatFloat));
+    const frac = cosEase(normBeat - idx);
     return {
       lu: _lerp(pat.left_upper[idx], pat.left_upper[next], frac),
       lf: _lerp(pat.left_forearm[idx], pat.left_forearm[next], frac),
@@ -1077,8 +1080,9 @@ export class ProceduralSkeleton {
       blending = true;
       blendProgress = (localBeatFloat - (pat.beats - blendBeats)) / blendBeats;
       const nextPat = PATTERNS[toKey];
-      // 固定對準下一招第 0 拍（起手），避免過渡追到中段、進段又從開頭播造成瞬移／合不起來
-      const nextRaw = this._sampleAnglesForPattern(nextPat, 0);
+      // 動態交疊：對準「進入下一招第 0 拍前」的軌跡（負時間），避免鎖死靜止起手造成速度斷層
+      const nextLocalBeat = localBeatFloat - pat.beats;
+      const nextRaw = this._sampleAnglesForPattern(nextPat, nextLocalBeat);
       const nextL = toIntent(nextRaw.lu, nextRaw.lf, noiseLu, noiseLf);
       const nextR = toIntent(nextRaw.ru, nextRaw.rf, noiseRu, noiseRf);
       const viaRest = needsRestBridge(fromKey, toKey);
