@@ -12,7 +12,7 @@
 import { ArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `foot-d4-v2+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `foot-d4-v4+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -140,11 +140,12 @@ export const BOUNCE_DIRS = Object.freeze({
   UP: "up",
 });
 
-/** @typedef {'plant' | 'single' | 'double'} FootMode */
+/** @typedef {'plant' | 'single' | 'double' | 'side'} FootMode */
 export const FOOT_MODES = Object.freeze({
-  PLANT: "plant",
-  SINGLE: "single", // 只踏同一側（左或右）
-  DOUBLE: "double", // 左右交替
+  PLANT: "plant",   // 釘地
+  SINGLE: "single", // 原地單腳（同側反覆）
+  DOUBLE: "double", // 原地雙腳交替（in-place）
+  SIDE: "side",     // 側一步 step-touch
 });
 
 /** @typedef {'L' | 'R'} FootSide */
@@ -169,8 +170,9 @@ function normalizeBounceDir(dir) {
 
 function normalizeFootMode(mode) {
   const m = String(mode || "").toLowerCase();
-  if (m === FOOT_MODES.SINGLE) return FOOT_MODES.SINGLE;
-  if (m === FOOT_MODES.DOUBLE) return FOOT_MODES.DOUBLE;
+  if (m === FOOT_MODES.SINGLE || m === "in_place_single") return FOOT_MODES.SINGLE;
+  if (m === FOOT_MODES.DOUBLE || m === "in_place") return FOOT_MODES.DOUBLE;
+  if (m === FOOT_MODES.SIDE || m === "side_step") return FOOT_MODES.SIDE;
   return FOOT_MODES.PLANT;
 }
 
@@ -204,15 +206,18 @@ const BOUNCE_SHOULDER_ELEV_DAMP_MAX_UP = 0.96; // UP 再壓一點
 const CHAIN_LAG_SHOULDER_BEATS = 0.06;
 const CHAIN_LAG_HEAD_BEATS = 0.12;
 
-// D4：程序化踏步（長輩友善小幅度；MP y 向下）
-// single＝同側反覆；double＝左右交替
-const STEP_HEIGHT_ONE = 0.022;   // 單腳
-const STEP_HEIGHT_ALT = 0.020;   // 雙腳交替
-const STEP_SIDE_OFFSET = 0.007;
-const STEP_WEIGHT_SHIFT = 0.012;
-const STEP_SHIFT_FRAC = 0.22; // 一拍內前段做重心轉移
-const STEP_ELEV_DAMP_START = 70;
-const STEP_ELEV_DAMP_FULL = 125;
+// D4：三定律踏步（MP 正規化座標；y 向下抬腳為負向位移用「減 y」）
+// 整拍著地、半拍抬最高：lift = h·sin(π·t)；髖與抬腳同相偏支撐腳
+const STEP_LIFT_INPLACE = 0.036;
+const STEP_LIFT_SIDE = 0.032;
+const STEP_LIFT_TOUCH = 0.020; // 側步「點地」較低
+const STEP_HIP_SHIFT = 0.0055; // 原地踏髖偏
+const STEP_WIDTH = 0.055;      // 側一步寬
+const STEP_HIP_FROM_STEP = 0.55; // 髖跟步寬比例（50～70%）
+const STEP_ELEV_DAMP_START = 85;
+const STEP_ELEV_DAMP_FULL = 140;
+/** 踏步時 groove 左右 sway 保留比例 */
+const STEP_GROOVE_LATERAL_SCALE = 0.10;
 
 // T11：軀幹／髖耦合（與律動同相位；肩反相延遲 → S 曲線；雙髖強制同高）
 const TORSO_SHOULDER_COUNTER_X = 0.0022;
@@ -431,14 +436,16 @@ function applyTorsoSCurve(lm, elapsed, beatSec, periodSec, amp) {
 
 /**
  * Swing：肩 Y 對角 + X 圓弧；髖同高橫移 + T11 軀幹 S；釘地腿解。
+ * @param {number} [lateralScale=1] 踏步時壓低左右 sway
  */
-function applySwing(lm, elapsed, beatSec, amp) {
+function applySwing(lm, elapsed, beatSec, amp, lateralScale = 1) {
   const periodSec = Math.max(1e-6, beatSec * SWING_PERIOD_BEATS);
   const swingSin = computeBeatSin(elapsed, periodSec);
   const swingCos = Math.cos((2 * Math.PI / periodSec) * elapsed);
+  const lat = clamp(lateralScale, 0, 1);
 
   const swingY = SWING_AMP * amp * swingSin;
-  const swingArc = SWING_ARC * amp * swingCos;
+  const swingArc = SWING_ARC * amp * swingCos * lat;
 
   lm[11][1] -= swingY;
   lm[12][1] += swingY;
@@ -446,7 +453,7 @@ function applySwing(lm, elapsed, beatSec, amp) {
   lm[12][0] -= swingArc;
 
   // 雙髖同高：只做同向 X（重心），不做左右 Y 對角
-  const hipX = SWING_HIP_WEIGHT_X * amp * swingSin;
+  const hipX = SWING_HIP_WEIGHT_X * amp * swingSin * lat;
   const hipY = BASE_POSE[23][1];
   const leftHip = [BASE_POSE[23][0] + hipX, hipY];
   const rightHip = [BASE_POSE[24][0] + hipX, hipY];
@@ -454,13 +461,13 @@ function applySwing(lm, elapsed, beatSec, amp) {
   writePlantedLegsFromHips(lm, leftHip, rightHip, kneeOut);
   enforcePelvisSameHeightAndPlant(lm, kneeOut);
 
-  applyTorsoSCurve(lm, elapsed, beatSec, periodSec, amp);
+  applyTorsoSCurve(lm, elapsed, beatSec, periodSec, amp * (0.35 + 0.65 * lat));
 
   const headSin = computeBeatSin(
     elapsed - CHAIN_LAG_HEAD_BEATS * beatSec,
     periodSec,
   );
-  const headX = SWING_HEAD_FOLLOW * amp * headSin;
+  const headX = SWING_HEAD_FOLLOW * amp * headSin * lat;
   const headY = SWING_HEAD_DROP * amp * Math.abs(headSin);
   for (let i = 0; i <= 10; i++) {
     lm[i][0] += headX;
@@ -471,8 +478,9 @@ function applySwing(lm, elapsed, beatSec, amp) {
 /**
  * Bounce：雙髖同高下沉 + 動能鏈；T11 軀幹 S 跟 sway。
  * @param {number} [elevationHint] 上一幀手臂 elevation（壓低高舉時肩垂直律動）
+ * @param {number} [lateralScale=1] 踏步時壓低左右 sway（保留垂直 bounce）
  */
-function applyBounce(lm, elapsed, beatSec, amp, bounceDir, elevationHint = 0) {
+function applyBounce(lm, elapsed, beatSec, amp, bounceDir, elevationHint = 0, lateralScale = 1) {
   const dropHip = bounceDropAmount(elapsed, beatSec, bounceDir);
   const dropShoulder = bounceDir === BOUNCE_DIRS.UP
     ? 1 - grooveWaveAt(elapsed, beatSec, CHAIN_LAG_SHOULDER_BEATS)
@@ -480,13 +488,14 @@ function applyBounce(lm, elapsed, beatSec, amp, bounceDir, elevationHint = 0) {
   const dropHead = bounceDir === BOUNCE_DIRS.UP
     ? 1 - grooveWaveAt(elapsed, beatSec, CHAIN_LAG_HEAD_BEATS)
     : grooveWaveAt(elapsed, beatSec, CHAIN_LAG_HEAD_BEATS);
+  const lat = clamp(lateralScale, 0, 1);
 
   const hipDrop = BOUNCE_HIP_DROP * amp * dropHip;
   const kneeOut = BOUNCE_KNEE_OUT_MAX * amp * dropHip;
   // 與 Bounce 垂直節奏分離的左右（週期 2 拍，跟 sway 同相）
   const swayPeriod = Math.max(1e-6, beatSec * 2);
   const swaySin = computeBeatSin(elapsed, swayPeriod);
-  const hipSwayX = BOUNCE_HIP_SWAY_X * amp * swaySin;
+  const hipSwayX = BOUNCE_HIP_SWAY_X * amp * swaySin * lat;
 
   const hipY = BASE_POSE[23][1] + hipDrop;
   const leftHip = [BASE_POSE[23][0] + hipSwayX, hipY];
@@ -508,7 +517,7 @@ function applyBounce(lm, elapsed, beatSec, amp, bounceDir, elevationHint = 0) {
   lm[11][0] += hipSwayX * 0.35;
   lm[12][0] += hipSwayX * 0.35;
 
-  applyTorsoSCurve(lm, elapsed, beatSec, swayPeriod, amp);
+  applyTorsoSCurve(lm, elapsed, beatSec, swayPeriod, amp * (0.35 + 0.65 * lat));
 
   const hDrop = BOUNCE_HEAD_DROP * amp * dropHead * (0.35 + 0.65 * shElevScale);
   for (let i = 0; i <= 10; i++) {
@@ -617,92 +626,145 @@ function stepHeightScale(elevHint) {
   const elev = Math.max(0, elevHint || 0);
   const span = Math.max(1e-6, STEP_ELEV_DAMP_FULL - STEP_ELEV_DAMP_START);
   const t = clamp((elev - STEP_ELEV_DAMP_START) / span, 0, 1);
-  return 1 - 0.85 * t * t;
+  return 1 - 0.55 * t * t;
 }
 
 /**
- * 單側一拍：重心移到支撐腳 → 擺動腳抬踏拋物線 → 著地。
- * @param {'L'|'R'} swingSide 擺動腳
+ * 三定律腳步：回傳相對 BASE 的踝／髖 offset。
+ * - plant：全 0
+ * - single：每拍同側 sin 抬腳（footSide）
+ * - double：2 拍交替 in-place（0–1 左、1–2 右）
+ * - side：4 拍 step-touch
+ *
+ * MP：人物左腳 x 較大；抬左 → 重心向右腳（x 較小）→ hipX 為負。
  */
-function sampleOneFootStep(halfBeat, swingSide, amp, hScale, height) {
-  const homeL = [BASE_POSE[27][0], BASE_POSE[27][1]];
-  const homeR = [BASE_POSE[28][0], BASE_POSE[28][1]];
-  const leftAnkle = [homeL[0], homeL[1]];
-  const rightAnkle = [homeR[0], homeR[1]];
-  const swingLeft = swingSide === "L";
-  const side = swingLeft ? 1 : -1;
-  // 抬左 → 重心偏右支撐（x↓）；抬右 → 重心偏左（x↑）
-  const weightSign = swingLeft ? -1 : 1;
-  const shiftAmt = STEP_WEIGHT_SHIFT * amp;
-  const shiftEnd = STEP_SHIFT_FRAC;
-  const half = ((halfBeat % 1) + 1) % 1;
+function computeFootwork(beatFloat, footMode, footSide, amp, hScale) {
+  const zero = {
+    leftAnkle: { x: 0, y: 0 },
+    rightAnkle: { x: 0, y: 0 },
+    hipX: 0,
+    active: false,
+  };
+  if (footMode === FOOT_MODES.PLANT) return zero;
 
-  let hipBiasX;
-  if (half < shiftEnd) {
-    hipBiasX = weightSign * shiftAmt * smoothstep01(half / shiftEnd);
-  } else {
-    hipBiasX = weightSign * shiftAmt;
-    const t = (half - shiftEnd) / (1 - shiftEnd);
-    const st = smoothstep01(t);
-    const lift = Math.sin(Math.PI * t) * height * hScale;
-    const dx = side * STEP_SIDE_OFFSET * amp * st;
-    if (swingLeft) {
-      leftAnkle[0] = homeL[0] + dx;
-      leftAnkle[1] = homeL[1] - lift;
-    } else {
-      rightAnkle[0] = homeR[0] + dx;
-      rightAnkle[1] = homeR[1] - lift;
-    }
-  }
-  return { leftAnkle, rightAnkle, hipBiasX, active: true };
-}
-
-/**
- * D4 步態取樣：重心轉移 → 擺動拋物線 → 著地。
- * - plant：釘地
- * - single：只踏 footSide（L 或 R）同一側反覆
- * - double：左右交替接替
- * @returns {{ leftAnkle:number[], rightAnkle:number[], hipBiasX:number, active:boolean }}
- */
-function sampleStepGait(footMode, beatFloat, amp, elevHint, footSide = "L") {
-  if (footMode === FOOT_MODES.PLANT) {
-    return {
-      leftAnkle: [BASE_POSE[27][0], BASE_POSE[27][1]],
-      rightAnkle: [BASE_POSE[28][0], BASE_POSE[28][1]],
-      hipBiasX: 0,
-      active: false,
-    };
-  }
-
-  const hScale = stepHeightScale(elevHint) * amp;
+  const a = Math.max(0.4, amp || 1);
+  const hs = Math.max(0.2, hScale || 1);
+  const liftH = STEP_LIFT_INPLACE * a * hs;
+  const hipD = STEP_HIP_SHIFT * a;
+  const out = {
+    leftAnkle: { x: 0, y: 0 },
+    rightAnkle: { x: 0, y: 0 },
+    hipX: 0,
+    active: true,
+  };
 
   if (footMode === FOOT_MODES.SINGLE) {
     const side = normalizeFootSide(footSide);
-    return sampleOneFootStep(beatFloat, side, amp, hScale, STEP_HEIGHT_ONE);
+    const t = ((beatFloat % 1) + 1) % 1;
+    const s = Math.sin(t * Math.PI);
+    if (side === "L") {
+      out.leftAnkle.y = -liftH * s;
+      out.hipX = -hipD * s; // 向右腳（支撐）
+    } else {
+      out.rightAnkle.y = -liftH * s;
+      out.hipX = hipD * s; // 向左腳
+    }
+    return out;
   }
 
-  // double：2 拍一輪（0–1 抬左、1–2 抬右）
-  const period = 2;
-  const local = ((beatFloat % period) + period) % period;
-  const swingSide = local < 1 ? "L" : "R";
-  const half = local < 1 ? local : local - 1;
-  return sampleOneFootStep(half, swingSide, amp, hScale, STEP_HEIGHT_ALT);
+  if (footMode === FOOT_MODES.DOUBLE) {
+    const cycle = ((beatFloat % 2) + 2) % 2;
+    if (cycle < 1) {
+      const t = cycle;
+      const s = Math.sin(t * Math.PI);
+      out.leftAnkle.y = -liftH * s;
+      out.hipX = -hipD * s;
+    } else {
+      const t = cycle - 1;
+      const s = Math.sin(t * Math.PI);
+      out.rightAnkle.y = -liftH * s;
+      out.hipX = hipD * s;
+    }
+    return out;
+  }
+
+  // side：4 拍 step-touch（人物左 = MP +x）
+  const width = STEP_WIDTH * a;
+  const liftSide = STEP_LIFT_SIDE * a * hs;
+  const liftTouch = STEP_LIFT_TOUCH * a * hs;
+  const cycle = ((beatFloat % 4) + 4) % 4;
+  const phase = Math.floor(cycle);
+  const frac = cycle - phase;
+  const sm = smoothstep01(frac);
+  const sLift = Math.sin(frac * Math.PI);
+
+  if (phase === 0) {
+    // 左腳向左踏出（MP +x）
+    out.leftAnkle.x = width * sm;
+    out.leftAnkle.y = -liftSide * sLift;
+    out.hipX = width * STEP_HIP_FROM_STEP * sm;
+  } else if (phase === 1) {
+    // 右腳靠攏點在左腳旁
+    out.leftAnkle.x = width;
+    out.rightAnkle.x = width * sm;
+    out.rightAnkle.y = -liftTouch * sLift;
+    out.hipX = width * STEP_HIP_FROM_STEP;
+  } else if (phase === 2) {
+    // 右腳向右踏出；左腳收回
+    out.leftAnkle.x = width * (1 - sm);
+    out.rightAnkle.x = -width * sm;
+    out.rightAnkle.y = -liftSide * sLift;
+    out.hipX = width * STEP_HIP_FROM_STEP * (1 - sm)
+      + (-width * STEP_HIP_FROM_STEP) * sm;
+  } else {
+    // 左腳靠攏點地
+    out.rightAnkle.x = -width;
+    out.leftAnkle.x = -width * sm;
+    out.leftAnkle.y = -liftTouch * sLift;
+    out.hipX = -width * STEP_HIP_FROM_STEP * (1 - sm);
+  }
+  return out;
 }
 
 /**
- * 在 groove 寫完髖／釘地腿之後套用踏步：改髖 bias + 動態踝 + 重解膝。
+ * offset → 絕對踝／髖，夾骨盆於雙踝間，解膝。
  */
 function applyStepGaitToLm(lm, footMode, beatFloat, amp, elevHint, kneeOutMax, footSide) {
-  const gait = sampleStepGait(footMode, beatFloat, amp, elevHint, footSide);
-  if (!gait.active) return gait;
+  const hScale = stepHeightScale(elevHint);
+  const fw = computeFootwork(beatFloat, footMode, footSide, amp, hScale);
+  if (!fw.active) return fw;
 
-  const y = (lm[23][1] + lm[24][1]) * 0.5;
-  const leftHip = [lm[23][0] + gait.hipBiasX, y];
-  const rightHip = [lm[24][0] + gait.hipBiasX, y];
+  const homeL = [BASE_POSE[27][0], BASE_POSE[27][1]];
+  const homeR = [BASE_POSE[28][0], BASE_POSE[28][1]];
+  const leftAnkle = [homeL[0] + fw.leftAnkle.x, homeL[1] + fw.leftAnkle.y];
+  const rightAnkle = [homeR[0] + fw.rightAnkle.x, homeR[1] + fw.rightAnkle.y];
+
+  const hipY = (lm[23][1] + lm[24][1]) * 0.5;
+  let leftHipX = BASE_POSE[23][0] + fw.hipX;
+  let rightHipX = BASE_POSE[24][0] + fw.hipX;
+
+  const mid = (leftHipX + rightHipX) * 0.5;
+  const ankleMin = Math.min(leftAnkle[0], rightAnkle[0]);
+  const ankleMax = Math.max(leftAnkle[0], rightAnkle[0]);
+  const margin = 0.008;
+  const lo = ankleMin + margin;
+  const hi = ankleMax - margin;
+  if (hi > lo) {
+    const clampedMid = clamp(mid, lo, hi);
+    const fix = clampedMid - mid;
+    leftHipX += fix;
+    rightHipX += fix;
+  }
+
   writeLegsWithAnkles(
-    lm, leftHip, rightHip, gait.leftAnkle, gait.rightAnkle, Math.max(0, kneeOutMax),
+    lm,
+    [leftHipX, hipY],
+    [rightHipX, hipY],
+    leftAnkle,
+    rightAnkle,
+    Math.max(0, kneeOutMax),
   );
-  return gait;
+  return { ...fw, leftAnkle, rightAnkle, hipBiasX: fw.hipX };
 }
 
 function applyShoulderDrive(lm, intentL, intentR, amp) {
@@ -1432,16 +1494,20 @@ export class ProceduralSkeleton {
       lm[i][3] = base[3];
     }
 
-    // 律動先於手臂 FK，讓肩／髖位移帶動手臂根點
+    // 律動先於手臂 FK；踏步時壓低左右 sway，避免與 weight-shift 雙重晃
+    const stepping = this.footMode !== FOOT_MODES.PLANT;
+    const lateralScale = stepping ? STEP_GROOVE_LATERAL_SCALE : 1;
     if (grooveEnablesSwing(this.grooveMode)) {
-      applySwing(lm, elapsed, this.beatSec, amp);
+      applySwing(lm, elapsed, this.beatSec, amp, lateralScale);
     }
     if (grooveEnablesBounce(this.grooveMode)) {
       const elevHint = Math.max(
         this._armState.L?.elevation ?? 0,
         this._armState.R?.elevation ?? 0,
       );
-      applyBounce(lm, elapsed, this.beatSec, amp, this.bounceDir, elevHint);
+      applyBounce(
+        lm, elapsed, this.beatSec, amp, this.bounceDir, elevHint, lateralScale,
+      );
     }
 
     // D4：踏步覆寫踝／髖 bias（plant 則略過，維持釘地）
@@ -1590,8 +1656,9 @@ function footModeLabel(footMode, footSide) {
   if (m === FOOT_MODES.SINGLE) {
     return normalizeFootSide(footSide) === "R" ? " ·單腳踏(右)" : " ·單腳踏(左)";
   }
-  if (m === FOOT_MODES.DOUBLE) return " ·雙腳交替";
-  return " ·原地";
+  if (m === FOOT_MODES.DOUBLE) return " ·原地交替";
+  if (m === FOOT_MODES.SIDE) return " ·側一步";
+  return " ·釘地";
 }
 
 // ─── 便利方法：建立一個 synthetic trace 物件 ──────────────────
