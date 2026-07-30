@@ -779,12 +779,26 @@ function getDeleteButtonRectForBBox(bbox) {
   };
 }
 
+const MIN_DRAW_RECT_PX = 30;
+
 function scaleRectAboutAnchor(rect, anchorX, anchorY, scale) {
   const s = typeof scale === "number" && Number.isFinite(scale) ? scale : 1;
+  let dw2 = rect.dw * s;
+  let dh2 = rect.dh * s;
+  // 避免滾輪連縮把矩形縮到 0／負
+  if (dw2 < MIN_DRAW_RECT_PX || dh2 < MIN_DRAW_RECT_PX) {
+    const sMin = Math.max(
+      MIN_DRAW_RECT_PX / Math.max(1e-6, rect.dw),
+      MIN_DRAW_RECT_PX / Math.max(1e-6, rect.dh),
+    );
+    dw2 = rect.dw * sMin;
+    dh2 = rect.dh * sMin;
+    const ox2 = anchorX + (rect.ox - anchorX) * sMin;
+    const oy2 = anchorY + (rect.oy - anchorY) * sMin;
+    return { ox: ox2, oy: oy2, dw: dw2, dh: dh2 };
+  }
   const ox2 = anchorX + (rect.ox - anchorX) * s;
   const oy2 = anchorY + (rect.oy - anchorY) * s;
-  const dw2 = rect.dw * s;
-  const dh2 = rect.dh * s;
   return { ox: ox2, oy: oy2, dw: dw2, dh: dh2 };
 }
 
@@ -891,8 +905,8 @@ function scaleRectAboutCenter(rect, s) {
   const ss = typeof s === "number" && Number.isFinite(s) ? s : 1;
   const cx = rect.ox + rect.dw / 2;
   const cy = rect.oy + rect.dh / 2;
-  const dw = rect.dw * ss;
-  const dh = rect.dh * ss;
+  const dw = Math.max(MIN_DRAW_RECT_PX, rect.dw * ss);
+  const dh = Math.max(MIN_DRAW_RECT_PX, rect.dh * ss);
   return { ox: cx - dw / 2, oy: cy - dh / 2, dw, dh };
 }
 
@@ -2823,21 +2837,17 @@ function drawUserOverlay() {
   ctx.restore();
 }
 
+let _poseUiBound = false;
+
 async function initPose() {
   if (!els.startCameraButton) return;
+  // 防止 main／熱重載重複綁定造成連點多次開關
+  if (_poseUiBound) return;
+  _poseUiBound = true;
 
   els.startCameraButton.addEventListener("click", async () => {
     if (state.cameraRunning) {
-      state.poseLoopActive = false;
-      state.cameraRunning = false;
-      if (state.cameraStream) {
-        state.cameraStream.getTracks().forEach((t) => t.stop());
-        state.cameraStream = null;
-      }
-      if (els.inputVideo) els.inputVideo.srcObject = null;
-      els.startCameraButton.textContent = "啟動攝影機";
-      state.latestUserLandmarks = null;
-      drawUserOverlay();
+      stopCameraIfRunning();
       return;
     }
 
@@ -2866,7 +2876,9 @@ async function initPose() {
       els.inputVideo.srcObject = stream;
       await els.inputVideo.play();
 
-      // Pose loop
+      // 偵測與繪製已解耦：
+      // - updateUiLoop（rAF）負責 Canvas／骨架繪製，不 await detect
+      // - 下方 cameraPump 只丟影格；processFrames 非同步推論，不阻塞繪製
       let lastTimestamp = 0;
       let isProcessing = false;
       let pendingFrame = null;
@@ -2886,22 +2898,21 @@ async function initPose() {
           console.error("Pose detect failed:", err);
         } finally {
           isProcessing = false;
-          if (pendingFrame && !isProcessing)
-            requestAnimationFrame(processFrames);
+          if (pendingFrame) processFrames();
         }
       };
 
-      const loop = () => {
+      const cameraPump = () => {
         if (!state.poseLoopActive) return;
         if (els.inputVideo.readyState === els.inputVideo.HAVE_ENOUGH_DATA) {
           pendingFrame = els.inputVideo;
           if (!isProcessing) processFrames();
         }
-        requestAnimationFrame(loop);
+        requestAnimationFrame(cameraPump);
       };
 
       state.poseLoopActive = true;
-      loop();
+      cameraPump();
       state.cameraRunning = true;
       els.startCameraButton.textContent = "關閉攝影機";
       els.startCameraButton.disabled = false;
@@ -3654,7 +3665,8 @@ async function main() {
   }
 
   // overlay_canvas interactions: select / drag / resize / wheel zoom
-  if (els.overlayCanvas) {
+  if (els.overlayCanvas && !els.overlayCanvas.dataset.interactBound) {
+    els.overlayCanvas.dataset.interactBound = "1";
     els.overlayCanvas.style.touchAction = "none";
 
     const onPointerDown = (ev) => {
