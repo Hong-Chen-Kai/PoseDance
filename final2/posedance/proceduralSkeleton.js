@@ -12,7 +12,7 @@
 import { ArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `foot-d4-v4+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `foot-d4-v5+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -538,7 +538,7 @@ function grooveEnablesBounce(mode) {
  * 髖–踝固定段長求膝。
  * hipSide 'L'|'R'：依 MP 左/右髖；膝外開 = 遠離骨盆中線（左膝 x↑、右膝 x↓）。
  */
-function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, hipSide) {
+function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, hipSide, prevKnee = null) {
   const dx = ankle[0] - hip[0];
   const dy = ankle[1] - hip[1];
   let d = Math.hypot(dx, dy);
@@ -558,6 +558,12 @@ function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, hipSide) {
   const k1 = [midX + px * h, midY + py * h];
   const k2 = [midX - px * h, midY - py * h];
   if (h < 1e-6) return [midX, midY];
+  // 有上一幀：選較近解，避免著地時兩解跳切造成腿抖
+  if (prevKnee && Number.isFinite(prevKnee[0]) && Number.isFinite(prevKnee[1])) {
+    const d1 = Math.hypot(k1[0] - prevKnee[0], k1[1] - prevKnee[1]);
+    const d2 = Math.hypot(k2[0] - prevKnee[0], k2[1] - prevKnee[1]);
+    return d1 <= d2 ? k1 : k2;
+  }
   const scoreKnee = (k) => {
     const dyDown = k[1] - baseKnee[1];
     const outward = hipSide === "L"
@@ -572,8 +578,8 @@ function solveKneeFromHipAnkle(hip, ankle, L1, L2, baseKnee, hipSide) {
 }
 
 /** 踝釘在地面；只調膝彎與大腿長，不把踝拉離基線（避免墊腳尖感） */
-function solveLegFromPlantedFoot(hip, ankleFixed, baseKnee, L1, L2, side, kneeOutMax) {
-  let knee = solveKneeFromHipAnkle(hip, ankleFixed, L1, L2, baseKnee, side);
+function solveLegFromPlantedFoot(hip, ankleFixed, baseKnee, L1, L2, side, kneeOutMax, prevKnee = null) {
+  let knee = solveKneeFromHipAnkle(hip, ankleFixed, L1, L2, baseKnee, side, prevKnee);
   knee = placeAtLength(hip, knee, L1);
   if (side === "L") {
     knee[0] = clamp(knee[0], baseKnee[0], baseKnee[0] + kneeOutMax);
@@ -584,12 +590,15 @@ function solveLegFromPlantedFoot(hip, ankleFixed, baseKnee, L1, L2, side, kneeOu
 }
 
 /** 動態踝目標解腿（支撐相釘地／擺動相抬腳共用） */
-function writeLegsWithAnkles(lm, leftHip, rightHip, leftAnkle, rightAnkle, kneeOutMax) {
+function writeLegsWithAnkles(
+  lm, leftHip, rightHip, leftAnkle, rightAnkle, kneeOutMax,
+  prevKneeL = null, prevKneeR = null,
+) {
   const leftLeg = solveLegFromPlantedFoot(
-    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L", kneeOutMax,
+    leftHip, leftAnkle, BASE_POSE[25], L_THIGH_L, L_SHIN_L, "L", kneeOutMax, prevKneeL,
   );
   const rightLeg = solveLegFromPlantedFoot(
-    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R", kneeOutMax,
+    rightHip, rightAnkle, BASE_POSE[26], L_THIGH_R, L_SHIN_R, "R", kneeOutMax, prevKneeR,
   );
   lm[23][0] = leftHip[0];
   lm[23][1] = leftHip[1];
@@ -603,6 +612,7 @@ function writeLegsWithAnkles(lm, leftHip, rightHip, leftAnkle, rightAnkle, kneeO
   lm[27][1] = leftLeg.ankle[1];
   lm[28][0] = rightLeg.ankle[0];
   lm[28][1] = rightLeg.ankle[1];
+  return { kneeL: leftLeg.knee, kneeR: rightLeg.knee };
 }
 
 /** Swing／Bounce 共用：寫入髖＋釘地膝踝 */
@@ -622,6 +632,12 @@ function smoothstep01(t) {
   return t * t * (3 - 2 * t);
 }
 
+/** 抬腳曲線：sin²(πt)＝半拍最高，整拍著地且端點速度≈0（減少撞地抖） */
+function liftEnvelope01(t) {
+  const s = Math.sin(clamp(t, 0, 1) * Math.PI);
+  return s * s;
+}
+
 function stepHeightScale(elevHint) {
   const elev = Math.max(0, elevHint || 0);
   const span = Math.max(1e-6, STEP_ELEV_DAMP_FULL - STEP_ELEV_DAMP_START);
@@ -632,11 +648,11 @@ function stepHeightScale(elevHint) {
 /**
  * 三定律腳步：回傳相對 BASE 的踝／髖 offset。
  * - plant：全 0
- * - single：每拍同側 sin 抬腳（footSide）
- * - double：2 拍交替 in-place（0–1 左、1–2 右）
- * - side：4 拍 step-touch
+ * - single：每拍同側抬腳（footSide）
+ * - double：2 拍交替 in-place
+ * - side：4 拍 step-touch（phase 連續，可循環回中）
  *
- * MP：人物左腳 x 較大；抬左 → 重心向右腳（x 較小）→ hipX 為負。
+ * MP：人物左腳 x 較大；抬左 → 重心向右腳 → hipX 為負。
  */
 function computeFootwork(beatFloat, footMode, footSide, amp, hScale) {
   const zero = {
@@ -661,13 +677,13 @@ function computeFootwork(beatFloat, footMode, footSide, amp, hScale) {
   if (footMode === FOOT_MODES.SINGLE) {
     const side = normalizeFootSide(footSide);
     const t = ((beatFloat % 1) + 1) % 1;
-    const s = Math.sin(t * Math.PI);
+    const e = liftEnvelope01(t);
     if (side === "L") {
-      out.leftAnkle.y = -liftH * s;
-      out.hipX = -hipD * s; // 向右腳（支撐）
+      out.leftAnkle.y = -liftH * e;
+      out.hipX = -hipD * e;
     } else {
-      out.rightAnkle.y = -liftH * s;
-      out.hipX = hipD * s; // 向左腳
+      out.rightAnkle.y = -liftH * e;
+      out.hipX = hipD * e;
     }
     return out;
   }
@@ -675,20 +691,18 @@ function computeFootwork(beatFloat, footMode, footSide, amp, hScale) {
   if (footMode === FOOT_MODES.DOUBLE) {
     const cycle = ((beatFloat % 2) + 2) % 2;
     if (cycle < 1) {
-      const t = cycle;
-      const s = Math.sin(t * Math.PI);
-      out.leftAnkle.y = -liftH * s;
-      out.hipX = -hipD * s;
+      const e = liftEnvelope01(cycle);
+      out.leftAnkle.y = -liftH * e;
+      out.hipX = -hipD * e;
     } else {
-      const t = cycle - 1;
-      const s = Math.sin(t * Math.PI);
-      out.rightAnkle.y = -liftH * s;
-      out.hipX = hipD * s;
+      const e = liftEnvelope01(cycle - 1);
+      out.rightAnkle.y = -liftH * e;
+      out.hipX = hipD * e;
     }
     return out;
   }
 
-  // side：4 拍 step-touch（人物左 = MP +x）
+  // side：連續 4 拍 step-touch（結束回中立，可循環）
   const width = STEP_WIDTH * a;
   const liftSide = STEP_LIFT_SIDE * a * hs;
   const liftTouch = STEP_LIFT_TOUCH * a * hs;
@@ -696,50 +710,58 @@ function computeFootwork(beatFloat, footMode, footSide, amp, hScale) {
   const phase = Math.floor(cycle);
   const frac = cycle - phase;
   const sm = smoothstep01(frac);
-  const sLift = Math.sin(frac * Math.PI);
+  const eLift = liftEnvelope01(frac);
 
   if (phase === 0) {
-    // 左腳向左踏出（MP +x）
+    // 左腳踏出 0→+W；右釘 0
     out.leftAnkle.x = width * sm;
-    out.leftAnkle.y = -liftSide * sLift;
+    out.leftAnkle.y = -liftSide * eLift;
     out.hipX = width * STEP_HIP_FROM_STEP * sm;
   } else if (phase === 1) {
-    // 右腳靠攏點在左腳旁
+    // 右腳靠攏 0→+W；左停 +W
     out.leftAnkle.x = width;
     out.rightAnkle.x = width * sm;
-    out.rightAnkle.y = -liftTouch * sLift;
+    out.rightAnkle.y = -liftTouch * eLift;
     out.hipX = width * STEP_HIP_FROM_STEP;
   } else if (phase === 2) {
-    // 右腳向右踏出；左腳收回
+    // 左 +W→0；右 +W→−W（連續，勿從 0 起跳）
     out.leftAnkle.x = width * (1 - sm);
-    out.rightAnkle.x = -width * sm;
-    out.rightAnkle.y = -liftSide * sLift;
-    out.hipX = width * STEP_HIP_FROM_STEP * (1 - sm)
-      + (-width * STEP_HIP_FROM_STEP) * sm;
+    out.rightAnkle.x = width * (1 - 2 * sm);
+    out.rightAnkle.y = -liftSide * eLift;
+    out.hipX = width * STEP_HIP_FROM_STEP * (1 - 2 * sm);
   } else {
-    // 左腳靠攏點地
-    out.rightAnkle.x = -width;
-    out.leftAnkle.x = -width * sm;
-    out.leftAnkle.y = -liftTouch * sLift;
+    // 右 −W→0 收回中立；左維持 0（下一循環接 phase0）
+    out.leftAnkle.x = 0;
+    out.rightAnkle.x = -width * (1 - sm);
+    out.rightAnkle.y = -liftTouch * eLift;
     out.hipX = -width * STEP_HIP_FROM_STEP * (1 - sm);
   }
   return out;
 }
 
 /**
- * offset → 絕對踝／髖，夾骨盆於雙踝間，解膝。
+ * offset → 絕對踝／髖，夾骨盆於雙踝間，解膝（可帶上一幀膝連續）。
  */
-function applyStepGaitToLm(lm, footMode, beatFloat, amp, elevHint, kneeOutMax, footSide) {
+function applyStepGaitToLm(
+  lm, footMode, beatFloat, amp, elevHint, kneeOutMax, footSide,
+  prevKneeL = null, prevKneeR = null,
+) {
   const hScale = stepHeightScale(elevHint);
   const fw = computeFootwork(beatFloat, footMode, footSide, amp, hScale);
-  if (!fw.active) return fw;
+  if (!fw.active) return { active: false, kneeL: prevKneeL, kneeR: prevKneeR };
 
   const homeL = [BASE_POSE[27][0], BASE_POSE[27][1]];
   const homeR = [BASE_POSE[28][0], BASE_POSE[28][1]];
   const leftAnkle = [homeL[0] + fw.leftAnkle.x, homeL[1] + fw.leftAnkle.y];
   const rightAnkle = [homeR[0] + fw.rightAnkle.x, homeR[1] + fw.rightAnkle.y];
 
-  const hipY = (lm[23][1] + lm[24][1]) * 0.5;
+  // 雙腳接近著地時略壓 bounce 髖上下，減少釘地腿被拉扯抖動
+  const liftAmt = Math.max(-fw.leftAnkle.y, -fw.rightAnkle.y, 0);
+  const plantSoft = clamp(1 - liftAmt / 0.012, 0, 1);
+  const bounceHipY = (lm[23][1] + lm[24][1]) * 0.5;
+  const baseHipY = BASE_POSE[23][1];
+  const hipY = _lerp(bounceHipY, baseHipY, plantSoft * 0.55);
+
   let leftHipX = BASE_POSE[23][0] + fw.hipX;
   let rightHipX = BASE_POSE[24][0] + fw.hipX;
 
@@ -756,15 +778,19 @@ function applyStepGaitToLm(lm, footMode, beatFloat, amp, elevHint, kneeOutMax, f
     rightHipX += fix;
   }
 
-  writeLegsWithAnkles(
+  // 踏步時 kneeOut 固定，避免跟 bounce drop 抖 clamp
+  const kneeOut = Math.max(0.003, Math.min(kneeOutMax, 0.006));
+  const knees = writeLegsWithAnkles(
     lm,
     [leftHipX, hipY],
     [rightHipX, hipY],
     leftAnkle,
     rightAnkle,
-    Math.max(0, kneeOutMax),
+    kneeOut,
+    prevKneeL,
+    prevKneeR,
   );
-  return { ...fw, leftAnkle, rightAnkle, hipBiasX: fw.hipX };
+  return { ...fw, leftAnkle, rightAnkle, hipBiasX: fw.hipX, ...knees, active: true };
 }
 
 function applyShoulderDrive(lm, intentL, intentR, amp) {
@@ -1237,6 +1263,8 @@ export class ProceduralSkeleton {
     this._prevElbowR = null;
     this._prevWristL = null;
     this._prevWristR = null;
+    this._prevKneeL = null;
+    this._prevKneeR = null;
     this._prevT = null;
     // 每位舞者獨立 FK，避免多實例共用 _prevForearm 造成舉手卡住
     this._armFk = new ArmFkThree(L_UPPER_L, L_LOWER_L, L_UPPER_R, L_LOWER_R);
@@ -1431,6 +1459,8 @@ export class ProceduralSkeleton {
     this._prevElbowR = null;
     this._prevWristL = null;
     this._prevWristR = null;
+    this._prevKneeL = null;
+    this._prevKneeR = null;
     this._armFk?.resetContinuity();
   }
 
@@ -1516,7 +1546,7 @@ export class ProceduralSkeleton {
         this._armState.L?.elevation ?? 0,
         this._armState.R?.elevation ?? 0,
       );
-      applyStepGaitToLm(
+      const stepResult = applyStepGaitToLm(
         lm,
         this.footMode,
         beatFloat,
@@ -1524,7 +1554,11 @@ export class ProceduralSkeleton {
         elevHint,
         BOUNCE_KNEE_OUT_MAX * amp,
         this.footSide,
+        this._prevKneeL,
+        this._prevKneeR,
       );
+      if (stepResult?.kneeL) this._prevKneeL = stepResult.kneeL;
+      if (stepResult?.kneeR) this._prevKneeR = stepResult.kneeR;
     }
 
     const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
