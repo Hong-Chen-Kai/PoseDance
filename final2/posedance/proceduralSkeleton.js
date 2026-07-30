@@ -12,7 +12,7 @@
 import { ArmFkThree, ARM_FK_THREE_BUILD } from "./armSkeletonThree.js";
 
 /** 版本標記（主控台可確認是否載入最新檔） */
-export const PROCEDURAL_SKELETON_BUILD = `foot-d4-v5+${ARM_FK_THREE_BUILD}`;
+export const PROCEDURAL_SKELETON_BUILD = `foot-d4-v6+${ARM_FK_THREE_BUILD}`;
 
 // ─── Perlin Noise（輕量 1D；固定置換表 → 同 seed 可跨機重現）──
 // Ken Perlin 經典 256 permutation（非 Math.random 洗牌）
@@ -207,13 +207,16 @@ const CHAIN_LAG_SHOULDER_BEATS = 0.06;
 const CHAIN_LAG_HEAD_BEATS = 0.12;
 
 // D4：三定律踏步（MP 正規化座標；y 向下抬腳為負向位移用「減 y」）
-// 整拍著地、半拍抬最高：lift = h·sin(π·t)；髖與抬腳同相偏支撐腳
+// 原地／交替：lift = h·sin²(π·t)；側步：抬→移→落重疊 envelope
 const STEP_LIFT_INPLACE = 0.036;
-const STEP_LIFT_SIDE = 0.032;
-const STEP_LIFT_TOUCH = 0.020; // 側步「點地」較低
+const STEP_LIFT_SIDE = 0.028;
+const STEP_LIFT_TOUCH = 0.016; // 側步「點地」較低
 const STEP_HIP_SHIFT = 0.0055; // 原地踏髖偏
-const STEP_WIDTH = 0.055;      // 側一步寬
-const STEP_HIP_FROM_STEP = 0.55; // 髖跟步寬比例（50～70%）
+const STEP_WIDTH = 0.032;      // 側一步寬（過大易半蹲／外八）
+const STEP_HIP_FROM_STEP = 0.72; // 髖跟步寬比例
+/** 踏步時上半身跟隨髖橫移（肩／頭略低於 1，保留一點延遲感） */
+const STEP_UPPER_FOLLOW_SHOULDER = 0.92;
+const STEP_UPPER_FOLLOW_HEAD = 0.85;
 const STEP_ELEV_DAMP_START = 85;
 const STEP_ELEV_DAMP_FULL = 140;
 /** 踏步時 groove 左右 sway 保留比例 */
@@ -632,10 +635,28 @@ function smoothstep01(t) {
   return t * t * (3 - 2 * t);
 }
 
+function remap01(t, a, b) {
+  if (b <= a) return t >= b ? 1 : 0;
+  return clamp((t - a) / (b - a), 0, 1);
+}
+
 /** 抬腳曲線：sin²(πt)＝半拍最高，整拍著地且端點速度≈0（減少撞地抖） */
 function liftEnvelope01(t) {
   const s = Math.sin(clamp(t, 0, 1) * Math.PI);
   return s * s;
+}
+
+/**
+ * 側步單拍：抬 → 移 → 落 重疊 envelope（先離地再橫移，避免拖地滑行／空中停頓）。
+ * @returns {{ lift: number, move: number }}
+ */
+function swingLiftMoveEnvelopes(frac) {
+  const t = clamp(frac, 0, 1);
+  const up = smoothstep01(remap01(t, 0.0, 0.22));
+  const down = 1 - smoothstep01(remap01(t, 0.48, 0.92));
+  const lift = up * down;
+  const move = smoothstep01(remap01(t, 0.10, 0.58));
+  return { lift, move };
 }
 
 function stepHeightScale(elevHint) {
@@ -650,7 +671,7 @@ function stepHeightScale(elevHint) {
  * - plant：全 0
  * - single：每拍同側抬腳（footSide）
  * - double：2 拍交替 in-place
- * - side：4 拍 step-touch（phase 連續，可循環回中）
+ * - side：4 拍 step-touch（支撐腳絕對釘死；擺動腳抬→移→落）
  *
  * MP：人物左腳 x 較大；抬左 → 重心向右腳 → hipX 為負。
  */
@@ -709,32 +730,32 @@ function computeFootwork(beatFloat, footMode, footSide, amp, hScale) {
   const cycle = ((beatFloat % 4) + 4) % 4;
   const phase = Math.floor(cycle);
   const frac = cycle - phase;
-  const sm = smoothstep01(frac);
-  const eLift = liftEnvelope01(frac);
+  const { lift, move } = swingLiftMoveEnvelopes(frac);
 
   if (phase === 0) {
     // 左腳踏出 0→+W；右釘 0
-    out.leftAnkle.x = width * sm;
-    out.leftAnkle.y = -liftSide * eLift;
-    out.hipX = width * STEP_HIP_FROM_STEP * sm;
+    out.leftAnkle.x = width * move;
+    out.leftAnkle.y = -liftSide * lift;
+    out.hipX = width * STEP_HIP_FROM_STEP * move;
   } else if (phase === 1) {
-    // 右腳靠攏 0→+W；左停 +W
+    // 右腳靠攏 0→+W；左釘 +W
     out.leftAnkle.x = width;
-    out.rightAnkle.x = width * sm;
-    out.rightAnkle.y = -liftTouch * eLift;
+    out.rightAnkle.x = width * move;
+    out.rightAnkle.y = -liftTouch * lift;
     out.hipX = width * STEP_HIP_FROM_STEP;
   } else if (phase === 2) {
-    // 左 +W→0；右 +W→−W（連續，勿從 0 起跳）
-    out.leftAnkle.x = width * (1 - sm);
-    out.rightAnkle.x = width * (1 - 2 * sm);
-    out.rightAnkle.y = -liftSide * eLift;
-    out.hipX = width * STEP_HIP_FROM_STEP * (1 - 2 * sm);
+    // 左 +W→0（輕抬）；右 +W→−W（主踏）；勿拖地平移
+    out.leftAnkle.x = width * (1 - move);
+    out.leftAnkle.y = -liftTouch * lift;
+    out.rightAnkle.x = width * (1 - 2 * move);
+    out.rightAnkle.y = -liftSide * lift;
+    out.hipX = width * STEP_HIP_FROM_STEP * (1 - 2 * move);
   } else {
-    // 右 −W→0 收回中立；左維持 0（下一循環接 phase0）
+    // 右 −W→0 收回中立；左釘 0（下一循環接 phase0）
     out.leftAnkle.x = 0;
-    out.rightAnkle.x = -width * (1 - sm);
-    out.rightAnkle.y = -liftTouch * eLift;
-    out.hipX = -width * STEP_HIP_FROM_STEP * (1 - sm);
+    out.rightAnkle.x = -width * (1 - move);
+    out.rightAnkle.y = -liftTouch * lift;
+    out.hipX = -width * STEP_HIP_FROM_STEP * (1 - move);
   }
   return out;
 }
@@ -755,12 +776,12 @@ function applyStepGaitToLm(
   const leftAnkle = [homeL[0] + fw.leftAnkle.x, homeL[1] + fw.leftAnkle.y];
   const rightAnkle = [homeR[0] + fw.rightAnkle.x, homeR[1] + fw.rightAnkle.y];
 
-  // 雙腳接近著地時略壓 bounce 髖上下，減少釘地腿被拉扯抖動
+  // 雙腳接近著地時壓 bounce 髖上下，減少釘地腿被拉扯／半蹲感
   const liftAmt = Math.max(-fw.leftAnkle.y, -fw.rightAnkle.y, 0);
-  const plantSoft = clamp(1 - liftAmt / 0.012, 0, 1);
+  const plantSoft = clamp(1 - liftAmt / 0.010, 0, 1);
   const bounceHipY = (lm[23][1] + lm[24][1]) * 0.5;
   const baseHipY = BASE_POSE[23][1];
-  const hipY = _lerp(bounceHipY, baseHipY, plantSoft * 0.55);
+  const hipY = _lerp(bounceHipY, baseHipY, plantSoft * 0.72);
 
   let leftHipX = BASE_POSE[23][0] + fw.hipX;
   let rightHipX = BASE_POSE[24][0] + fw.hipX;
@@ -791,6 +812,18 @@ function applyStepGaitToLm(
     prevKneeR,
   );
   return { ...fw, leftAnkle, rightAnkle, hipBiasX: fw.hipX, ...knees, active: true };
+}
+
+/** 踏步時肩／頭跟隨髖橫移，避免只骨盆動、上半身釘死 */
+function applyStepUpperBodyFollow(lm, hipBiasX) {
+  if (!hipBiasX) return;
+  const sh = hipBiasX * STEP_UPPER_FOLLOW_SHOULDER;
+  const hd = hipBiasX * STEP_UPPER_FOLLOW_HEAD;
+  lm[11][0] += sh;
+  lm[12][0] += sh;
+  for (let i = 0; i <= 10; i++) {
+    lm[i][0] += hd;
+  }
 }
 
 function applyShoulderDrive(lm, intentL, intentR, amp) {
@@ -1559,6 +1592,7 @@ export class ProceduralSkeleton {
       );
       if (stepResult?.kneeL) this._prevKneeL = stepResult.kneeL;
       if (stepResult?.kneeR) this._prevKneeR = stepResult.kneeR;
+      if (stepResult?.active) applyStepUpperBodyFollow(lm, stepResult.hipBiasX || 0);
     }
 
     const smoothL = springArmIntent(this._armState.L, intentL, halfLife, dt);
