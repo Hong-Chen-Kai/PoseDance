@@ -96,7 +96,16 @@ const state = {
     hintMode: "easy",
     demoScale: { l1: 1, l2: 1, r1: 1, r2: 1 },
     mode1DemoEnabled: true,
-    /** Mode1 載入骨架的刪除鈕 hit rect（canvas 座標 {x,y,w,h}） */
+    /** UI Mode2：四個示範槽是否已刪除／隱藏 */
+    mode1DemoSlotsHidden: {
+      m1_demo_0: false,
+      m1_demo_1: false,
+      m1_demo_2: false,
+      m1_demo_3: false,
+    },
+    /** UI Mode2：各示範槽刪除鈕 hit rect */
+    mode1DemoDeleteRects: {},
+    /** 載入 JSON 的刪除鈕（相容舊邏輯） */
     mode1LoadedDeleteRect: null,
   },
 
@@ -326,15 +335,63 @@ function filterLandmarksOneEuro(landmarks, meta) {
 }
 
 const SKELETON_IDS = {
-  // Mode1
+  // Mode1（UI 顯示為 Mode 2）
   m1_demo_0: "m1_demo_0",
   m1_demo_1: "m1_demo_1",
   m1_demo_2: "m1_demo_2",
   m1_demo_3: "m1_demo_3",
   m1_user: "m1_user",
-  // Mode2
+  // Mode2（UI 顯示為 Mode 1）
   m2_user: "m2_user",
 };
+
+const MODE1_DEMO_SLOT_IDS = [
+  SKELETON_IDS.m1_demo_0,
+  SKELETON_IDS.m1_demo_1,
+  SKELETON_IDS.m1_demo_2,
+  SKELETON_IDS.m1_demo_3,
+];
+
+function isMode1DemoSlotHidden(id) {
+  return Boolean(state.ui?.mode1DemoSlotsHidden?.[id]);
+}
+
+function hideMode1DemoSlot(id) {
+  if (!MODE1_DEMO_SLOT_IDS.includes(id)) return false;
+  if (!state.ui.mode1DemoSlotsHidden) state.ui.mode1DemoSlotsHidden = {};
+  state.ui.mode1DemoSlotsHidden[id] = true;
+  if (state.interact?.selectedId === id) state.interact.selectedId = null;
+  if (state.ui.mode1DemoDeleteRects) delete state.ui.mode1DemoDeleteRects[id];
+  return true;
+}
+
+function hideAllMode1DemoSlots() {
+  if (!state.ui.mode1DemoSlotsHidden) state.ui.mode1DemoSlotsHidden = {};
+  for (const id of MODE1_DEMO_SLOT_IDS) state.ui.mode1DemoSlotsHidden[id] = true;
+  state.ui.mode1DemoDeleteRects = {};
+  if (
+    state.interact?.selectedId &&
+    MODE1_DEMO_SLOT_IDS.includes(state.interact.selectedId)
+  ) {
+    state.interact.selectedId = null;
+  }
+  state.ui.mode1DemoEnabled = false;
+  if (els.toggleMode1DemoButton) {
+    els.toggleMode1DemoButton.textContent = "顯示骨架";
+  }
+  clearOverlayCanvas();
+  return true;
+}
+
+function showAllMode1DemoSlots() {
+  if (!state.ui.mode1DemoSlotsHidden) state.ui.mode1DemoSlotsHidden = {};
+  for (const id of MODE1_DEMO_SLOT_IDS) state.ui.mode1DemoSlotsHidden[id] = false;
+  state.ui.mode1DemoEnabled = true;
+  if (els.toggleMode1DemoButton) {
+    els.toggleMode1DemoButton.textContent = "隱藏骨架";
+  }
+  return true;
+}
 
 function mode2TraceSkeletonId(traceId) {
   return `m2_trace_${traceId}`;
@@ -1458,8 +1515,11 @@ function getDrawOrderIds() {
     ids.push(SKELETON_IDS.m2_user);
     return ids;
   }
-  // Mode1: user first then demos on top (as current drawing does)
-  return [SKELETON_IDS.m1_user, SKELETON_IDS.m1_demo_0, SKELETON_IDS.m1_demo_1, SKELETON_IDS.m1_demo_2, SKELETON_IDS.m1_demo_3];
+  // Mode1（UI Mode2）：user + 未刪除的示範槽
+  return [
+    SKELETON_IDS.m1_user,
+    ...MODE1_DEMO_SLOT_IDS.filter((id) => !isMode1DemoSlotHidden(id)),
+  ];
 }
 
 function getPickOrderIds() {
@@ -3765,32 +3825,34 @@ function updateUiLoop() {
         });
       }
 
-      // Demo overlay (green / blue) on top so it's always visible
+      // Demo overlay：四個示範槽各自可刪（UI Mode 2）
       state.ui.mode1LoadedDeleteRect = null;
+      state.ui.mode1DemoDeleteRects = {};
       if (demoLm && !isRecordingMode && state.ui.mode1DemoEnabled) {
         const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
-        const rectIds = [
-          SKELETON_IDS.m1_demo_0,
-          SKELETON_IDS.m1_demo_1,
-          SKELETON_IDS.m1_demo_2,
-          SKELETON_IDS.m1_demo_3,
-        ];
 
-        for (let i = 0; i < rectIds.length; i += 1) {
-          const id = rectIds[i];
+        for (const id of MODE1_DEMO_SLOT_IDS) {
+          if (isMode1DemoSlotHidden(id)) continue;
           const r = getDrawRect(id, defaultRects) || stageRect;
+          if (!r) continue;
           const off = state.interact?.poseOffsets?.[id] ?? null;
           const getter2 = makeOffsetGetter(getArrXYV, off);
           drawPoseConnections(ctx, demoLm, getter2, r, () => demoColor, 5);
           drawPosePoints(ctx, demoLm, getter2, r, demoColor, 4.5);
+          // 每個示範骨架右上角叉叉
+          const dr = getDeleteButtonRectForBBox(r, 26, 4);
+          drawDeleteXButton(ctx, dr);
+          if (dr) state.ui.mode1DemoDeleteRects[id] = dr;
         }
 
-        // 有載入骨架時：在主舞台右上角畫刪除叉叉（Mode2／swim.json 用）
+        // 另：有載入 swim.json 時保留「清除載入」熱區（第一個可見槽）
         if (state.demo.loaded?.samples?.length) {
-          const anchor = getDrawRect(SKELETON_IDS.m1_demo_0, defaultRects) || stageRect;
-          const dr = getDeleteButtonRectForBBox(anchor, 28, 8);
-          drawDeleteXButton(ctx, dr);
-          state.ui.mode1LoadedDeleteRect = dr;
+          const firstVisible =
+            MODE1_DEMO_SLOT_IDS.find((id) => !isMode1DemoSlotHidden(id)) || null;
+          if (firstVisible && state.ui.mode1DemoDeleteRects[firstVisible]) {
+            state.ui.mode1LoadedDeleteRect =
+              state.ui.mode1DemoDeleteRects[firstVisible];
+          }
         }
       }
 
@@ -4067,7 +4129,11 @@ async function main() {
   if (els.toggleMode1DemoButton) {
     els.toggleMode1DemoButton.addEventListener("click", () => {
       if (state.ui.mode !== "mode1") return;
-      state.ui.mode1DemoEnabled = !state.ui.mode1DemoEnabled;
+      if (state.ui.mode1DemoEnabled) {
+        hideAllMode1DemoSlots();
+      } else {
+        showAllMode1DemoSlots();
+      }
       updateMode1DemoButtonText();
       clearOverlayCanvas();
     });
@@ -4098,12 +4164,26 @@ async function main() {
           ? tScore
           : getMode2InteractTimeSec();
 
-      // Mode1（UI Mode 2）：點綠骨架右上角 X → 清除載入
-      if (state.ui.mode === "mode1" && state.ui.mode1LoadedDeleteRect) {
-        if (pointInRect(state.ui.mode1LoadedDeleteRect, x, y)) {
-          clearLoadedDemoTrace();
-          ev.preventDefault();
-          return;
+      // Mode1（UI Mode 2）：點四個示範骨架任一叉叉 → 刪除該槽
+      if (state.ui.mode === "mode1" && state.ui.mode1DemoDeleteRects) {
+        for (const id of MODE1_DEMO_SLOT_IDS) {
+          const dr = state.ui.mode1DemoDeleteRects[id];
+          if (dr && pointInRect(dr, x, y)) {
+            hideMode1DemoSlot(id);
+            // 若四個都刪光，等同隱藏示範
+            const allGone = MODE1_DEMO_SLOT_IDS.every((sid) =>
+              isMode1DemoSlotHidden(sid),
+            );
+            if (allGone) {
+              state.ui.mode1DemoEnabled = false;
+              if (els.toggleMode1DemoButton) {
+                els.toggleMode1DemoButton.textContent = "顯示骨架";
+              }
+            }
+            clearOverlayCanvas();
+            ev.preventDefault();
+            return;
+          }
         }
       }
 
@@ -4379,8 +4459,27 @@ async function main() {
   if (els.clearLoadedSkeletonButton) {
     els.clearLoadedSkeletonButton.addEventListener("click", () => {
       if (state.ui.mode === "mode2") return;
+      // UI Mode2：先清載入 JSON；並一次刪掉四個示範骨架
       clearLoadedDemoTrace();
+      hideAllMode1DemoSlots();
     });
+  }
+
+  // 更新按鈕文案：Mode2 強調「清示範」
+  if (els.clearLoadedSkeletonButton) {
+    const syncClearBtnLabel = () => {
+      if (state.ui.mode === "mode1") {
+        els.clearLoadedSkeletonButton.textContent = "清除示範骨架";
+        els.clearLoadedSkeletonButton.title =
+          "刪除畫面上四個示範骨架，並清除已載入 JSON（Delete 亦可）";
+      } else {
+        els.clearLoadedSkeletonButton.textContent = "清除載入";
+      }
+    };
+    syncClearBtnLabel();
+    if (els.modeSelect) {
+      els.modeSelect.addEventListener("change", syncClearBtnLabel);
+    }
   }
 
   if (els.deleteSelectedSkeletonButton) {
@@ -4405,8 +4504,10 @@ async function main() {
         }
         return;
       }
-      if (state.ui.mode === "mode1" && state.demo.loaded) {
-        clearLoadedDemoTrace();
+      if (state.ui.mode === "mode1") {
+        // UI Mode2：Delete = 刪除四個示範骨架（你要的）
+        hideAllMode1DemoSlots();
+        if (state.demo.loaded) clearLoadedDemoTrace();
         e.preventDefault();
         e.stopPropagation();
       }
