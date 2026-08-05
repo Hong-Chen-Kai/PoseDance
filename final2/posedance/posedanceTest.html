@@ -34,11 +34,20 @@
             </button>
             <button
               id="clearLoadedSkeletonButton"
-              class="btn btn-load"
+              class="btn btn-load btn-load--danger"
               type="button"
-              title="清除已載入的使用者／游泳骨架"
+              title="清除已載入的使用者／游泳骨架（Delete）"
             >
               清除載入
+            </button>
+            <button
+              id="deleteSelectedSkeletonButton"
+              class="btn btn-load btn-load--danger"
+              type="button"
+              style="display: none"
+              title="刪除 Mode1 選中的骨架（或剛載入的）；Delete 亦可"
+            >
+              刪除選中骨架
             </button>
             <button
               id="toggleMode1DemoButton"
@@ -368,6 +377,6 @@
       }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="./posedanceTest.js?build=delete-skel-v1"></script>
+    <script type="module" src="./posedanceTest.js?build=delete-skel-v2"></script>
   </body>
 </html>

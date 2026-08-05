@@ -96,6 +96,8 @@ const state = {
     hintMode: "easy",
     demoScale: { l1: 1, l2: 1, r1: 1, r2: 1 },
     mode1DemoEnabled: true,
+    /** Mode1 載入骨架的刪除鈕 hit rect（canvas 座標 {x,y,w,h}） */
+    mode1LoadedDeleteRect: null,
   },
 
   interact: {
@@ -381,6 +383,7 @@ function initDomRefs() {
   els.pickSongButton = $("pickSongButton");
   els.loadSkeletonButton = $("loadSkeletonButton");
   els.clearLoadedSkeletonButton = $("clearLoadedSkeletonButton");
+  els.deleteSelectedSkeletonButton = $("deleteSelectedSkeletonButton");
   els.loadMode2SkeletonButton = $("loadMode2SkeletonButton");
   els.toggleMode2DemoABCButton = $("toggleMode2DemoABCButton");
   els.restoreMode2BindingButton = $("restoreMode2BindingButton");
@@ -890,16 +893,36 @@ function getCenterTimeForSkeletonId(id) {
   return 0;
 }
 
-function getDeleteButtonRectForBBox(bbox) {
+function getDeleteButtonRectForBBox(bbox, size = 22, pad = 6) {
   if (!bbox) return null;
-  const size = 18;
-  const pad = 6;
+  const ox = typeof bbox.ox === "number" ? bbox.ox : bbox.x;
+  const oy = typeof bbox.oy === "number" ? bbox.oy : bbox.y;
+  const dw = typeof bbox.dw === "number" ? bbox.dw : bbox.w;
+  const dh = typeof bbox.dh === "number" ? bbox.dh : bbox.h;
+  if (![ox, oy, dw, dh].every((n) => typeof n === "number" && Number.isFinite(n))) {
+    return null;
+  }
   return {
-    x: bbox.ox + bbox.dw - size - pad,
-    y: bbox.oy + pad,
+    x: ox + dw - size - pad,
+    y: oy + pad,
     w: size,
     h: size,
   };
+}
+
+function drawDeleteXButton(ctx, dr) {
+  if (!ctx || !dr) return;
+  ctx.fillStyle = "rgba(220,38,38,0.95)";
+  ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
+  ctx.strokeStyle = "rgba(255,255,255,0.98)";
+  ctx.lineWidth = 2.5;
+  const m = Math.max(4, dr.w * 0.28);
+  ctx.beginPath();
+  ctx.moveTo(dr.x + m, dr.y + m);
+  ctx.lineTo(dr.x + dr.w - m, dr.y + dr.h - m);
+  ctx.moveTo(dr.x + dr.w - m, dr.y + m);
+  ctx.lineTo(dr.x + m, dr.y + dr.h - m);
+  ctx.stroke();
 }
 
 /** Mode2 互動用時間：有影片用播放時間；否則用上次／0（不綁歌曲也可選取／刪除） */
@@ -932,11 +955,30 @@ function removeMode2TraceBySkeletonId(sel) {
 function clearLoadedDemoTrace() {
   state.demo.loaded = null;
   state.overall.loaded = [];
+  state.ui.mode1LoadedDeleteRect = null;
   setUi({ loaded: "—", overallLoaded: "—" });
   if (els.poseInfoText) {
+    els.poseInfoText.style.display = "";
     els.poseInfoText.textContent = "已清除載入骨架";
   }
+  clearOverlayCanvas();
   return true;
+}
+
+/** Mode2：刪除選中；若未選中則刪最後一個使用者載入（u_）骨架 */
+function deleteMode2SkeletonSmart() {
+  if (state.ui.mode !== "mode2") return false;
+  if (removeMode2TraceBySkeletonId(state.interact?.selectedId)) return true;
+  const traces = state.mode2?.traces || [];
+  const userTraces = traces.filter((t) => t && String(t.id).startsWith("u_"));
+  if (userTraces.length) {
+    const last = userTraces[userTraces.length - 1];
+    return removeMode2TraceBySkeletonId(mode2TraceSkeletonId(last.id));
+  }
+  if (traces.length === 1) {
+    return removeMode2TraceBySkeletonId(mode2TraceSkeletonId(traces[0].id));
+  }
+  return false;
 }
 
 const MIN_DRAW_RECT_PX = 30;
@@ -1201,6 +1243,8 @@ function applyMode(mode) {
     if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "none";
     if (els.clearLoadedSkeletonButton)
       els.clearLoadedSkeletonButton.style.display = "none";
+    if (els.deleteSelectedSkeletonButton)
+      els.deleteSelectedSkeletonButton.style.display = "";
     if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "";
@@ -1222,6 +1266,8 @@ function applyMode(mode) {
     if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "";
     if (els.clearLoadedSkeletonButton)
       els.clearLoadedSkeletonButton.style.display = "";
+    if (els.deleteSelectedSkeletonButton)
+      els.deleteSelectedSkeletonButton.style.display = "none";
     if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "none";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "none";
@@ -3424,27 +3470,16 @@ function drawMode2Overlay(tScore) {
       ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
 
-      // delete button (only for mode2 traces)
+      // delete button (only for mode2 traces) — 加大較好點
       if (isMode2TraceSkeletonId(sel)) {
-        const dr = getDeleteButtonRectForBBox(rSel);
-        if (dr) {
-          ctx.fillStyle = "rgba(239,68,68,0.92)";
-          ctx.fillRect(dr.x, dr.y, dr.w, dr.h);
-          ctx.strokeStyle = "rgba(255,255,255,0.95)";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(dr.x + 4, dr.y + 4);
-          ctx.lineTo(dr.x + dr.w - 4, dr.y + dr.h - 4);
-          ctx.moveTo(dr.x + dr.w - 4, dr.y + 4);
-          ctx.lineTo(dr.x + 4, dr.y + dr.h - 4);
-          ctx.stroke();
-        }
+        const dr = getDeleteButtonRectForBBox(rSel, 26, 4);
+        drawDeleteXButton(ctx, dr);
       }
     }
   }
 
   ctx.restore();
-  updateSynthPatternHud(tScore);
+  updateSynthPatternHud(t);
 }
 
 /** E4：選中的 Mode2 trace；若選中非 synth，改取第一個 enabled 的 synth */
@@ -3731,6 +3766,7 @@ function updateUiLoop() {
       }
 
       // Demo overlay (green / blue) on top so it's always visible
+      state.ui.mode1LoadedDeleteRect = null;
       if (demoLm && !isRecordingMode && state.ui.mode1DemoEnabled) {
         const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
         const rectIds = [
@@ -3747,6 +3783,14 @@ function updateUiLoop() {
           const getter2 = makeOffsetGetter(getArrXYV, off);
           drawPoseConnections(ctx, demoLm, getter2, r, () => demoColor, 5);
           drawPosePoints(ctx, demoLm, getter2, r, demoColor, 4.5);
+        }
+
+        // 有載入骨架時：在主舞台右上角畫刪除叉叉（Mode2／swim.json 用）
+        if (state.demo.loaded?.samples?.length) {
+          const anchor = getDrawRect(SKELETON_IDS.m1_demo_0, defaultRects) || stageRect;
+          const dr = getDeleteButtonRectForBBox(anchor, 28, 8);
+          drawDeleteXButton(ctx, dr);
+          state.ui.mode1LoadedDeleteRect = dr;
         }
       }
 
@@ -4054,18 +4098,28 @@ async function main() {
           ? tScore
           : getMode2InteractTimeSec();
 
-      // Mode2：點選中骨架右上角 X 刪除（不需 YouTube）
+      // Mode1（UI Mode 2）：點綠骨架右上角 X → 清除載入
+      if (state.ui.mode === "mode1" && state.ui.mode1LoadedDeleteRect) {
+        if (pointInRect(state.ui.mode1LoadedDeleteRect, x, y)) {
+          clearLoadedDemoTrace();
+          ev.preventDefault();
+          return;
+        }
+      }
+
+      // Mode2（UI Mode 1）：點選中骨架右上角 X 刪除（不需 YouTube）
       const selIdForDelete = state.interact.selectedId;
       if (state.ui.mode === "mode2" && isMode2TraceSkeletonId(selIdForDelete)) {
+        const drawR = getDrawRect(selIdForDelete, defaults);
         const bbox = getSkeletonBBoxRectForId(
           selIdForDelete,
           defaults,
           tInteract,
           8,
         );
-        const dr = bbox
-          ? getDeleteButtonRectForBBox(bbox)
-          : getDeleteButtonRectForBBox(getDrawRect(selIdForDelete, defaults));
+        const dr =
+          getDeleteButtonRectForBBox(drawR || bbox, 26, 4) ||
+          getDeleteButtonRectForBBox(bbox, 26, 4);
         if (dr && pointInRect(dr, x, y)) {
           if (removeMode2TraceBySkeletonId(selIdForDelete)) {
             ev.preventDefault();
@@ -4322,11 +4376,6 @@ async function main() {
     if (e.key === "Escape" && state.music.open) closeSongModal();
   });
 
-  const deleteSelectedMode2Trace = () => {
-    if (state.ui.mode !== "mode2") return false;
-    return removeMode2TraceBySkeletonId(state.interact?.selectedId);
-  };
-
   if (els.clearLoadedSkeletonButton) {
     els.clearLoadedSkeletonButton.addEventListener("click", () => {
       if (state.ui.mode === "mode2") return;
@@ -4334,23 +4383,36 @@ async function main() {
     });
   }
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Delete" && e.key !== "Backspace") return;
-    if (isEditableTarget(e.target)) return;
-    if (deleteSelectedMode2Trace()) {
-      e.preventDefault();
-      return;
-    }
-    // Mode2（UI）：清除已載入骨架
-    if (
-      state.ui.mode === "mode1" &&
-      state.demo.loaded &&
-      (e.key === "Delete" || e.key === "Backspace")
-    ) {
-      clearLoadedDemoTrace();
-      e.preventDefault();
-    }
-  });
+  if (els.deleteSelectedSkeletonButton) {
+    els.deleteSelectedSkeletonButton.addEventListener("click", () => {
+      if (state.ui.mode !== "mode2") return;
+      if (!deleteMode2SkeletonSmart()) {
+        console.warn("[Delete] 請先點選骨架，或先載入要刪的 JSON");
+      }
+    });
+  }
+
+  // capture：避免焦點在 iframe／按鈕時刪不掉
+  window.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      if (isEditableTarget(e.target)) return;
+      if (state.ui.mode === "mode2") {
+        if (deleteMode2SkeletonSmart()) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        return;
+      }
+      if (state.ui.mode === "mode1" && state.demo.loaded) {
+        clearLoadedDemoTrace();
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    },
+    true,
+  );
 
   if (els.songSearchButton) {
     els.songSearchButton.addEventListener("click", async () => {

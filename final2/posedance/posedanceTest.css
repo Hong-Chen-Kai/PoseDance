@@ -400,6 +400,11 @@
   background: rgba(255, 255, 255, 0.88);
 }
 
+.btn.btn-load--danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
 /* 錄製：綁歌曲／不綁歌曲 */
 .record-bind-toggle {
   display: inline-flex;
