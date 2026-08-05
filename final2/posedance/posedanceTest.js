@@ -380,6 +380,7 @@ function initDomRefs() {
   els.loadVideoButton = $("loadVideoButton");
   els.pickSongButton = $("pickSongButton");
   els.loadSkeletonButton = $("loadSkeletonButton");
+  els.clearLoadedSkeletonButton = $("clearLoadedSkeletonButton");
   els.loadMode2SkeletonButton = $("loadMode2SkeletonButton");
   els.toggleMode2DemoABCButton = $("toggleMode2DemoABCButton");
   els.restoreMode2BindingButton = $("restoreMode2BindingButton");
@@ -901,6 +902,43 @@ function getDeleteButtonRectForBBox(bbox) {
   };
 }
 
+/** Mode2 互動用時間：有影片用播放時間；否則用上次／0（不綁歌曲也可選取／刪除） */
+function getMode2InteractTimeSec() {
+  const t = getPlayerTimeSafe();
+  if (typeof t === "number" && Number.isFinite(t)) return t;
+  const last = state.interact?.lastTimeSec;
+  if (typeof last === "number" && Number.isFinite(last)) return last;
+  return 0;
+}
+
+/** 刪除 Mode2 選中的 trace 骨架 */
+function removeMode2TraceBySkeletonId(sel) {
+  if (!sel || !isMode2TraceSkeletonId(sel)) return false;
+  const traceId = sel.slice("m2_trace_".length);
+  state.mode2.traces = (state.mode2.traces || []).filter(
+    (t) => String(t.id) !== traceId,
+  );
+  if (state.interact?.rectOverrides) delete state.interact.rectOverrides[sel];
+  if (state.interact?.poseOffsets) delete state.interact.poseOffsets[sel];
+  if (state.interact?.pinned) delete state.interact.pinned[sel];
+  if (state.interact?.layoutTargets) delete state.interact.layoutTargets[sel];
+  if (state.interact?.selectedId === sel) state.interact.selectedId = null;
+  autoLayoutMode2({ animate: true });
+  clearOverlayCanvas();
+  return true;
+}
+
+/** Mode1：清除已載入的使用者／游泳等 trace */
+function clearLoadedDemoTrace() {
+  state.demo.loaded = null;
+  state.overall.loaded = [];
+  setUi({ loaded: "—", overallLoaded: "—" });
+  if (els.poseInfoText) {
+    els.poseInfoText.textContent = "已清除載入骨架";
+  }
+  return true;
+}
+
 const MIN_DRAW_RECT_PX = 30;
 
 function scaleRectAboutAnchor(rect, anchorX, anchorY, scale) {
@@ -1161,6 +1199,8 @@ function applyMode(mode) {
     setControlsDisabled(false);
     if (els.hintModeSelect) els.hintModeSelect.disabled = true;
     if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "none";
+    if (els.clearLoadedSkeletonButton)
+      els.clearLoadedSkeletonButton.style.display = "none";
     if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "";
@@ -1180,6 +1220,8 @@ function applyMode(mode) {
     setControlsDisabled(false);
     if (els.hintModeSelect) els.hintModeSelect.disabled = false;
     if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "";
+    if (els.clearLoadedSkeletonButton)
+      els.clearLoadedSkeletonButton.style.display = "";
     if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "none";
     if (els.toggleMode2DemoABCButton)
       els.toggleMode2DemoABCButton.style.display = "none";
@@ -3266,7 +3308,10 @@ function updateMode2VideoMismatchWarn() {
 
 function drawMode2Overlay(tScore) {
   if (!els.overlayCanvas) return;
-  if (typeof tScore !== "number" || !Number.isFinite(tScore)) return;
+  const t =
+    typeof tScore === "number" && Number.isFinite(tScore)
+      ? tScore
+      : getMode2InteractTimeSec();
 
   syncInteractCanvasSize();
 
@@ -3337,8 +3382,8 @@ function drawMode2Overlay(tScore) {
     const id = mode2TraceSkeletonId(tr.id);
     const rect = getDrawRect(id, defaultRects);
     const lm = tr.synthetic
-      ? getSyntheticLandmarksAtTime(tr, tScore)
-      : (tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, tScore) : null);
+      ? getSyntheticLandmarksAtTime(tr, t)
+      : (tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, t) : null);
     if (!rect || !lm) continue;
     const trColor = tr.synthetic ? "rgba(0,180,255,0.95)" : demoColor;
     const off = state.interact?.poseOffsets?.[id] ?? null;
@@ -3467,12 +3512,12 @@ function updateUiLoop() {
       overallLoaded: "—",
     });
 
+    // 無 YouTube 也可繪製／選取／刪除骨架（用不綁歌曲相對時間或 0）
+    const tMode2 = getMode2InteractTimeSec();
     if (typeof tScore === "number" && Number.isFinite(tScore)) {
       updateMode2VideoMismatchWarn();
-      drawMode2Overlay(tScore);
-    } else {
-      clearOverlayCanvas();
     }
+    drawMode2Overlay(tMode2);
     return;
   }
 
@@ -4004,45 +4049,37 @@ async function main() {
           : DEMO_SOURCE_ASPECT;
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
 
-      // If a mode2 trace is selected and user clicks the delete X, delete it.
+      const tInteract =
+        typeof tScore === "number" && Number.isFinite(tScore)
+          ? tScore
+          : getMode2InteractTimeSec();
+
+      // Mode2：點選中骨架右上角 X 刪除（不需 YouTube）
       const selIdForDelete = state.interact.selectedId;
-      if (
-        state.ui.mode === "mode2" &&
-        isMode2TraceSkeletonId(selIdForDelete) &&
-        typeof tScore === "number" &&
-        Number.isFinite(tScore)
-      ) {
-        const bbox = getSkeletonBBoxRectForId(selIdForDelete, defaults, tScore, 8);
-        const dr = bbox ? getDeleteButtonRectForBBox(bbox) : null;
+      if (state.ui.mode === "mode2" && isMode2TraceSkeletonId(selIdForDelete)) {
+        const bbox = getSkeletonBBoxRectForId(
+          selIdForDelete,
+          defaults,
+          tInteract,
+          8,
+        );
+        const dr = bbox
+          ? getDeleteButtonRectForBBox(bbox)
+          : getDeleteButtonRectForBBox(getDrawRect(selIdForDelete, defaults));
         if (dr && pointInRect(dr, x, y)) {
-          const traceId = selIdForDelete.slice("m2_trace_".length);
-          state.mode2.traces = (state.mode2.traces || []).filter((t) => String(t.id) !== traceId);
-          if (state.interact?.rectOverrides) {
-            delete state.interact.rectOverrides[selIdForDelete];
+          if (removeMode2TraceBySkeletonId(selIdForDelete)) {
+            ev.preventDefault();
+            return;
           }
-          if (state.interact?.poseOffsets) {
-            delete state.interact.poseOffsets[selIdForDelete];
-          }
-          if (state.interact?.pinned) {
-            delete state.interact.pinned[selIdForDelete];
-          }
-          if (state.interact?.layoutTargets) {
-            delete state.interact.layoutTargets[selIdForDelete];
-          }
-          state.interact.selectedId = null;
-          autoLayoutMode2({ animate: true });
-          clearOverlayCanvas();
-          ev.preventDefault();
-          return;
         }
       }
 
       const selId = state.interact.selectedId;
       // Use tight bbox only for corner-hit UX, but apply resize to draw-rect (container).
-      const selBox =
-        selId && typeof tScore === "number" && Number.isFinite(tScore)
-          ? getSkeletonBBoxRectForId(selId, defaults, tScore, 8)
-          : (selId ? getDrawRect(selId, defaults) : null);
+      const selBox = selId
+        ? getSkeletonBBoxRectForId(selId, defaults, tInteract, 8) ||
+          getDrawRect(selId, defaults)
+        : null;
       const corner = selBox ? rectCornerHit(selBox, x, y, 10) : null;
       if (selId && selBox && corner) {
         const baseRect = getDrawRect(selId, defaults);
@@ -4064,9 +4101,8 @@ async function main() {
       let picked = null;
       for (const id of getPickOrderIds()) {
         const r =
-          typeof tScore === "number" && Number.isFinite(tScore)
-            ? getSkeletonBBoxRectForId(id, defaults, tScore, 8)
-            : getDrawRect(id, defaults);
+          getSkeletonBBoxRectForId(id, defaults, tInteract, 8) ||
+          getDrawRect(id, defaults);
         const hit = shrinkRect(r, 6);
         if (rectContains(hit, x, y)) {
           picked = id;
@@ -4288,34 +4324,30 @@ async function main() {
 
   const deleteSelectedMode2Trace = () => {
     if (state.ui.mode !== "mode2") return false;
-    const sel = state.interact?.selectedId;
-    if (!sel || !isMode2TraceSkeletonId(sel)) return false;
-    const traceId = sel.slice("m2_trace_".length);
-    state.mode2.traces = (state.mode2.traces || []).filter(
-      (t) => String(t.id) !== traceId,
-    );
-    if (state.interact?.rectOverrides) {
-      delete state.interact.rectOverrides[sel];
-    }
-    if (state.interact?.poseOffsets) {
-      delete state.interact.poseOffsets[sel];
-    }
-    if (state.interact?.pinned) {
-      delete state.interact.pinned[sel];
-    }
-    if (state.interact?.layoutTargets) {
-      delete state.interact.layoutTargets[sel];
-    }
-    state.interact.selectedId = null;
-    autoLayoutMode2({ animate: true });
-    clearOverlayCanvas();
-    return true;
+    return removeMode2TraceBySkeletonId(state.interact?.selectedId);
   };
+
+  if (els.clearLoadedSkeletonButton) {
+    els.clearLoadedSkeletonButton.addEventListener("click", () => {
+      if (state.ui.mode === "mode2") return;
+      clearLoadedDemoTrace();
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Delete" && e.key !== "Backspace") return;
     if (isEditableTarget(e.target)) return;
     if (deleteSelectedMode2Trace()) {
+      e.preventDefault();
+      return;
+    }
+    // Mode2（UI）：清除已載入骨架
+    if (
+      state.ui.mode === "mode1" &&
+      state.demo.loaded &&
+      (e.key === "Delete" || e.key === "Backspace")
+    ) {
+      clearLoadedDemoTrace();
       e.preventDefault();
     }
   });
