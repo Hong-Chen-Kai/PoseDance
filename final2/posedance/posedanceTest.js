@@ -119,8 +119,12 @@ const state = {
   recorder: {
     armed: false,
     active: false,
+    /** true：t = 歌曲／影片時間；false：t = 錄製開始後相對秒數 */
+    bindSong: true,
     delaySec: 5,
     armStartPlayerTimeSec: null,
+    armStartWallMs: null,
+    recordStartWallMs: null,
     startedAtIso: null,
     lastRecordedT: Number.NEGATIVE_INFINITY,
     samples: [],
@@ -167,6 +171,12 @@ const state = {
     energyE0: 0.08,
     energyE1: 0.35,
     energyMinWeight: 0.1,
+    /** 不綁歌曲：每幀最多比對幾個 demo 樣本（均勻抽樣） */
+    freeMaxCompare: 90,
+    /** 不綁歌曲：略親民的分數曲線 */
+    freeK: 1.0,
+    /** 不綁歌曲：達標門檻（顯示／橘色提示用） */
+    freePassScore: 72,
   },
 
   // Rolling overall buffers (Phase 1)
@@ -202,6 +212,116 @@ const consoleUiStatus = {
 };
 
 const RECORD_SAMPLE_MIN_DT = 1 / 30; // 30fps 上限
+
+// --- Pose 防抖（OneEuroFilter，與 posedance.js 相同參數）
+class LowPassFilter {
+  constructor(alpha, initialValue = null) {
+    this.alpha = alpha;
+    this.initialized = initialValue !== null;
+    this.s = initialValue;
+  }
+
+  setAlpha(alpha) {
+    this.alpha = alpha;
+  }
+
+  filter(value) {
+    if (!this.initialized) {
+      this.initialized = true;
+      this.s = value;
+      return value;
+    }
+    this.s = this.alpha * value + (1 - this.alpha) * this.s;
+    return this.s;
+  }
+
+  last() {
+    return this.s;
+  }
+}
+
+class OneEuroFilter {
+  constructor(freq, minCutoff = 1.2, beta = 0.04, dCutoff = 1.0) {
+    this.freq = freq;
+    this.minCutoff = minCutoff;
+    this.beta = beta;
+    this.dCutoff = dCutoff;
+    this.x = new LowPassFilter(1.0);
+    this.dx = new LowPassFilter(1.0);
+    this.lastTimeSec = null;
+  }
+
+  alpha(cutoff) {
+    const te = 1.0 / this.freq;
+    const tau = 1.0 / (2 * Math.PI * cutoff);
+    return 1.0 / (1.0 + tau / te);
+  }
+
+  filter(value, timeSec) {
+    if (this.lastTimeSec !== null && timeSec !== null) {
+      const dt = timeSec - this.lastTimeSec;
+      if (dt > 0) this.freq = 1.0 / dt;
+    }
+    this.lastTimeSec = timeSec;
+
+    const prevX = this.x.last();
+    const dValue =
+      prevX === null || prevX === undefined ? 0 : (value - prevX) * this.freq;
+
+    this.dx.setAlpha(this.alpha(this.dCutoff));
+    const edValue = this.dx.filter(dValue);
+
+    const cutoff = this.minCutoff + this.beta * Math.abs(edValue);
+    this.x.setAlpha(this.alpha(cutoff));
+    return this.x.filter(value);
+  }
+}
+
+const oneEuroParams = {
+  freq: 60,
+  minCutoff: 2.4,
+  beta: 0.25,
+  dCutoff: 1.0,
+};
+
+const landmarkFilterBank = Array.from({ length: 33 }, () => ({
+  x: new OneEuroFilter(
+    oneEuroParams.freq,
+    oneEuroParams.minCutoff,
+    oneEuroParams.beta,
+    oneEuroParams.dCutoff,
+  ),
+  y: new OneEuroFilter(
+    oneEuroParams.freq,
+    oneEuroParams.minCutoff,
+    oneEuroParams.beta,
+    oneEuroParams.dCutoff,
+  ),
+  z: new OneEuroFilter(
+    oneEuroParams.freq,
+    oneEuroParams.minCutoff,
+    oneEuroParams.beta,
+    oneEuroParams.dCutoff,
+  ),
+}));
+
+function filterLandmarksOneEuro(landmarks, meta) {
+  if (!landmarks || landmarks.length === 0) return landmarks;
+  const timeSec =
+    meta && typeof meta.timestampUs === "number"
+      ? meta.timestampUs / 1e6
+      : null;
+
+  return landmarks.map((lm, i) => {
+    if (!lm) return lm;
+    const bank = landmarkFilterBank[i];
+    if (!bank) return lm;
+    const x = typeof lm.x === "number" ? bank.x.filter(lm.x, timeSec) : lm.x;
+    const y = typeof lm.y === "number" ? bank.y.filter(lm.y, timeSec) : lm.y;
+    const z = typeof lm.z === "number" ? bank.z.filter(lm.z, timeSec) : lm.z;
+    return { ...lm, x, y, z };
+  });
+}
 
 const SKELETON_IDS = {
   // Mode1
@@ -275,6 +395,8 @@ function initDomRefs() {
   els.addSynthTraceButton = $("addSynthTraceButton");
   els.startCameraButton = $("startCameraButton");
   els.toggleMode1DemoButton = $("toggleMode1DemoButton");
+  els.bindSongToggle = $("bindSongToggle");
+  els.bindSongLabel = $("bindSongLabel");
   els.recordButton = $("recordButton");
   els.poseInfoText = $("poseInfoText");
   els.synthPatternHud = $("synthPatternHud");
@@ -874,6 +996,7 @@ function stopCameraIfRunning() {
   if (els.startCameraButton) els.startCameraButton.textContent = "啟動攝影機";
   state.latestUserLandmarks = null;
   drawUserOverlay();
+  setRecordUi(getPlayerTimeSafe());
 }
 
 function setControlsDisabled(disabled) {
@@ -884,7 +1007,98 @@ function setControlsDisabled(disabled) {
   if (els.loadSkeletonButton) els.loadSkeletonButton.disabled = dis;
   if (els.hintModeSelect) els.hintModeSelect.disabled = dis;
   if (els.startCameraButton) els.startCameraButton.disabled = dis;
-  if (els.recordButton) els.recordButton.disabled = dis || !state.cameraRunning || !state.ready;
+  if (els.recordButton) {
+    els.recordButton.disabled = dis || !canEnableRecordButton();
+  }
+  syncBindSongToggleUi();
+}
+
+function canEnableRecordButton() {
+  if (!state.cameraRunning) return false;
+  if (state.recorder.bindSong) return Boolean(state.ready);
+  return true;
+}
+
+function syncBindSongToggleUi() {
+  const rec = state.recorder;
+  if (els.bindSongToggle) {
+    els.bindSongToggle.checked = Boolean(rec.bindSong);
+    els.bindSongToggle.setAttribute(
+      "aria-checked",
+      rec.bindSong ? "true" : "false",
+    );
+    // 錄製進行中不可切換，避免時間軸混用
+    els.bindSongToggle.disabled = Boolean(rec.armed);
+  }
+  if (els.bindSongLabel) {
+    els.bindSongLabel.textContent = rec.bindSong ? "綁歌曲" : "不綁歌曲";
+  }
+}
+
+/** 重置錄製狀態（保留 bindSong） */
+function resetRecorderSession() {
+  const rec = state.recorder;
+  rec.armed = false;
+  rec.active = false;
+  rec.armStartPlayerTimeSec = null;
+  rec.armStartWallMs = null;
+  rec.recordStartWallMs = null;
+  rec.startedAtIso = null;
+  rec.lastRecordedT = Number.NEGATIVE_INFINITY;
+  rec.samples = [];
+}
+
+/**
+ * 錄製狀態機（Mode1 / Mode2 共用）
+ * @param {number|null} tScore 影片時間（綁歌曲用）；不綁時可傳 null
+ */
+function tickRecorder(tScore) {
+  const rec = state.recorder;
+  if (!rec.armed) return;
+
+  if (rec.bindSong) {
+    if (typeof tScore !== "number" || !Number.isFinite(tScore)) return;
+    if (typeof rec.armStartPlayerTimeSec !== "number") {
+      rec.armStartPlayerTimeSec = tScore;
+    }
+    if (!rec.active) {
+      const elapsed = tScore - rec.armStartPlayerTimeSec;
+      if (elapsed >= rec.delaySec) {
+        rec.active = true;
+        rec.startedAtIso = new Date().toISOString();
+        rec.lastRecordedT = Number.NEGATIVE_INFINITY;
+      }
+    }
+    if (rec.active && state.latestUserLandmarks) {
+      if (tScore - rec.lastRecordedT >= RECORD_SAMPLE_MIN_DT) {
+        rec.samples.push({ t: tScore, lm: toLmArray(state.latestUserLandmarks) });
+        rec.lastRecordedT = tScore;
+      }
+    }
+    return;
+  }
+
+  // 不綁歌曲：牆鐘倒數 + 相對 t
+  const now = performance.now();
+  if (typeof rec.armStartWallMs !== "number") {
+    rec.armStartWallMs = now;
+  }
+  if (!rec.active) {
+    const elapsedSec = (now - rec.armStartWallMs) / 1000;
+    if (elapsedSec >= rec.delaySec) {
+      rec.active = true;
+      rec.startedAtIso = new Date().toISOString();
+      rec.recordStartWallMs = now;
+      rec.lastRecordedT = Number.NEGATIVE_INFINITY;
+    }
+  }
+  if (rec.active && state.latestUserLandmarks) {
+    const tRel = (now - (rec.recordStartWallMs ?? now)) / 1000;
+    if (tRel - rec.lastRecordedT >= RECORD_SAMPLE_MIN_DT) {
+      rec.samples.push({ t: tRel, lm: toLmArray(state.latestUserLandmarks) });
+      rec.lastRecordedT = tRel;
+    }
+  }
 }
 
 function bindDemoScaleSlider(el, key) {
@@ -957,12 +1171,8 @@ function applyMode(mode) {
     if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
     if (els.synthControls) els.synthControls.style.display = "";
 
-    state.recorder.armed = false;
-    state.recorder.active = false;
-    state.recorder.armStartPlayerTimeSec = null;
-    state.recorder.startedAtIso = null;
-    state.recorder.lastRecordedT = Number.NEGATIVE_INFINITY;
-    state.recorder.samples = [];
+    resetRecorderSession();
+    setRecordUi(getPlayerTimeSafe());
     // mode2: no fixed A/B/C slots anymore
     setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
   } else {
@@ -2080,7 +2290,8 @@ function createDownload(filename, obj) {
 function setRecordUi(tScore) {
   if (!els.recordButton) return;
   const rec = state.recorder;
-  els.recordButton.disabled = !state.cameraRunning || !state.ready;
+  els.recordButton.disabled = !canEnableRecordButton();
+  syncBindSongToggleUi();
 
   if (!rec.armed) {
     els.recordButton.textContent = "開始錄製";
@@ -2089,13 +2300,24 @@ function setRecordUi(tScore) {
   }
 
   if (!rec.active) {
-    if (typeof tScore !== "number" || !Number.isFinite(tScore) || typeof rec.armStartPlayerTimeSec !== "number") {
-      els.recordButton.textContent = "準備錄製（等待影片）";
-    } else {
+    let remain = rec.delaySec;
+    if (rec.bindSong) {
+      if (
+        typeof tScore !== "number" ||
+        !Number.isFinite(tScore) ||
+        typeof rec.armStartPlayerTimeSec !== "number"
+      ) {
+        els.recordButton.textContent = "準備錄製（等待影片）";
+        els.recordButton.classList.add("btn-record--active");
+        return;
+      }
       const elapsed = Math.max(0, tScore - rec.armStartPlayerTimeSec);
-      const remain = Math.max(0, rec.delaySec - elapsed);
-      els.recordButton.textContent = `準備錄製（${Math.ceil(remain)}s）`;
+      remain = Math.max(0, rec.delaySec - elapsed);
+    } else if (typeof rec.armStartWallMs === "number") {
+      const elapsed = Math.max(0, (performance.now() - rec.armStartWallMs) / 1000);
+      remain = Math.max(0, rec.delaySec - elapsed);
     }
+    els.recordButton.textContent = `準備錄製（${Math.ceil(remain)}s）`;
     els.recordButton.classList.add("btn-record--active");
     return;
   }
@@ -2111,6 +2333,8 @@ async function loadTraceFromFile(file) {
   if (!data || !Array.isArray(data.samples)) {
     throw new Error("JSON 格式無效（缺少 samples[]）");
   }
+  // 明確保留不綁歌曲標記（舊檔無此欄位則視為綁歌曲流程）
+  if (data.bindSong === false) data.bindSong = false;
   return data;
 }
 
@@ -2552,7 +2776,8 @@ function lowerBoundByT(samples, t) {
   let lo = 0;
   let hi = samples.length;
   while (lo < hi) {
-    const mid = (lo + hi) >> 1;
+    // 避免 (lo+hi)>>1 在極大長度時 signed 32-bit 溢位
+    const mid = Math.floor((lo + hi) / 2);
     if ((samples[mid]?.t ?? Infinity) < t) lo = mid + 1;
     else hi = mid;
   }
@@ -2613,6 +2838,88 @@ function computeWindowScoreD(userLandmarks, trace, t) {
   const ErefWin = sumWE / sumW;
   const score = Math.max(0, Math.min(100, 100 * Math.exp(-cfg.k * meanDist)));
   return { ok: true, score, meanDist, validPoints: bestN, ErefWin };
+}
+
+/** 不綁歌曲短動作：忽略時間／速度，取模板中最像的一幀 */
+function isFreePoseTrace(trace) {
+  return Boolean(trace && trace.bindSong === false);
+}
+
+/**
+ * 姿勢最佳匹配（速度無關）：掃描模板均勻抽樣幀，取 meanDist 最小者計分。
+ * 回傳 ok / score / meanDist / validPoints / bestLm / bestT / ErefWin / freePose。
+ */
+function computePoseBestScoreD(userLandmarks, trace) {
+  const cfg = state.similarity;
+  if (!trace?.samples?.length) return { ok: false, reason: "no_trace" };
+  const samples = trace.samples;
+  const n = samples.length;
+  const maxCmp = Math.max(12, cfg.freeMaxCompare | 0);
+  const stride = Math.max(1, Math.ceil(n / maxCmp));
+  const k = Number.isFinite(cfg.freeK) ? cfg.freeK : cfg.k;
+
+  let bestD = Infinity;
+  let bestN = 0;
+  let bestLm = null;
+  let bestT = null;
+  let bestE = 0;
+
+  for (let i = 0; i < n; i += stride) {
+    const s = samples[i];
+    if (!s || !Array.isArray(s.lm) || s.lm.length !== 33) continue;
+    const r = computeMeanDist(userLandmarks, s.lm);
+    if (!r.ok) continue;
+    if (r.meanDist < bestD) {
+      bestD = r.meanDist;
+      bestN = r.validPoints;
+      bestLm = s.lm;
+      bestT = typeof s.t === "number" ? s.t : null;
+      bestE =
+        typeof s.E_ref === "number" && Number.isFinite(s.E_ref) ? s.E_ref : 0;
+    }
+  }
+
+  // 尾幀補比（避免 stride 跳過結尾關鍵姿勢）
+  if (n > 1) {
+    const s = samples[n - 1];
+    if (s && Array.isArray(s.lm) && s.lm.length === 33) {
+      const r = computeMeanDist(userLandmarks, s.lm);
+      if (r.ok && r.meanDist < bestD) {
+        bestD = r.meanDist;
+        bestN = r.validPoints;
+        bestLm = s.lm;
+        bestT = typeof s.t === "number" ? s.t : null;
+        bestE =
+          typeof s.E_ref === "number" && Number.isFinite(s.E_ref) ? s.E_ref : 0;
+      }
+    }
+  }
+
+  if (!(bestD < Infinity) || !bestLm) {
+    return { ok: false, reason: "no_valid_candidates" };
+  }
+  const score = Math.max(0, Math.min(100, 100 * Math.exp(-k * bestD)));
+  return {
+    ok: true,
+    score,
+    meanDist: bestD,
+    validPoints: bestN,
+    bestLm,
+    bestT,
+    ErefWin: bestE,
+    freePose: true,
+  };
+}
+
+/** 依 trace 類型選擇：綁歌曲用時間窗；不綁用姿勢最佳匹配 */
+function scoreAgainstTrace(userLandmarks, trace, tScore) {
+  if (isFreePoseTrace(trace)) {
+    return computePoseBestScoreD(userLandmarks, trace);
+  }
+  if (typeof tScore !== "number" || !Number.isFinite(tScore)) {
+    return { ok: false, reason: "no_time" };
+  }
+  return computeWindowScoreD(userLandmarks, trace, tScore);
 }
 
 function clamp01(x) {
@@ -2856,6 +3163,9 @@ async function initPose() {
       const poseInstance = await PoseModel.init();
       if (!poseInstance) throw new Error("MediaPipe PoseLandmarker 初始化失敗");
 
+      // 啟用 OneEuroFilter 防抖（全身 33 點 x/y/z）
+      PoseModel.setLandmarkPreprocessor(filterLandmarksOneEuro);
+
       PoseModel.setCallback((result) => {
         if (
           !result ||
@@ -2916,10 +3226,12 @@ async function initPose() {
       state.cameraRunning = true;
       els.startCameraButton.textContent = "關閉攝影機";
       els.startCameraButton.disabled = false;
+      setRecordUi(getPlayerTimeSafe());
     } catch (err) {
       console.error(err);
       els.startCameraButton.disabled = false;
       els.startCameraButton.textContent = "啟動攝影機";
+      setRecordUi(getPlayerTimeSafe());
     }
   });
 }
@@ -3144,28 +3456,7 @@ function updateUiLoop() {
   }
 
   if (state.ui.mode === "mode2") {
-    // Mode2 也要支援錄製：錄製狀態機與 Mode1 相同
-    const rec = state.recorder;
-    if (rec.armed && typeof tScore === "number" && Number.isFinite(tScore)) {
-      if (typeof rec.armStartPlayerTimeSec !== "number") {
-        rec.armStartPlayerTimeSec = tScore;
-      }
-      if (!rec.active) {
-        const elapsed = tScore - rec.armStartPlayerTimeSec;
-        if (elapsed >= rec.delaySec) {
-          rec.active = true;
-          rec.startedAtIso = new Date().toISOString();
-          rec.lastRecordedT = Number.NEGATIVE_INFINITY;
-        }
-      }
-      if (rec.active && state.latestUserLandmarks) {
-        if (tScore - rec.lastRecordedT >= RECORD_SAMPLE_MIN_DT) {
-          rec.samples.push({ t: tScore, lm: toLmArray(state.latestUserLandmarks) });
-          rec.lastRecordedT = tScore;
-        }
-      }
-    }
-
+    tickRecorder(tScore);
     setRecordUi(tScore);
     setUi({
       easy: "—",
@@ -3185,28 +3476,7 @@ function updateUiLoop() {
     return;
   }
 
-  // --- Recorder state machine (record user pose vs YouTube time)
-  const rec = state.recorder;
-  if (rec.armed && typeof tScore === "number" && Number.isFinite(tScore)) {
-    if (typeof rec.armStartPlayerTimeSec !== "number") {
-      rec.armStartPlayerTimeSec = tScore;
-    }
-    if (!rec.active) {
-      const elapsed = tScore - rec.armStartPlayerTimeSec;
-      if (elapsed >= rec.delaySec) {
-        rec.active = true;
-        rec.startedAtIso = new Date().toISOString();
-        rec.lastRecordedT = Number.NEGATIVE_INFINITY;
-      }
-    }
-    if (rec.active && state.latestUserLandmarks) {
-      if (tScore - rec.lastRecordedT >= RECORD_SAMPLE_MIN_DT) {
-        rec.samples.push({ t: tScore, lm: toLmArray(state.latestUserLandmarks) });
-        rec.lastRecordedT = tScore;
-      }
-    }
-  }
-
+  tickRecorder(tScore);
   setRecordUi(tScore);
 
   const userLm = state.latestUserLandmarks;
@@ -3220,15 +3490,10 @@ function updateUiLoop() {
       ? state.ui.hintMode
       : "easy";
   const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
+  const freeLoaded = isFreePoseTrace(state.demo.loaded);
+  const wallT = performance.now() / 1000;
 
-  // Demo 只依賴 YouTube time（不依賴攝影機）
-  const demoLm =
-    state.ui.mode1DemoEnabled && trace?.samples && canUseTime
-      ? getDemoLandmarksAtTime(trace.samples, tScore)
-      : null;
-  const activeParts = trace && canUseTime ? computeActiveParts(trace, tScore) : new Set();
-
-  // Similarity / overall：只有在 userLm + 有時間軸時才計算
+  // Similarity
   let rEasy = { ok: false, score: 0 };
   let rHard = { ok: false, score: 0 };
   let rLoaded = { ok: false, score: 0 };
@@ -3242,14 +3507,12 @@ function updateUiLoop() {
   let okHard = "—";
   let okLoaded = "—";
 
+  // 綁歌曲：需影片時間；不綁歌曲 loaded：只要有使用者骨架即可
   if (userLm && canUseTime) {
     rEasy = computeWindowScoreD(userLm, state.demo.easy, tScore);
     rHard = computeWindowScoreD(userLm, state.demo.hard, tScore);
-    rLoaded = computeWindowScoreD(userLm, state.demo.loaded, tScore);
-
     okEasy = rEasy.ok ? rEasy.score.toFixed(0) : "—";
     okHard = rHard.ok ? rHard.score.toFixed(0) : "—";
-    okLoaded = rLoaded.ok ? rLoaded.score.toFixed(0) : "—";
 
     if (rEasy.ok) {
       const wg = computeEnergyGateWeight(rEasy.ErefWin);
@@ -3267,20 +3530,29 @@ function updateUiLoop() {
         overallHard = ov.toFixed(0);
       }
     }
+  }
+
+  if (userLm && state.demo.loaded?.samples?.length) {
+    if (freeLoaded) {
+      rLoaded = computePoseBestScoreD(userLm, state.demo.loaded);
+    } else if (canUseTime) {
+      rLoaded = computeWindowScoreD(userLm, state.demo.loaded, tScore);
+    }
+    okLoaded = rLoaded.ok ? rLoaded.score.toFixed(0) : "—";
     if (rLoaded.ok) {
-      const wg = computeEnergyGateWeight(rLoaded.ErefWin);
-      const ov = pushOverall(state.overall.loaded, tScore, rLoaded.score, wg);
+      const clock = freeLoaded ? wallT : tScore;
+      const wg = freeLoaded
+        ? 1
+        : computeEnergyGateWeight(rLoaded.ErefWin);
+      const ov = pushOverall(state.overall.loaded, clock, rLoaded.score, wg);
       if (typeof ov === "number") {
         overallLoadedNum = ov;
         overallLoaded = ov.toFixed(0);
       }
     }
-  } else {
-    // 沒有 user 或沒有時間軸時，不做分數計算（畫 demo 仍可）
-    setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
   }
 
-  if (userLm && canUseTime) {
+  if (userLm && (canUseTime || freeLoaded)) {
     setUi({
       easy: okEasy,
       hard: okHard,
@@ -3289,7 +3561,32 @@ function updateUiLoop() {
       overallHard,
       overallLoaded,
     });
+  } else if (!userLm) {
+    setUi({
+      easy: "—",
+      hard: "—",
+      loaded: "—",
+      overallEasy: "—",
+      overallHard: "—",
+      overallLoaded: "—",
+    });
   }
+
+  // Demo 骨架：綁歌曲用影片時間；不綁歌曲顯示「目前最像的模板幀」
+  let demoLm = null;
+  if (!isRecordingMode && state.ui.mode1DemoEnabled && trace?.samples) {
+    if (isFreePoseTrace(trace) && userLm && rLoaded.ok && rLoaded.bestLm) {
+      demoLm = rLoaded.bestLm;
+    } else if (canUseTime) {
+      demoLm = getDemoLandmarksAtTime(trace.samples, tScore);
+    } else if (isFreePoseTrace(trace)) {
+      demoLm = getDemoLandmarksAtTime(trace.samples, 0);
+    }
+  }
+  const activeParts =
+    trace && canUseTime && !isFreePoseTrace(trace)
+      ? computeActiveParts(trace, tScore)
+      : new Set();
 
   const selectedInstant =
     hintMode === "hard"
@@ -3309,7 +3606,30 @@ function updateUiLoop() {
       : hintMode === "user"
         ? overallLoadedNum
         : overallEasyNum;
-  const isOrange = canUseTime && userLm ? updateOrangeState(tScore, selectedInstant, selectedOverall) : false;
+  const orangeClock =
+    hintMode === "user" && freeLoaded
+      ? wallT
+      : canUseTime
+        ? tScore
+        : null;
+  const isOrange =
+    userLm && typeof orangeClock === "number"
+      ? updateOrangeState(orangeClock, selectedInstant, selectedOverall)
+      : false;
+
+  if (els.poseInfoText && freeLoaded && hintMode === "user") {
+    els.poseInfoText.style.display = "";
+    if (!userLm) {
+      els.poseInfoText.textContent = "不綁歌曲：請啟動攝影機做動作";
+    } else if (rLoaded.ok) {
+      const pass = rLoaded.score >= state.similarity.freePassScore;
+      els.poseInfoText.textContent = pass
+        ? `姿勢吻合 ${rLoaded.score.toFixed(0)}（速度無關）`
+        : `比對中 ${rLoaded.score.toFixed(0)}｜姿勢靠近模板即可`;
+    } else {
+      els.poseInfoText.textContent = "不綁歌曲：等待偵測骨架…";
+    }
+  }
 
   if (els.overlayCanvas) {
     const ctx = els.overlayCanvas.getContext("2d");
@@ -3889,13 +4209,32 @@ async function main() {
     els.overlayCanvas.addEventListener("wheel", onWheel, { passive: false });
   }
 
+  if (els.bindSongToggle) {
+    // 勾選 = 綁歌曲
+    state.recorder.bindSong = Boolean(els.bindSongToggle.checked);
+    syncBindSongToggleUi();
+    els.bindSongToggle.addEventListener("change", () => {
+      if (state.recorder.armed) {
+        // 錄製中不允許切換
+        els.bindSongToggle.checked = Boolean(state.recorder.bindSong);
+        return;
+      }
+      state.recorder.bindSong = Boolean(els.bindSongToggle.checked);
+      syncBindSongToggleUi();
+      setRecordUi(getPlayerTimeSafe());
+    });
+  }
+
   if (els.recordButton) {
     els.recordButton.addEventListener("click", () => {
       const rec = state.recorder;
       if (!rec.armed) {
+        if (!canEnableRecordButton()) return;
         rec.armed = true;
         rec.active = false;
         rec.armStartPlayerTimeSec = null;
+        rec.armStartWallMs = rec.bindSong ? null : performance.now();
+        rec.recordStartWallMs = null;
         rec.startedAtIso = null;
         rec.lastRecordedT = Number.NEGATIVE_INFINITY;
         rec.samples = [];
@@ -3904,22 +4243,23 @@ async function main() {
       }
 
       // stop & download
-      rec.armed = false;
-      rec.active = false;
-      const videoId = state.videoId || "unknown";
-      const payload = {
-        videoId,
-        recordedAt: rec.startedAtIso || new Date().toISOString(),
-        sampleCount: rec.samples.length,
-        samples: rec.samples,
-      };
-      const filename = `pose_trace_user_${videoId}_${formatTsForFilename()}.json`;
-      createDownload(filename, payload);
+      const samples = rec.samples.slice();
+      const startedAtIso = rec.startedAtIso || new Date().toISOString();
+      const bindSong = Boolean(rec.bindSong);
+      const videoId = bindSong ? state.videoId || "unknown" : null;
+      resetRecorderSession();
 
-      rec.armStartPlayerTimeSec = null;
-      rec.startedAtIso = null;
-      rec.lastRecordedT = Number.NEGATIVE_INFINITY;
-      rec.samples = [];
+      const payload = {
+        bindSong,
+        videoId,
+        recordedAt: startedAtIso,
+        sampleCount: samples.length,
+        samples,
+      };
+      const filename = bindSong
+        ? `pose_trace_user_${videoId}_${formatTsForFilename()}.json`
+        : `pose_clip_${formatTsForFilename()}.json`;
+      createDownload(filename, payload);
       setRecordUi(getPlayerTimeSafe());
     });
   }

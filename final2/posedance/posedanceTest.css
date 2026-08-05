@@ -400,3 +400,68 @@
   background: rgba(255, 255, 255, 0.88);
 }
 
+/* 錄製：綁歌曲／不綁歌曲 */
+.record-bind-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 4px 0 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.record-bind-toggle__label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #0f172a;
+  min-width: 3.5em;
+}
+
+.record-bind-toggle__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.record-bind-toggle__track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #94a3b8;
+  transition: background 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.record-bind-toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.record-bind-toggle__input:checked + .record-bind-toggle__track {
+  background: #2563eb;
+}
+
+.record-bind-toggle__input:checked + .record-bind-toggle__track::after {
+  transform: translateX(16px);
+}
+
+.record-bind-toggle:has(.record-bind-toggle__input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

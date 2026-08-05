@@ -151,14 +151,36 @@
               <option value="mode2" selected>Mode 1</option>
               <option value="mode1">Mode 2</option>
             </select>
-            <select id="hintModeSelect" class="topbar__mode-select">
+            <select
+              id="hintModeSelect"
+              class="topbar__mode-select"
+              title="選「使用者」並載入不綁歌曲 JSON：姿勢吻合即可，不受速度快慢影響"
+            >
               <option value="easy" selected>Easy</option>
               <option value="hard">Hard</option>
-              <option value="user">使用者</option>
+              <option value="user">使用者(姿勢)</option>
             </select>
             <button id="startCameraButton" class="btn btn-camera" type="button">
               啟動攝影機
             </button>
+            <label
+              class="record-bind-toggle"
+              title="綁歌曲：時間對齊影片；不綁：相對時間從 0 起算"
+            >
+              <span class="record-bind-toggle__label" id="bindSongLabel"
+                >綁歌曲</span
+              >
+              <input
+                id="bindSongToggle"
+                class="record-bind-toggle__input"
+                type="checkbox"
+                checked
+                role="switch"
+                aria-checked="true"
+                aria-label="錄製是否綁定歌曲時間"
+              />
+              <span class="record-bind-toggle__track" aria-hidden="true"></span>
+            </label>
             <button
               id="recordButton"
               class="btn btn-record"
@@ -338,6 +360,6 @@
       }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="./posedanceTest.js?build=foot-d4-v7"></script>
+    <script type="module" src="./posedanceTest.js?build=one-euro-v1"></script>
   </body>
 </html>
