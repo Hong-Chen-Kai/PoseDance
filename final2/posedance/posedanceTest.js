@@ -3981,6 +3981,20 @@ async function main() {
         computeDemoPartEnergyForTrace(state.demo.loaded);
         state.overall.loaded = [];
         setUi({ loaded: "—", overallLoaded: "—" });
+
+        // 重要：四個示範槽畫的是 hintMode 對應的 trace。
+        // 若仍停在 Easy，畫面會繼續顯示 pose_trace_easy（看起來像「載入錯誤」）。
+        state.ui.hintMode = "user";
+        if (els.hintModeSelect) els.hintModeSelect.value = "user";
+        showAllMode1DemoSlots();
+        clearOverlayCanvas();
+        if (els.poseInfoText) {
+          els.poseInfoText.style.display = "";
+          const free = isFreePoseTrace(data);
+          els.poseInfoText.textContent = free
+            ? `已載入 ${file.name || "骨架"}（不綁歌曲／姿勢比對）`
+            : `已載入 ${file.name || "骨架"}（使用者）`;
+        }
       } catch (err) {
         console.error("[LoadedTrace] load failed:", err);
       }
@@ -4140,6 +4154,12 @@ async function main() {
     els.overlayCanvas.style.touchAction = "none";
 
     const onPointerDown = (ev) => {
+      // 讓 Delete／Backspace 作用在畫布上（勿留在 select 焦點）
+      try {
+        els.overlayCanvas.focus({ preventScroll: true });
+      } catch {
+        els.overlayCanvas.focus?.();
+      }
       syncInteractCanvasSize();
       const pos = getPointerPosInOverlayCssPx(ev, els.overlayCanvas);
       if (!pos) return;
@@ -4486,29 +4506,28 @@ async function main() {
     });
   }
 
-  // capture：避免焦點在 iframe／按鈕時刪不掉
-  window.addEventListener(
-    "keydown",
-    (e) => {
-      if (e.key !== "Delete" && e.key !== "Backspace") return;
-      if (isEditableTarget(e.target)) return;
-      if (state.ui.mode === "mode2") {
-        if (deleteMode2SkeletonSmart()) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        return;
-      }
-      if (state.ui.mode === "mode1") {
-        // UI Mode2：Delete = 刪除四個示範骨架（你要的）
-        hideAllMode1DemoSlots();
-        if (state.demo.loaded) clearLoadedDemoTrace();
+  // capture：select／按鈕有焦點時也可刪；點過畫布後更穩
+  const onGlobalDeleteKey = (e) => {
+    if (!isDeleteOrBackspaceKey(e)) return;
+    if (isEditableTarget(e.target)) return;
+    if (state.ui.mode === "mode2") {
+      if (deleteMode2SkeletonSmart()) {
         e.preventDefault();
         e.stopPropagation();
       }
-    },
-    true,
-  );
+      return;
+    }
+    if (state.ui.mode === "mode1") {
+      if (handleMode1DeleteKey()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  };
+  window.addEventListener("keydown", onGlobalDeleteKey, true);
+  if (els.overlayCanvas) {
+    els.overlayCanvas.addEventListener("keydown", onGlobalDeleteKey);
+  }
 
   if (els.songSearchButton) {
     els.songSearchButton.addEventListener("click", async () => {

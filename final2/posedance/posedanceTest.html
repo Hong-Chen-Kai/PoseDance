@@ -286,7 +286,11 @@
           <div class="camera-wrapper camera-wrapper--full">
             <video id="input_video" playsinline></video>
             <canvas id="output_canvas"></canvas>
-            <canvas id="overlay_canvas"></canvas>
+            <canvas
+              id="overlay_canvas"
+              tabindex="0"
+              aria-label="骨架互動區（Delete 可刪除選中示範）"
+            ></canvas>
 
             <!-- 畫布內側底部：示範骨架縮放（依序 L1 / L2 / R1 / R2，中間留空） -->
             <div
@@ -377,6 +381,6 @@
       }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="./posedanceTest.js?build=delete-on-select-v1"></script>
+    <script type="module" src="./posedanceTest.js?build=del-key-mode2-v1"></script>
   </body>
 </html>

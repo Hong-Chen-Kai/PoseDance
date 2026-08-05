@@ -241,6 +241,7 @@
   z-index: 10;
   /* 與 input_video / output_canvas 一致：鏡像使用者畫面 */
   transform: scaleX(-1);
+  outline: none;
 }
 
 /* 確保 output_canvas 在 overlay 下方（原本用來畫骨架/遮罩的那層） */
