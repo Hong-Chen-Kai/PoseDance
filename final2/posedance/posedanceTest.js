@@ -3839,24 +3839,10 @@ function updateUiLoop() {
           const getter2 = makeOffsetGetter(getArrXYV, off);
           drawPoseConnections(ctx, demoLm, getter2, r, () => demoColor, 5);
           drawPosePoints(ctx, demoLm, getter2, r, demoColor, 4.5);
-          // 每個示範骨架右上角叉叉
-          const dr = getDeleteButtonRectForBBox(r, 26, 4);
-          drawDeleteXButton(ctx, dr);
-          if (dr) state.ui.mode1DemoDeleteRects[id] = dr;
-        }
-
-        // 另：有載入 swim.json 時保留「清除載入」熱區（第一個可見槽）
-        if (state.demo.loaded?.samples?.length) {
-          const firstVisible =
-            MODE1_DEMO_SLOT_IDS.find((id) => !isMode1DemoSlotHidden(id)) || null;
-          if (firstVisible && state.ui.mode1DemoDeleteRects[firstVisible]) {
-            state.ui.mode1LoadedDeleteRect =
-              state.ui.mode1DemoDeleteRects[firstVisible];
-          }
         }
       }
 
-      // selection box
+      // selection box；叉叉僅在「點選」示範骨架時顯示
       const sel = state.interact?.selectedId;
       if (sel) {
         // Use the container draw-rect for selection UI so the box stays stable
@@ -3875,6 +3861,15 @@ function updateUiLoop() {
           ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
           ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
           ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
+
+          if (
+            MODE1_DEMO_SLOT_IDS.includes(sel) &&
+            !isMode1DemoSlotHidden(sel)
+          ) {
+            const dr = getDeleteButtonRectForBBox(rSel, 26, 4);
+            drawDeleteXButton(ctx, dr);
+            if (dr) state.ui.mode1DemoDeleteRects[sel] = dr;
+          }
         }
       }
 
