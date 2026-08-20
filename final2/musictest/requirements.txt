@@ -1,0 +1,7 @@
+# Docker（Linux）內會一併裝 Essentia；Windows 本機通常裝不到，請用 docker compose。
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+yt-dlp>=2024.1.0
+python-multipart>=0.0.9
+pydantic>=2.0,<3
+essentia

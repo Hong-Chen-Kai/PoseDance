@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>musictest — 前後端串接測試</title>
+    <style>
+      :root {
+        --bg: #0f1419;
+        --card: #1a2332;
+        --text: #e7ecf3;
+        --muted: #9aa8bc;
+        --accent: #3d9cf0;
+        --ok: #3ecf8e;
+        --bad: #f07178;
+        --line: #2a3548;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 28px 18px 64px;
+      }
+      h1 { font-size: 1.45rem; margin: 0 0 0.35rem; }
+      .lead { color: var(--muted); margin: 0 0 1.4rem; font-size: 0.95rem; }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 14px;
+      }
+      h2 { font-size: 1.05rem; margin: 0 0 10px; }
+      p, li { color: var(--muted); font-size: 0.92rem; }
+      ol { padding-left: 1.2rem; margin: 0.4rem 0 0; }
+      code, pre {
+        font-family: Consolas, "Cascadia Mono", monospace;
+        font-size: 0.84rem;
+      }
+      code {
+        background: #0c1017;
+        padding: 0.1em 0.35em;
+        border-radius: 4px;
+        color: #c6e0ff;
+      }
+      pre {
+        background: #0c1017;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #d7e3f4;
+        min-height: 3rem;
+        margin: 10px 0 0;
+      }
+      .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      button, .file-label {
+        appearance: none;
+        border: 0;
+        border-radius: 8px;
+        padding: 0.55rem 0.95rem;
+        background: var(--accent);
+        color: #061018;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+      button.secondary { background: #314259; color: var(--text); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .file-label { display: inline-block; }
+      input[type="file"] { display: none; }
+      .pill {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+      .pill.ok { background: rgba(62, 207, 142, 0.18); color: var(--ok); }
+      .pill.bad { background: rgba(240, 113, 120, 0.18); color: var(--bad); }
+      .pill.wait { background: rgba(61, 156, 240, 0.18); color: var(--accent); }
+      .diagram {
+        font-size: 0.88rem;
+        color: var(--text);
+        background: #0c1017;
+        border-radius: 8px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+      }
+      .hint { margin-top: 8px; font-size: 0.85rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>musictest 前後端串接測試</h1>
+      <p class="lead">
+        前端：這個 HTML／JavaScript　｜　後端：Python FastAPI（同一台
+        <code>127.0.0.1:8000</code>）
+      </p>
+
+      <section>
+        <h2>這次在學什麼</h2>
+        <div class="diagram">
+          瀏覽器（JS fetch） → HTTP → Python FastAPI → 回傳 JSON → 畫面顯示
+        </div>
+        <p class="hint">
+          兩個「語法」不是混在同一個檔：JS 負責畫面與發請求；Python 負責分析。
+          中間用 <strong>HTTP + JSON</strong> 說話。
+        </p>
+      </section>
+
+      <section>
+        <h2>步驟 0：確認後端有在跑</h2>
+        <ol>
+          <li>開啟 Docker Desktop（Engine running）</li>
+          <li>
+            <code>cd</code> 到
+            <code>final2\musictest</code>
+          </li>
+          <li>
+            <code>docker compose up --build</code>（詳見
+            <code>DOCKER.md</code>）
+          </li>
+          <li>瀏覽器開本頁：<code>http://127.0.0.1:8000/</code></li>
+        </ol>
+        <p class="hint">
+          請用上面網址開啟（由 FastAPI 提供頁面）；不要直接雙擊 HTML。
+        </p>
+      </section>
+
+      <section>
+        <h2>測試 1：健康檢查 <code>GET /health</code></h2>
+        <div class="row">
+          <button id="btnHealth" type="button">呼叫 /health</button>
+          <span id="healthPill" class="pill wait">尚未測試</span>
+        </div>
+        <pre id="healthOut">（結果會顯示在這裡）</pre>
+        <p class="hint">
+          正常應為 <code>essentia: true</code>。
+        </p>
+      </section>
+
+      <section>
+        <h2>測試 2：上傳音檔 <code>POST /analyze/upload</code></h2>
+        <div class="row">
+          <label class="file-label">
+            選擇音檔
+            <input id="audioFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg" />
+          </label>
+          <span id="fileName" class="hint">尚未選擇</span>
+        </div>
+        <div class="row" style="margin-top: 10px">
+          <button id="btnUpload" type="button" disabled>上傳並分析</button>
+          <button id="btnDocs" class="secondary" type="button">開 Swagger /docs</button>
+        </div>
+        <pre id="uploadOut">（結果會顯示在這裡）</pre>
+        <p class="hint">
+          若失敗：確認 Docker 仍在跑，並看終端機日誌。
+        </p>
+      </section>
+
+      <section>
+        <h2>對應的前端程式在哪</h2>
+        <p>
+          本頁下方 <code>&lt;script&gt;</code> 使用
+          <code>fetch("/health")</code>、<code>fetch("/analyze/upload")</code>。
+          之後 posedance（JS）也是用同樣方式打你的 Python API。
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const healthOut = document.getElementById("healthOut");
+      const healthPill = document.getElementById("healthPill");
+      const uploadOut = document.getElementById("uploadOut");
+      const audioFile = document.getElementById("audioFile");
+      const fileName = document.getElementById("fileName");
+      const btnUpload = document.getElementById("btnUpload");
+
+      function setPill(el, kind, text) {
+        el.className = "pill " + kind;
+        el.textContent = text;
+      }
+
+      document.getElementById("btnHealth").addEventListener("click", async () => {
+        setPill(healthPill, "wait", "請求中…");
+        healthOut.textContent = "請求中…";
+        try {
+          // 相對路徑：同源打到同一個 FastAPI（Python）
+          const res = await fetch("/health");
+          const data = await res.json();
+          healthOut.textContent = JSON.stringify(data, null, 2);
+          if (res.ok && data.ok) {
+            const ess = data.essentia ? "Essentia 已就緒" : "已連線（Essentia 尚未安裝）";
+            setPill(healthPill, data.essentia ? "ok" : "wait", ess);
+          } else {
+            setPill(healthPill, "bad", "回應異常");
+          }
+        } catch (err) {
+          healthOut.textContent =
+            "連線失敗：後端可能沒啟動。\n\n" + String(err) +
+            "\n\n請先在終端機執行 uvicorn（見步驟 0）。";
+          setPill(healthPill, "bad", "連線失敗");
+        }
+      });
+
+      audioFile.addEventListener("change", () => {
+        const f = audioFile.files && audioFile.files[0];
+        fileName.textContent = f ? f.name : "尚未選擇";
+        btnUpload.disabled = !f;
+      });
+
+      btnUpload.addEventListener("click", async () => {
+        const f = audioFile.files && audioFile.files[0];
+        if (!f) return;
+        uploadOut.textContent = "上傳／分析中…";
+        const form = new FormData();
+        form.append("file", f);
+        form.append("force", "true");
+        try {
+          const res = await fetch("/analyze/upload", {
+            method: "POST",
+            body: form,
+          });
+          const text = await res.text();
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = { raw: text };
+          }
+          uploadOut.textContent =
+            "HTTP " + res.status + "\n\n" + JSON.stringify(data, null, 2);
+        } catch (err) {
+          uploadOut.textContent = "連線失敗：\n" + String(err);
+        }
+      });
+
+      document.getElementById("btnDocs").addEventListener("click", () => {
+        window.open("/docs", "_blank");
+      });
+    </script>
+  </body>
+</html>

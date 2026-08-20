@@ -4,6 +4,8 @@
   "youtubeVideoId": "FXg4LXsg14s",
   "mode2Only": true,
   "offsetSec": 0,
+  "tempoMode": "auto",
+  "rhythm": "./rhythm.json",
   "mode2": {
     "traces": [
       {
