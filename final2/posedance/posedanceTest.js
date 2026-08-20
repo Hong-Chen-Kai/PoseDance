@@ -936,6 +936,37 @@ function isEditableTarget(el) {
   return Boolean(el.isContentEditable);
 }
 
+/** Delete／Backspace（含部分鍵盤 code） */
+function isDeleteOrBackspaceKey(e) {
+  if (!e) return false;
+  const key = String(e.key || "");
+  if (key === "Delete" || key === "Backspace") return true;
+  const code = String(e.code || "");
+  return code === "Delete" || code === "Backspace";
+}
+
+/**
+ * Mode1：鍵盤刪除
+ * - 選中示範槽 → 隱藏該槽
+ * - 否則若有 loaded trace → 清除載入骨架
+ */
+function handleMode1DeleteKey() {
+  if (state.ui.mode !== "mode1") return false;
+  const sel = state.interact?.selectedId;
+  if (sel && MODE1_DEMO_SLOT_IDS.includes(sel) && !isMode1DemoSlotHidden(sel)) {
+    hideMode1DemoSlot(sel);
+    if (MODE1_DEMO_SLOT_IDS.every((id) => isMode1DemoSlotHidden(id))) {
+      state.ui.mode1DemoEnabled = false;
+    }
+    clearOverlayCanvas();
+    return true;
+  }
+  if (state.demo?.loaded) {
+    return clearLoadedDemoTrace();
+  }
+  return false;
+}
+
 function centerRectOnBBox(rect, bbox) {
   if (!rect || !bbox) return rect;
   const rcx = rect.ox + rect.dw / 2;

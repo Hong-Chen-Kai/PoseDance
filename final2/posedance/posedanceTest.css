@@ -578,10 +578,7 @@ body {
 }
 
 #synthControls {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: none !important;
 }
 
 .topbar__bpm-input {
