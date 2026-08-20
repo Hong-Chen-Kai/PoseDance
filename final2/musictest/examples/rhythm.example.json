@@ -1,0 +1,18 @@
+{
+  "videoId": "Gb8AZbpnzy4",
+  "source": "youtube",
+  "sourcePath": "tmp/Gb8AZbpnzy4.wav",
+  "bpm": 125.0,
+  "beats": [9.74, 10.22, 10.70, 11.18],
+  "confidence": 4.1,
+  "offsetSec": 0.0,
+  "durationSec": 210.0,
+  "engine": "essentia",
+  "method": "multifeature",
+  "cached": false,
+  "extras": {
+    "essentiaVersion": "2.1-beta*",
+    "estimatesCount": 0,
+    "bpmIntervalsCount": 0
+  }
+}

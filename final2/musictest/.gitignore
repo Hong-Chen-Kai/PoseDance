@@ -1,0 +1,18 @@
+# 執行時產物（勿提交）
+cache/*
+!cache/.gitkeep
+tmp/*
+!tmp/.gitkeep
+uploads/*
+!uploads/.gitkeep
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.part
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.env
+.DS_Store

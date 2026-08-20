@@ -10,11 +10,7 @@
   </head>
   <body>
     <div class="app">
-      <header class="topbar">
-        <div class="topbar__title">
-          <h1>Pose Dance</h1>
-        </div>
-
+      <header class="topbar topbar--compact">
         <div class="topbar__controls">
           <div class="topbar__controls-group topbar__controls-group--left">
             <input
@@ -284,6 +280,11 @@
       <main class="main">
         <section class="main__stage main__stage--user" aria-label="使用者骨架">
           <div class="camera-wrapper camera-wrapper--full">
+            <canvas
+              id="scene_canvas"
+              class="scene-canvas"
+              aria-hidden="true"
+            ></canvas>
             <video id="input_video" playsinline></video>
             <canvas id="output_canvas"></canvas>
             <canvas
@@ -381,6 +382,6 @@
       }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="./posedanceTest.js?build=del-key-mode2-v1"></script>
+    <script type="module" src="./posedanceTest.js?build=swim-bg-v1"></script>
   </body>
 </html>

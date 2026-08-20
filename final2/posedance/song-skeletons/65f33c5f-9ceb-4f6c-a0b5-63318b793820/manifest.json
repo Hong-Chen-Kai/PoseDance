@@ -4,6 +4,8 @@
   "youtubeVideoId": "N5z3ZO0QfFE",
   "mode2Only": true,
   "offsetSec": 0,
+  "tempoMode": "manual",
+  "manualBpm": 76,
   "mode2": {
     "traces": [
       {

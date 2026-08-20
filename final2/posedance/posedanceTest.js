@@ -1,4 +1,5 @@
 import { PoseModel, POSE_LANDMARKS } from "./poseTask.js";
+import { createSceneWorld, SCENE_LABELS } from "./scenes/sceneWorld.js";
 
 // 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
 const PROCEDURAL_IMPORT_BUILD = "foot-d4-v7";
@@ -39,6 +40,24 @@ const DEMO_TRACE_PATHS = {
     import.meta.url,
   ).href,
 };
+/** 背景划水偵測模板（開頁預載，不顯示於畫面） */
+const SWIM_TRACE_PATH = new URL("./swim.json", import.meta.url).href;
+
+function createOrangeGateState() {
+  return {
+    active: false,
+    enterGoodSec: 0,
+    exitBadSec: 0,
+    window: [],
+    lastT: null,
+    enterThreshold: 86,
+    enterRequireSec: 2,
+    enterInstantMajorityRatio: 0.6,
+    exitThreshold: 80,
+    exitRequireSec: 1.0,
+    exitInstantMajorityRatio: 0.6,
+  };
+}
 
 const DEMO_POSE_CONNECTIONS = [
   [POSE_LANDMARKS.LEFT_EYE, POSE_LANDMARKS.RIGHT_EYE],
@@ -161,6 +180,10 @@ const state = {
   songBinding: {
     activeSongId: null,
     manifestUrl: null,
+    /** @type {"auto"|"manual"|null} */
+    tempoMode: null,
+    /** 從 manifest / rhythm.json 套用到 UI 的 BPM；之後仍可用輸入框覆寫 */
+    appliedBpm: null,
   },
 
   // Pose
@@ -184,10 +207,24 @@ const state = {
     energyMinWeight: 0.1,
     /** 不綁歌曲：每幀最多比對幾個 demo 樣本（均勻抽樣） */
     freeMaxCompare: 90,
-    /** 不綁歌曲：略親民的分數曲線 */
-    freeK: 1.0,
-    /** 不綁歌曲：達標門檻（顯示／橘色提示用） */
-    freePassScore: 72,
+    /** 不綁歌曲：分數曲線（折中） */
+    freeK: 1.7,
+    /** 不綁歌曲：達標門檻 */
+    freePassScore: 86,
+    /** 不綁歌曲：上半身有效點下限 */
+    freeMinValidPoints: 4,
+    /** 載入自由姿勢時裁掉頭／尾（秒） */
+    freeTrimHeadSec: 2,
+    freeTrimTailSec: 2,
+    /** 不綁歌曲：近窗手腕速度低於此視為站立（正規化座標／秒） */
+    freeWristSpeedMin: 0.15,
+    /** 手腕速度統計時間窗（秒） */
+    freeWristWindowSec: 0.3,
+  },
+
+  /** 手腕動態門檻用軌跡（僅自由姿勢） */
+  wristMotion: {
+    history: [], // { t, lx, ly, rx, ry }
   },
 
   // Rolling overall buffers (Phase 1)
@@ -197,18 +234,24 @@ const state = {
     loaded: [],
   },
 
-  orange: {
+  orange: createOrangeGateState(),
+
+  /**
+   * 背景划水偵測（預載 swim.json，不畫示範骨架）
+   * 達標 → 切海邊；失敗 → 接回
+   */
+  swim: {
+    trace: null,
+    overall: [],
+    orange: createOrangeGateState(),
+    ready: false,
+  },
+
+  /** 海邊場景 */
+  beachScene: {
+    /** @type {ReturnType<typeof createSceneWorld> | null} */
+    world: null,
     active: false,
-    enterGoodSec: 0,
-    exitBadSec: 0,
-    window: [],
-    lastT: null,
-    enterThreshold: 80,
-    enterRequireSec: 3,
-    enterInstantMajorityRatio: 0.6,
-    exitThreshold: 75,
-    exitRequireSec: 1.5,
-    exitInstantMajorityRatio: 0.6,
   },
 };
 
@@ -465,6 +508,8 @@ function initDomRefs() {
   els.inputVideo = $("input_video");
   els.outputCanvas = $("output_canvas");
   els.overlayCanvas = $("overlay_canvas");
+  els.sceneCanvas = $("scene_canvas");
+  els.cameraWrapper = document.querySelector(".camera-wrapper");
 
   els.songModalBackdrop = $("songModalBackdrop");
   els.songApplyingOverlay = $("songApplyingOverlay");
@@ -1725,6 +1770,8 @@ function restoreDefaultSongBinding() {
   state.mode2.traces = cloneMode2Traces(state.mode2.defaultTraces);
   state.songBinding.activeSongId = null;
   state.songBinding.manifestUrl = null;
+  state.songBinding.tempoMode = null;
+  state.songBinding.appliedBpm = null;
   resetSongBindingUiState();
   if (
     state.interact?.selectedId &&
@@ -1734,6 +1781,68 @@ function restoreDefaultSongBinding() {
   }
   updateMode2VideoMismatchWarn();
   clearOverlayCanvas();
+}
+
+/**
+ * 依 manifest 的 tempoMode 套用 BPM 到 UI（synthBpmInput）。
+ * - auto：讀 rhythm.json 的 bpm（流行預分析）
+ * - manual：讀 manualBpm（古典手輸）
+ * UI 之後仍可手動改數字覆寫。
+ */
+async function applyTempoFromManifest(manifest, manifestUrl) {
+  const modeRaw = String(manifest?.tempoMode || "").trim().toLowerCase();
+  const mode = modeRaw === "auto" || modeRaw === "manual" ? modeRaw : null;
+  let bpm = null;
+  let source = null;
+
+  if (mode === "manual") {
+    const n = Number(manifest?.manualBpm);
+    if (Number.isFinite(n) && n >= 40 && n <= 300) {
+      bpm = Math.round(n);
+      source = "manualBpm";
+    } else {
+      console.warn("[SongBinding] tempoMode=manual 但 manualBpm 無效", {
+        manualBpm: manifest?.manualBpm,
+      });
+    }
+  } else if (mode === "auto") {
+    const rhythmRaw =
+      typeof manifest?.rhythm === "string" ? manifest.rhythm.trim() : "";
+    if (!rhythmRaw) {
+      console.warn("[SongBinding] tempoMode=auto 但缺少 rhythm 路徑");
+    } else {
+      try {
+        const rhythmUrl = resolveBindingAssetUrl(rhythmRaw, manifestUrl);
+        const rhythm = await fetchJson(rhythmUrl);
+        const n = Number(rhythm?.bpm);
+        if (Number.isFinite(n) && n >= 40 && n <= 300) {
+          bpm = Math.round(n);
+          source = "rhythm.json";
+        } else {
+          console.warn("[SongBinding] rhythm.json 的 bpm 無效", {
+            bpm: rhythm?.bpm,
+          });
+        }
+      } catch (err) {
+        console.warn("[SongBinding] 讀取 rhythm.json 失敗", err);
+      }
+    }
+  }
+
+  state.songBinding.tempoMode = mode;
+  state.songBinding.appliedBpm = bpm;
+
+  if (bpm != null && els.synthBpmInput) {
+    els.synthBpmInput.value = String(bpm);
+    els.synthBpmInput.title = `BPM（${mode || "?"}：${source || "—"}；可手動覆寫）`;
+  }
+
+  console.log("[SongBinding] tempo 套用", {
+    tempoMode: mode,
+    bpm,
+    source,
+  });
+  return bpm;
 }
 
 function setVideoIdAndLoad(videoId, { autoplay = false } = {}) {
@@ -1866,6 +1975,8 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
       : null;
   state.songBinding.manifestUrl = manifestUrl;
 
+  const appliedBpm = await applyTempoFromManifest(manifest, manifestUrl);
+
   const targetMode = resolveSongBindingTargetMode(manifest, hasMode1, hasMode2);
   if (targetMode === "mode1" || targetMode === "mode2") {
     if (els.modeSelect) els.modeSelect.value = targetMode;
@@ -1884,6 +1995,8 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
     title: manifest?.title,
     videoId: youtubeVideoId,
     targetMode,
+    tempoMode: state.songBinding.tempoMode,
+    bpm: appliedBpm,
     traceCount: state.mode2.traces.length,
   });
   return setVideoIdAndLoad(youtubeVideoId, { autoplay });
@@ -2405,6 +2518,26 @@ async function loadDemoTrace(url) {
   return data;
 }
 
+/** 開頁預載划水模板；僅供背景偵測，不掛到 demo.loaded、不畫骨架 */
+async function preloadSwimTrace() {
+  try {
+    const data = await loadDemoTrace(SWIM_TRACE_PATH);
+    data.bindSong = false;
+    trimFreePoseTrace(data);
+    state.swim.trace = data;
+    state.swim.ready = true;
+    console.log("[Swim] 背景模板就緒", {
+      samples: data.samples?.length,
+      trimHead: data.trimHeadSec,
+      trimTail: data.trimTailSec,
+    });
+  } catch (err) {
+    state.swim.trace = null;
+    state.swim.ready = false;
+    console.warn("[Swim] 預載失敗（海邊切換停用）", err);
+  }
+}
+
 function toLmArray(landmarks) {
   if (!Array.isArray(landmarks) || landmarks.length === 0) return [];
   return landmarks.map((lm) => {
@@ -2482,7 +2615,10 @@ async function loadTraceFromFile(file) {
     throw new Error("JSON 格式無效（缺少 samples[]）");
   }
   // 明確保留不綁歌曲標記（舊檔無此欄位則視為綁歌曲流程）
-  if (data.bindSong === false) data.bindSong = false;
+  if (data.bindSong === false) {
+    data.bindSong = false;
+    trimFreePoseTrace(data);
+  }
   return data;
 }
 
@@ -2920,6 +3056,76 @@ function computeMeanDist(userLandmarks, demoLmArray) {
   return { ok: true, meanDist: sum / n, validPoints: n };
 }
 
+/** 上半身關鍵點：雙肩、雙肘、雙腕（划水為主） */
+const UPPER_BODY_POSE_INDICES = [
+  POSE_LANDMARKS.LEFT_SHOULDER,
+  POSE_LANDMARKS.RIGHT_SHOULDER,
+  POSE_LANDMARKS.LEFT_ELBOW,
+  POSE_LANDMARKS.RIGHT_ELBOW,
+  POSE_LANDMARKS.LEFT_WRIST,
+  POSE_LANDMARKS.RIGHT_WRIST,
+];
+
+/** 歸一化仍用肩髖；距離只計上半身 */
+function computeMeanDistUpperBody(userLandmarks, demoLmArray) {
+  const cfg = state.similarity;
+  const visTh = cfg.visibilityThreshold;
+  const userNorm = normalizePose2D((i) => getLmXYV(userLandmarks?.[i]), visTh);
+  const demoNorm = normalizePose2D((i) => getArrXYV(demoLmArray?.[i]), visTh);
+  if (!userNorm || !demoNorm) return { ok: false, reason: "weak_core" };
+
+  let sum = 0;
+  let n = 0;
+  for (const i of UPPER_BODY_POSE_INDICES) {
+    const a = userNorm.pts[i];
+    const b = demoNorm.pts[i];
+    if (!a || !b) continue;
+    const d = dist2(a, b);
+    if (!Number.isFinite(d)) continue;
+    sum += d;
+    n += 1;
+  }
+  const minN = cfg.freeMinValidPoints ?? 4;
+  if (n < minN) return { ok: false, reason: "too_few_points", validPoints: n };
+  return { ok: true, meanDist: sum / n, validPoints: n };
+}
+
+/**
+ * 不綁歌曲：裁掉頭／尾雜訊幀，並將 t 歸零
+ * @returns {object} 同一 trace（原地修改）
+ */
+function trimFreePoseTrace(trace) {
+  if (!isFreePoseTrace(trace) || !Array.isArray(trace.samples) || !trace.samples.length) {
+    return trace;
+  }
+  const cfg = state.similarity;
+  const headSec = Number.isFinite(cfg.freeTrimHeadSec) ? cfg.freeTrimHeadSec : 1;
+  const tailSec = Number.isFinite(cfg.freeTrimTailSec) ? cfg.freeTrimTailSec : 2;
+  const samples = trace.samples;
+  const tFirst = samples[0]?.t;
+  const tLast = samples[samples.length - 1]?.t;
+  if (typeof tFirst !== "number" || typeof tLast !== "number") return trace;
+
+  const startT = tFirst + headSec;
+  const endT = tLast - tailSec;
+  if (!(endT > startT + 0.2)) return trace;
+
+  const trimmed = samples.filter(
+    (s) => s && typeof s.t === "number" && s.t >= startT && s.t <= endT,
+  );
+  if (trimmed.length < 8) return trace;
+
+  const t0 = trimmed[0].t;
+  trace.samples = trimmed.map((s) => ({
+    ...s,
+    t: Math.max(0, s.t - t0),
+  }));
+  trace.sampleCount = trace.samples.length;
+  trace.trimHeadSec = headSec;
+  trace.trimTailSec = tailSec;
+  return trace;
+}
+
 function lowerBoundByT(samples, t) {
   let lo = 0;
   let hi = samples.length;
@@ -2993,13 +3199,76 @@ function isFreePoseTrace(trace) {
   return Boolean(trace && trace.bindSong === false);
 }
 
+function readWristXY(userLandmarks, index) {
+  const lm = userLandmarks?.[index];
+  if (!lm) return null;
+  // MediaPipe 物件 或 [x,y,z,v]
+  if (typeof lm.x === "number" && typeof lm.y === "number") {
+    return { x: lm.x, y: lm.y };
+  }
+  if (Array.isArray(lm) && typeof lm[0] === "number" && typeof lm[1] === "number") {
+    return { x: lm[0], y: lm[1] };
+  }
+  return null;
+}
+
+/**
+ * 近 0.3s 雙手手腕速度（正規化座標／秒）；取左右較大者（單手有動即可）
+ * 無論是否過門檻都會更新軌跡。
+ */
+function updateAndGetWristSpeed(userLandmarks) {
+  const cfg = state.similarity;
+  const windowSec = Number.isFinite(cfg.freeWristWindowSec)
+    ? cfg.freeWristWindowSec
+    : 0.3;
+  const now = performance.now();
+  const lw = readWristXY(userLandmarks, POSE_LANDMARKS.LEFT_WRIST);
+  const rw = readWristXY(userLandmarks, POSE_LANDMARKS.RIGHT_WRIST);
+  if (!lw || !rw) return 0;
+
+  const hist = state.wristMotion.history;
+  hist.push({ t: now, lx: lw.x, ly: lw.y, rx: rw.x, ry: rw.y });
+  const cutoff = now - windowSec * 1000;
+  while (hist.length && hist[0].t < cutoff) hist.shift();
+
+  if (hist.length < 2) return 0;
+  const a = hist[0];
+  const b = hist[hist.length - 1];
+  const dt = (b.t - a.t) / 1000;
+  if (!(dt >= 0.05)) return 0;
+
+  const speedL = dist2({ x: b.lx, y: b.ly }, { x: a.lx, y: a.ly }) / dt;
+  const speedR = dist2({ x: b.rx, y: b.ry }, { x: a.rx, y: a.ry }) / dt;
+  const speed = Math.max(speedL, speedR);
+  return Number.isFinite(speed) ? speed : 0;
+}
+
 /**
  * 姿勢最佳匹配（速度無關）：掃描模板均勻抽樣幀，取 meanDist 最小者計分。
- * 回傳 ok / score / meanDist / validPoints / bestLm / bestT / ErefWin / freePose。
+ * @param {{ wristSpeed?: number }} [opts] 若已算過手腕速度可傳入，避免同幀重複寫入軌跡
  */
-function computePoseBestScoreD(userLandmarks, trace) {
+function computePoseBestScoreD(userLandmarks, trace, opts = {}) {
   const cfg = state.similarity;
   if (!trace?.samples?.length) return { ok: false, reason: "no_trace" };
+
+  // 方案一：手腕動能門檻——站著／手幾乎不動則不比對
+  const wristSpeed =
+    typeof opts.wristSpeed === "number"
+      ? opts.wristSpeed
+      : updateAndGetWristSpeed(userLandmarks);
+  const speedMin = Number.isFinite(cfg.freeWristSpeedMin)
+    ? cfg.freeWristSpeedMin
+    : 0.12;
+  if (!(wristSpeed >= speedMin)) {
+    return {
+      ok: false,
+      reason: "user_static",
+      score: 0,
+      wristSpeed,
+      freePose: true,
+    };
+  }
+
   const samples = trace.samples;
   const n = samples.length;
   const maxCmp = Math.max(12, cfg.freeMaxCompare | 0);
@@ -3015,7 +3284,7 @@ function computePoseBestScoreD(userLandmarks, trace) {
   for (let i = 0; i < n; i += stride) {
     const s = samples[i];
     if (!s || !Array.isArray(s.lm) || s.lm.length !== 33) continue;
-    const r = computeMeanDist(userLandmarks, s.lm);
+    const r = computeMeanDistUpperBody(userLandmarks, s.lm);
     if (!r.ok) continue;
     if (r.meanDist < bestD) {
       bestD = r.meanDist;
@@ -3031,7 +3300,7 @@ function computePoseBestScoreD(userLandmarks, trace) {
   if (n > 1) {
     const s = samples[n - 1];
     if (s && Array.isArray(s.lm) && s.lm.length === 33) {
-      const r = computeMeanDist(userLandmarks, s.lm);
+      const r = computeMeanDistUpperBody(userLandmarks, s.lm);
       if (r.ok && r.meanDist < bestD) {
         bestD = r.meanDist;
         bestN = r.validPoints;
@@ -3207,8 +3476,8 @@ function getDemoTraceByMode(mode) {
   return state.demo.easy;
 }
 
-function updateOrangeState(nowT, instantScore, overallScore) {
-  const st = state.orange;
+function updateOrangeState(nowT, instantScore, overallScore, orangeSt = state.orange) {
+  const st = orangeSt || state.orange;
   if (!Number.isFinite(nowT)) return st.active;
   const dt = typeof st.lastT === "number" ? Math.max(0, nowT - st.lastT) : 0;
   st.lastT = nowT;
@@ -3582,6 +3851,67 @@ function updateSynthPatternHud(tScore) {
   el.style.display = "";
 }
 
+function syncSceneCanvasSize() {
+  const world = state.beachScene.world;
+  const canvas = els.sceneCanvas;
+  if (!world || !canvas) return;
+  const wrap = els.cameraWrapper || canvas.parentElement;
+  const w = Math.max(1, Math.floor(wrap?.clientWidth || canvas.clientWidth || 1));
+  const h = Math.max(1, Math.floor(wrap?.clientHeight || canvas.clientHeight || 1));
+  world.setSize(w, h);
+}
+
+/**
+ * 自由姿勢達標 → 海邊；否則回到無場景。
+ * @param {boolean} wantBeach
+ */
+function syncBeachScene(wantBeach) {
+  const world = state.beachScene.world;
+  const canvas = els.sceneCanvas;
+  if (!world || !canvas) return;
+
+  const next = wantBeach ? SCENE_LABELS.swim : SCENE_LABELS.none;
+  if (world.getLabel() !== next) {
+    world.setScene(next);
+    if (next === SCENE_LABELS.swim) syncSceneCanvasSize();
+  }
+
+  const on = next === SCENE_LABELS.swim;
+  if (state.beachScene.active !== on) {
+    state.beachScene.active = on;
+    canvas.classList.toggle("is-active", on);
+    els.cameraWrapper?.classList.toggle("is-beach-scene", on);
+    if (on) {
+      console.log("[Scene] 切換海邊");
+    } else {
+      console.log("[Scene] 回到原畫面");
+    }
+  }
+
+  if (on) {
+    world.frame();
+  }
+}
+
+function initBeachScene() {
+  if (!els.sceneCanvas) {
+    console.warn("[Scene] 找不到 scene_canvas");
+    return;
+  }
+  if (state.beachScene.world) return;
+  try {
+    state.beachScene.world = createSceneWorld(els.sceneCanvas);
+    syncSceneCanvasSize();
+    window.addEventListener("resize", () => {
+      if (state.beachScene.active) syncSceneCanvasSize();
+    });
+    console.log("[Scene] sceneWorld 就緒");
+  } catch (e) {
+    console.warn("[Scene] 初始化失敗", e);
+    state.beachScene.world = null;
+  }
+}
+
 function updateUiLoop() {
   requestAnimationFrame(updateUiLoop);
 
@@ -3632,6 +3962,7 @@ function updateUiLoop() {
   const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
   const freeLoaded = isFreePoseTrace(state.demo.loaded);
   const wallT = performance.now() / 1000;
+  const wristSpeed = userLm ? updateAndGetWristSpeed(userLm) : 0;
 
   // Similarity
   let rEasy = { ok: false, score: 0 };
@@ -3674,7 +4005,7 @@ function updateUiLoop() {
 
   if (userLm && state.demo.loaded?.samples?.length) {
     if (freeLoaded) {
-      rLoaded = computePoseBestScoreD(userLm, state.demo.loaded);
+      rLoaded = computePoseBestScoreD(userLm, state.demo.loaded, { wristSpeed });
     } else if (canUseTime) {
       rLoaded = computeWindowScoreD(userLm, state.demo.loaded, tScore);
     }
@@ -3690,6 +4021,31 @@ function updateUiLoop() {
         overallLoaded = ov.toFixed(0);
       }
     }
+  }
+
+  // ---- 背景划水偵測（不顯示模板骨架／HUD）
+  let swimOrange = false;
+  if (userLm && state.swim.trace) {
+    const rSwim = computePoseBestScoreD(userLm, state.swim.trace, { wristSpeed });
+    let overallSwimNum = null;
+    if (rSwim.ok) {
+      const ov = pushOverall(state.swim.overall, wallT, rSwim.score, 1);
+      if (typeof ov === "number") overallSwimNum = ov;
+    }
+    const swimInstant = rSwim.ok ? rSwim.score : null;
+    swimOrange = updateOrangeState(
+      wallT,
+      swimInstant,
+      overallSwimNum,
+      state.swim.orange,
+    );
+  } else if (!userLm && state.swim.orange.active) {
+    // 失去骨架時立刻退出海邊
+    state.swim.orange.active = false;
+    state.swim.orange.enterGoodSec = 0;
+    state.swim.orange.exitBadSec = 0;
+    state.swim.orange.window = [];
+    state.swim.orange.lastT = null;
   }
 
   if (userLm && (canUseTime || freeLoaded)) {
@@ -3712,7 +4068,7 @@ function updateUiLoop() {
     });
   }
 
-  // Demo 骨架：綁歌曲用影片時間；不綁歌曲顯示「目前最像的模板幀」
+  // Demo 骨架：僅 Easy/Hard／手動載入；背景 swim 不畫
   let demoLm = null;
   if (!isRecordingMode && state.ui.mode1DemoEnabled && trace?.samples) {
     if (isFreePoseTrace(trace) && userLm && rLoaded.ok && rLoaded.bestLm) {
@@ -3746,28 +4102,39 @@ function updateUiLoop() {
       : hintMode === "user"
         ? overallLoadedNum
         : overallEasyNum;
-  const orangeClock =
-    hintMode === "user" && freeLoaded
-      ? wallT
-      : canUseTime
-        ? tScore
-        : null;
+  const orangeClock = canUseTime ? tScore : null;
   const isOrange =
-    userLm && typeof orangeClock === "number"
+    userLm && typeof orangeClock === "number" && !(hintMode === "user" && freeLoaded)
       ? updateOrangeState(orangeClock, selectedInstant, selectedOverall)
       : false;
 
-  if (els.poseInfoText && freeLoaded && hintMode === "user") {
-    els.poseInfoText.style.display = "";
-    if (!userLm) {
-      els.poseInfoText.textContent = "不綁歌曲：請啟動攝影機做動作";
-    } else if (rLoaded.ok) {
-      const pass = rLoaded.score >= state.similarity.freePassScore;
-      els.poseInfoText.textContent = pass
-        ? `姿勢吻合 ${rLoaded.score.toFixed(0)}（速度無關）`
-        : `比對中 ${rLoaded.score.toFixed(0)}｜姿勢靠近模板即可`;
-    } else {
-      els.poseInfoText.textContent = "不綁歌曲：等待偵測骨架…";
+  // 使用者骨架高亮：划水達標或歌曲提示達標
+  const userGood = Boolean(swimOrange || isOrange);
+
+  // 背景划水達標 → 海邊；否則接回（不依賴手動載入／提示模式）
+  syncBeachScene(Boolean(swimOrange));
+
+  if (els.poseInfoText) {
+    if (state.swim.ready && state.cameraRunning) {
+      // 背景偵測不顯示分數，保持輕量提示
+      els.poseInfoText.style.display = "";
+      els.poseInfoText.textContent = swimOrange
+        ? "划水中 · 海邊場景"
+        : "攝影機開啟 · 划水可切換海邊";
+    } else if (freeLoaded && hintMode === "user") {
+      els.poseInfoText.style.display = "";
+      if (!userLm) {
+        els.poseInfoText.textContent = "不綁歌曲：請啟動攝影機做動作";
+      } else if (rLoaded.reason === "user_static") {
+        els.poseInfoText.textContent = "請動動手（站著不動不計分）";
+      } else if (rLoaded.ok) {
+        const pass = rLoaded.score >= state.similarity.freePassScore;
+        els.poseInfoText.textContent = pass
+          ? `姿勢吻合 ${rLoaded.score.toFixed(0)}（速度無關）`
+          : `比對中 ${rLoaded.score.toFixed(0)}｜姿勢靠近模板即可`;
+      } else {
+        els.poseInfoText.textContent = "不綁歌曲：等待偵測骨架…";
+      }
     }
   }
 
@@ -3798,17 +4165,17 @@ function updateUiLoop() {
       const stageRect0 = getDrawRect(SKELETON_IDS.m1_user, defaultRects);
       const stageRect = stageRect0 || computeContainRect(w, h, videoAspect);
 
-      // User skeleton (orange / red hints / lighter orange when good)
+      // User skeleton（划水達標或歌曲提示達標時高亮）
       const blueColor = "rgba(59,130,246,0.95)";
       const redColor = "rgba(239,68,68,0.95)";
-      const baseColor = isOrange ? USER_SKELETON_COLOR_GOOD : USER_SKELETON_COLOR;
-      const highlightParts = isOrange
+      const baseColor = userGood ? USER_SKELETON_COLOR_GOOD : USER_SKELETON_COLOR;
+      const highlightParts = userGood
         ? new Set(ALL_AVATAR_PARTS)
         : isRecordingMode
           ? new Set()
           : activeParts;
       const colorByConn = (a, b) => {
-        if (isOrange) return USER_SKELETON_COLOR_GOOD;
+        if (userGood) return USER_SKELETON_COLOR_GOOD;
         const part = partOfConnection(a, b);
         if (isRecordingMode) return USER_SKELETON_COLOR;
         return activeParts.has(part) ? redColor : USER_SKELETON_COLOR;
@@ -3817,7 +4184,7 @@ function updateUiLoop() {
         drawUserAvatar(ctx, userLm, getLmXYV, stageRect, {
           skeletonId: SKELETON_IDS.m1_user,
           baseColor,
-          highlightColor: isOrange ? USER_SKELETON_COLOR_GOOD : redColor,
+          highlightColor: userGood ? USER_SKELETON_COLOR_GOOD : redColor,
           highlightParts,
           colorByConnection: colorByConn,
           lineWidth: 3,
@@ -3825,13 +4192,17 @@ function updateUiLoop() {
         });
       }
 
-      // Demo overlay：四個示範槽各自可刪（UI Mode 2）
+      // Demo overlay（背景 swim 不畫；手動載入自由姿勢才 1 個）
       state.ui.mode1LoadedDeleteRect = null;
       state.ui.mode1DemoDeleteRects = {};
       if (demoLm && !isRecordingMode && state.ui.mode1DemoEnabled) {
-        const demoColor = isOrange ? blueColor : "rgba(34,197,94,0.95)";
+        const demoColor = userGood ? blueColor : "rgba(34,197,94,0.95)";
+        const slotIds =
+          freeLoaded && hintMode === "user"
+            ? [SKELETON_IDS.m1_demo_0]
+            : MODE1_DEMO_SLOT_IDS;
 
-        for (const id of MODE1_DEMO_SLOT_IDS) {
+        for (const id of slotIds) {
           if (isMode1DemoSlotHidden(id)) continue;
           const r = getDrawRect(id, defaultRects) || stageRect;
           if (!r) continue;
@@ -3899,6 +4270,7 @@ async function main() {
     const [easy, hard] = await Promise.all([
       loadDemoTrace(DEMO_TRACE_PATHS.easy),
       loadDemoTrace(DEMO_TRACE_PATHS.hard),
+      preloadSwimTrace(),
     ]);
     state.demo.easy = easy;
     state.demo.hard = hard;
@@ -3986,13 +4358,26 @@ async function main() {
         // 若仍停在 Easy，畫面會繼續顯示 pose_trace_easy（看起來像「載入錯誤」）。
         state.ui.hintMode = "user";
         if (els.hintModeSelect) els.hintModeSelect.value = "user";
-        showAllMode1DemoSlots();
+        const free = isFreePoseTrace(data);
+        if (free) {
+          // 自由姿勢：只留 1 個示範槽，減少卡頓
+          showAllMode1DemoSlots();
+          for (const id of MODE1_DEMO_SLOT_IDS) {
+            if (id !== SKELETON_IDS.m1_demo_0) hideMode1DemoSlot(id);
+          }
+          state.ui.mode1DemoEnabled = true;
+          if (els.toggleMode1DemoButton) {
+            els.toggleMode1DemoButton.textContent = "隱藏骨架";
+          }
+        } else {
+          showAllMode1DemoSlots();
+        }
         clearOverlayCanvas();
         if (els.poseInfoText) {
           els.poseInfoText.style.display = "";
-          const free = isFreePoseTrace(data);
+          const n = data.samples?.length ?? 0;
           els.poseInfoText.textContent = free
-            ? `已載入 ${file.name || "骨架"}（不綁歌曲／姿勢比對）`
+            ? `已載入 ${file.name || "骨架"}（裁頭尾／上半身／${n}幀）`
             : `已載入 ${file.name || "骨架"}（使用者）`;
         }
       } catch (err) {
@@ -4557,6 +4942,7 @@ async function main() {
     });
   }
 
+  initBeachScene();
   await initPose();
   updateUiLoop();
 }

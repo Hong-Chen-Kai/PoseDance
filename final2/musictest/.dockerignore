@@ -1,0 +1,17 @@
+__pycache__
+*.py[cod]
+.pytest_cache
+.git
+.gitignore
+.venv
+.env
+cache/*
+!cache/.gitkeep
+tmp/*
+!tmp/.gitkeep
+uploads/*
+!uploads/.gitkeep
+*.md
+!DOCKER.md
+node_modules
+.DS_Store

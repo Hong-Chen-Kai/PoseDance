@@ -1,0 +1,21 @@
+# 碩論／後台主線：Docker + Python Essentia + FastAPI
+# 用法見 DOCKER.md
+#
+#   docker compose up --build
+#   瀏覽器 http://127.0.0.1:8000/health 應見 "essentia": true
+
+services:
+  musictest:
+    build: .
+    image: posedance-musictest:essentia
+    container_name: posedance-musictest
+    ports:
+      - "8000:8000"
+    volumes:
+      # 分析結果／暫存留在 Windows 專案目錄，關掉容器也不丟
+      - ./cache:/app/cache
+      - ./tmp:/app/tmp
+      - ./uploads:/app/uploads
+    environment:
+      - MUSICTEST_ENGINE=essentia
+    restart: unless-stopped
