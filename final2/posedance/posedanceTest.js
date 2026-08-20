@@ -481,6 +481,21 @@ function initDomRefs() {
   els.demoScaleBottom = $("demoScaleBottom");
   els.loadVideoButton = $("loadVideoButton");
   els.pickSongButton = $("pickSongButton");
+  els.skeletonSettingsButton = $("skeletonSettingsButton");
+  els.skeletonSettingsBackdrop = $("skeletonSettingsBackdrop");
+  els.skeletonSettingsCloseButton = $("skeletonSettingsCloseButton");
+  els.settingsLoadSkeletonButton = $("settingsLoadSkeletonButton");
+  els.settingsToggleSkeletonButton = $("settingsToggleSkeletonButton");
+  els.settingsRestoreSkeletonButton = $("settingsRestoreSkeletonButton");
+  els.synthRandomMixCheckbox = $("synthRandomMixCheckbox");
+  els.settingsGrooveSelect = $("settingsGrooveSelect");
+  els.settingsBounceDirSelect = $("settingsBounceDirSelect");
+  els.settingsBounceDirField = $("settingsBounceDirField");
+  els.settingsFootSelect = $("settingsFootSelect");
+  els.settingsFootSideSelect = $("settingsFootSideSelect");
+  els.settingsFootSideField = $("settingsFootSideField");
+  els.settingsPatternSelect = $("settingsPatternSelect");
+  els.synthManualSettings = $("synthManualSettings");
   els.loadSkeletonButton = $("loadSkeletonButton");
   els.clearLoadedSkeletonButton = $("clearLoadedSkeletonButton");
   els.deleteSelectedSkeletonButton = $("deleteSelectedSkeletonButton");
@@ -1175,7 +1190,7 @@ function stopCameraIfRunning() {
     state.cameraStream = null;
   }
   if (els.inputVideo) els.inputVideo.srcObject = null;
-  if (els.startCameraButton) els.startCameraButton.textContent = "啟動攝影機";
+  if (els.startCameraButton) els.startCameraButton.textContent = "啟動鏡頭";
   state.latestUserLandmarks = null;
   drawUserOverlay();
   setRecordUi(getPlayerTimeSafe());
@@ -1335,51 +1350,38 @@ function syncInteractCanvasSize() {
 }
 
 function applyMode(mode) {
-  state.ui.mode = mode === "mode2" ? "mode2" : "mode1";
+  // 精簡 UI：鎖定生成舞者模式（程式 mode2）；打分 Mode1 暫不開放
+  state.ui.mode = "mode2";
+  if (els.modeSelect) els.modeSelect.value = "mode2";
   setModeUiText();
-  const isMode2 = state.ui.mode === "mode2";
-  if (isMode2) {
-    // Mode2：允許 YouTube 與攝影機繼續運作；只禁用與 Mode1 相關的控制
-    setControlsDisabled(false);
-    if (els.hintModeSelect) els.hintModeSelect.disabled = true;
-    if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "none";
-    if (els.clearLoadedSkeletonButton)
-      els.clearLoadedSkeletonButton.style.display = "none";
-    if (els.deleteSelectedSkeletonButton)
-      els.deleteSelectedSkeletonButton.style.display = "";
-    if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "";
-    if (els.toggleMode2DemoABCButton)
-      els.toggleMode2DemoABCButton.style.display = "";
-    if (els.restoreMode2BindingButton)
-      els.restoreMode2BindingButton.style.display = "";
-    if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "none";
-    if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
-    if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
-    if (els.synthControls) els.synthControls.style.display = "";
+  setControlsDisabled(false);
+  if (els.hintModeSelect) els.hintModeSelect.disabled = true;
+  if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "none";
+  if (els.clearLoadedSkeletonButton)
+    els.clearLoadedSkeletonButton.style.display = "none";
+  if (els.deleteSelectedSkeletonButton)
+    els.deleteSelectedSkeletonButton.style.display = "none";
+  if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "none";
+  if (els.toggleMode2DemoABCButton)
+    els.toggleMode2DemoABCButton.style.display = "none";
+  if (els.restoreMode2BindingButton)
+    els.restoreMode2BindingButton.style.display = "none";
+  if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "none";
+  if (els.demoScaleBottom) els.demoScaleBottom.style.display = "none";
+  if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
+  if (els.synthControls) els.synthControls.style.display = "none";
 
-    resetRecorderSession();
-    setRecordUi(getPlayerTimeSafe());
-    // mode2: no fixed A/B/C slots anymore
-    setUi({ easy: "—", hard: "—", loaded: "—", overallEasy: "—", overallHard: "—", overallLoaded: "—" });
-  } else {
-    // Mode1：恢復所有 Mode1 控制
-    setControlsDisabled(false);
-    if (els.hintModeSelect) els.hintModeSelect.disabled = false;
-    if (els.loadSkeletonButton) els.loadSkeletonButton.style.display = "";
-    if (els.clearLoadedSkeletonButton)
-      els.clearLoadedSkeletonButton.style.display = "";
-    if (els.deleteSelectedSkeletonButton)
-      els.deleteSelectedSkeletonButton.style.display = "none";
-    if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "none";
-    if (els.toggleMode2DemoABCButton)
-      els.toggleMode2DemoABCButton.style.display = "none";
-    if (els.restoreMode2BindingButton)
-      els.restoreMode2BindingButton.style.display = "none";
-    if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "";
-    if (els.demoScaleBottom) els.demoScaleBottom.style.display = "";
-    if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
-    if (els.synthControls) els.synthControls.style.display = "none";
-  }
+  resetRecorderSession();
+  setRecordUi(getPlayerTimeSafe());
+  setUi({
+    easy: "—",
+    hard: "—",
+    loaded: "—",
+    overallEasy: "—",
+    overallHard: "—",
+    overallLoaded: "—",
+  });
+  void mode;
 }
 
 function extractVideoId(input) {
@@ -1978,10 +1980,8 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   const appliedBpm = await applyTempoFromManifest(manifest, manifestUrl);
 
   const targetMode = resolveSongBindingTargetMode(manifest, hasMode1, hasMode2);
-  if (targetMode === "mode1" || targetMode === "mode2") {
-    if (els.modeSelect) els.modeSelect.value = targetMode;
-    applyMode(targetMode);
-  }
+  // 精簡 UI：即使 binding 標 mode1，仍鎖定生成舞者模式
+  applyMode("mode2");
   if (targetMode === "mode1" && els.hintModeSelect) {
     const hintMode =
       mode1Def?.defaultHintMode === "hard" ? "hard" : "easy";
@@ -1994,7 +1994,8 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
     songId: state.songBinding.activeSongId,
     title: manifest?.title,
     videoId: youtubeVideoId,
-    targetMode,
+    targetMode: "mode2",
+    bindingTargetMode: targetMode,
     tempoMode: state.songBinding.tempoMode,
     bpm: appliedBpm,
     traceCount: state.mode2.traces.length,
@@ -2285,10 +2286,9 @@ function initYouTubePlayerIfPossible() {
   if (!YTGlobal || typeof YTGlobal.Player !== "function") return;
 
   state.ytInitStarted = true;
-  state.player = new YT.Player("player", {
+  const playerConfig = {
     height: "180",
     width: "320",
-    videoId: state.videoId || DEFAULT_YOUTUBE_VIDEO_ID,
     playerVars: {
       playsinline: 1,
       enablejsapi: 1,
@@ -2298,14 +2298,17 @@ function initYouTubePlayerIfPossible() {
     events: {
       onReady: () => {
         state.ready = true;
-        // 避免一進頁面就自動播放：預設只 cue（或維持當前）
-        loadVideoByIdIfReady({ autoplay: false });
+        if (state.videoId) {
+          loadVideoByIdIfReady({ autoplay: false });
+        }
       },
       onError: (event) => {
         console.error("[YouTube] errorCode =", event.data);
       },
     },
-  });
+  };
+  if (state.videoId) playerConfig.videoId = state.videoId;
+  state.player = new YT.Player("player", playerConfig);
 }
 
 window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
@@ -3641,13 +3644,13 @@ async function initPose() {
       state.poseLoopActive = true;
       cameraPump();
       state.cameraRunning = true;
-      els.startCameraButton.textContent = "關閉攝影機";
+      els.startCameraButton.textContent = "關閉鏡頭";
       els.startCameraButton.disabled = false;
       setRecordUi(getPlayerTimeSafe());
     } catch (err) {
       console.error(err);
       els.startCameraButton.disabled = false;
-      els.startCameraButton.textContent = "啟動攝影機";
+      els.startCameraButton.textContent = "啟動鏡頭";
       setRecordUi(getPlayerTimeSafe());
     }
   });
@@ -4124,7 +4127,7 @@ function updateUiLoop() {
     } else if (freeLoaded && hintMode === "user") {
       els.poseInfoText.style.display = "";
       if (!userLm) {
-        els.poseInfoText.textContent = "不綁歌曲：請啟動攝影機做動作";
+        els.poseInfoText.textContent = "不綁歌曲：請啟動鏡頭做動作";
       } else if (rLoaded.reason === "user_static") {
         els.poseInfoText.textContent = "請動動手（站著不動不計分）";
       } else if (rLoaded.ok) {
@@ -4259,11 +4262,10 @@ async function main() {
   bindDemoScaleSlider(els.demoScaleR1, "r1");
   bindDemoScaleSlider(els.demoScaleR2, "r2");
   setupYtFloatingWindow();
-  // 先設預設 videoId，避免 YT API 先就緒時用舊 placeholder 建播放器
-  if (!state.videoId) {
-    state.videoId = DEFAULT_YOUTUBE_VIDEO_ID;
-    if (els.videoUrlInput) els.videoUrlInput.value = DEFAULT_YOUTUBE_VIDEO_ID;
-  }
+  // 進頁不預設歌曲；等使用者「挑選音樂」或手動載入網址
+  if (els.videoUrlInput) els.videoUrlInput.value = "";
+  state.videoId = null;
+  state.lastLoadedVideoId = null;
   initYouTubePlayerIfPossible();
 
   try {
@@ -4277,26 +4279,15 @@ async function main() {
     state.demo.defaultEasy = easy;
     state.demo.defaultHard = hard;
 
-    // Mode2 預設：先放 3 支示範（你也可以再用「載入骨架」新增更多）
-    state.mode2.traces = [
-      { id: `demo_${formatTsForFilename()}_0`, name: "demo_easy", data: easy, enabled: true },
-      { id: `demo_${formatTsForFilename()}_1`, name: "demo_hard", data: hard, enabled: true },
-      { id: `demo_${formatTsForFilename()}_2`, name: "demo_easy2", data: easy, enabled: true },
-    ];
-    state.mode2.defaultTraces = cloneMode2Traces(state.mode2.traces);
+    // 進頁不預放示範舞者；挑選音樂／生成舞者後再出現
+    state.mode2.traces = [];
+    state.mode2.defaultTraces = [];
     updateMode2VideoMismatchWarn();
 
     computeDemoEnergyForTrace(state.demo.easy);
     computeDemoEnergyForTrace(state.demo.hard);
     computeDemoPartEnergyForTrace(state.demo.easy);
     computeDemoPartEnergyForTrace(state.demo.hard);
-
-    if (!state.videoId && typeof easy.videoId === "string" && easy.videoId) {
-      state.videoId = easy.videoId;
-      if (els.videoUrlInput) els.videoUrlInput.value = easy.videoId;
-    }
-    // 初始載入 demo 附帶的 videoId：只 cue 不自動播放
-    loadVideoByIdIfReady({ autoplay: false });
   } catch (err) {
     console.error("[DemoTrace] load failed:", err);
   }
@@ -4317,10 +4308,9 @@ async function main() {
 
   if (els.modeSelect) {
     els.modeSelect.addEventListener("change", () => {
-      const raw = els.modeSelect.value;
-      applyMode(raw === "mode2" ? "mode2" : "mode1");
+      applyMode("mode2");
     });
-    applyMode(els.modeSelect.value);
+    applyMode("mode2");
   } else {
     applyMode("mode2");
   }
@@ -4461,37 +4451,138 @@ async function main() {
     });
   }
 
-  // Mode2：生成舞者
-  if (els.addSynthTraceButton) {
-    const syncBounceDirVisibility = () => {
-      if (!els.synthBounceDirSelect) return;
-      const isBounce = (els.synthGrooveSelect?.value || "bounce") === "bounce";
-      els.synthBounceDirSelect.style.display = isBounce ? "" : "none";
-    };
-    const syncFootSideVisibility = () => {
-      if (!els.synthFootSideSelect) return;
-      const isSingle = (els.synthFootSelect?.value || "plant") === "single";
-      els.synthFootSideSelect.style.display = isSingle ? "" : "none";
-    };
-    syncBounceDirVisibility();
-    syncFootSideVisibility();
-    els.synthGrooveSelect?.addEventListener("change", syncBounceDirVisibility);
-    els.synthFootSelect?.addEventListener("change", syncFootSideVisibility);
+  // 生成舞者：讀「設置骨架」內的參數（可隨機混和；不含側一步）
+  function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
 
+  function syncSynthSettingsVisibility() {
+    const groove =
+      els.settingsGrooveSelect?.value ||
+      els.synthGrooveSelect?.value ||
+      "bounce";
+    const foot =
+      els.settingsFootSelect?.value || els.synthFootSelect?.value || "plant";
+    if (els.settingsBounceDirField) {
+      els.settingsBounceDirField.style.display =
+        groove === "bounce" ? "" : "none";
+    }
+    if (els.settingsFootSideField) {
+      els.settingsFootSideField.style.display =
+        foot === "single" ? "" : "none";
+    }
+    const randomOn = Boolean(els.synthRandomMixCheckbox?.checked);
+    if (els.synthManualSettings) {
+      els.synthManualSettings.style.opacity = randomOn ? "0.55" : "1";
+    }
+  }
+
+  function resolveSynthGenerateOptions() {
+    const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
+    const randomMix = Boolean(els.synthRandomMixCheckbox?.checked);
+    let grooveMode;
+    let bounceDir;
+    let footMode;
+    let footSide;
+    let patternMode;
+
+    if (randomMix) {
+      grooveMode = pickRandom(["bounce", "swing"]);
+      bounceDir = grooveMode === "bounce" ? pickRandom(["down", "up"]) : "down";
+      footMode = pickRandom(["plant", "single", "double"]);
+      footSide = footMode === "single" ? pickRandom(["L", "R"]) : "L";
+      patternMode = "mix";
+    } else {
+      grooveMode =
+        els.settingsGrooveSelect?.value ||
+        els.synthGrooveSelect?.value ||
+        "bounce";
+      bounceDir =
+        els.settingsBounceDirSelect?.value ||
+        els.synthBounceDirSelect?.value ||
+        "down";
+      footMode =
+        els.settingsFootSelect?.value || els.synthFootSelect?.value || "plant";
+      if (footMode === "side") footMode = "plant";
+      footSide =
+        els.settingsFootSideSelect?.value ||
+        els.synthFootSideSelect?.value ||
+        "L";
+      patternMode =
+        els.settingsPatternSelect?.value ||
+        els.synthPatternSelect?.value ||
+        "mix";
+    }
+
+    return { bpm, grooveMode, bounceDir, footMode, footSide, patternMode, randomMix };
+  }
+
+  function openSkeletonSettingsModal() {
+    if (!els.skeletonSettingsBackdrop) return;
+    syncSynthSettingsVisibility();
+    els.skeletonSettingsBackdrop.classList.add("is-open");
+    els.skeletonSettingsBackdrop.setAttribute("aria-hidden", "false");
+  }
+
+  function closeSkeletonSettingsModal() {
+    if (!els.skeletonSettingsBackdrop) return;
+    els.skeletonSettingsBackdrop.classList.remove("is-open");
+    els.skeletonSettingsBackdrop.setAttribute("aria-hidden", "true");
+  }
+
+  if (els.skeletonSettingsButton) {
+    els.skeletonSettingsButton.addEventListener("click", () => {
+      openSkeletonSettingsModal();
+    });
+  }
+  if (els.skeletonSettingsCloseButton) {
+    els.skeletonSettingsCloseButton.addEventListener("click", () => {
+      closeSkeletonSettingsModal();
+    });
+  }
+  if (els.skeletonSettingsBackdrop) {
+    els.skeletonSettingsBackdrop.addEventListener("click", (ev) => {
+      if (ev.target === els.skeletonSettingsBackdrop) closeSkeletonSettingsModal();
+    });
+  }
+
+  if (els.settingsLoadSkeletonButton && els.mode2SkeletonFileInput) {
+    els.settingsLoadSkeletonButton.addEventListener("click", () => {
+      els.mode2SkeletonFileInput.value = "";
+      els.mode2SkeletonFileInput.click();
+    });
+  }
+  if (els.settingsToggleSkeletonButton && els.toggleMode2DemoABCButton) {
+    els.settingsToggleSkeletonButton.addEventListener("click", () => {
+      els.toggleMode2DemoABCButton.click();
+    });
+  }
+  if (els.settingsRestoreSkeletonButton && els.restoreMode2BindingButton) {
+    els.settingsRestoreSkeletonButton.addEventListener("click", () => {
+      els.restoreMode2BindingButton.click();
+    });
+  }
+
+  els.settingsGrooveSelect?.addEventListener("change", syncSynthSettingsVisibility);
+  els.settingsFootSelect?.addEventListener("change", syncSynthSettingsVisibility);
+  els.synthRandomMixCheckbox?.addEventListener("change", syncSynthSettingsVisibility);
+  syncSynthSettingsVisibility();
+
+  if (els.addSynthTraceButton) {
     els.addSynthTraceButton.addEventListener("click", () => {
       if (state.ui.mode !== "mode2") return;
       if (!_synthModule) {
         console.warn("[Synth] proceduralSkeleton.js 尚未載入，無法生成");
         return;
       }
-      const bpm = parseInt(els.synthBpmInput?.value, 10) || 120;
-      const grooveMode = els.synthGrooveSelect?.value || "bounce";
-      const bounceDir = els.synthBounceDirSelect?.value || "down";
-      const footMode = els.synthFootSelect?.value || "plant";
-      const footSide = els.synthFootSideSelect?.value || "L";
-      const patternMode = els.synthPatternSelect?.value || "random";
+      const opts = resolveSynthGenerateOptions();
       const trace = createSyntheticTrace({
-        bpm, grooveMode, bounceDir, footMode, footSide, patternMode,
+        bpm: opts.bpm,
+        grooveMode: opts.grooveMode,
+        bounceDir: opts.bounceDir,
+        footMode: opts.footMode,
+        footSide: opts.footSide,
+        patternMode: opts.patternMode,
       });
       if (!trace) return;
       state.mode2.traces.push(trace);
@@ -4500,18 +4591,13 @@ async function main() {
       clearOverlayCanvas();
       console.log("[Synth] 已新增舞者", {
         id: trace.id,
-        bpm,
-        grooveMode,
-        bounceDir,
-        footMode,
-        footSide,
-        patternMode,
+        ...opts,
         build: _synthModule?.PROCEDURAL_SKELETON_BUILD,
       });
     });
   }
 
-  // Mode1：顯示/隱藏示範骨架
+  // Mode1：顯示/隱藏示範骨架（打分模式已隱藏，保留邏輯）
   const updateMode1DemoButtonText = () => {
     if (!els.toggleMode1DemoButton) return;
     els.toggleMode1DemoButton.textContent = state.ui.mode1DemoEnabled

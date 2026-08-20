@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./main.css" />
-    <link rel="stylesheet" href="./posedanceTest.css" />
+    <link rel="stylesheet" href="./posedanceTest.css?v=light-blue-1" />
   </head>
   <body>
     <div class="app">
@@ -17,127 +17,75 @@
               id="videoUrlInput"
               class="topbar__url-input topbar__url-input--compact"
               type="text"
-              placeholder="貼上 YouTube 網址"
+              placeholder="YouTube 網址"
             />
             <button id="loadVideoButton" class="btn btn-load" type="button">
-              載入影片
+              載入
             </button>
             <button id="pickSongButton" class="btn btn-load" type="button">
               挑選音樂
             </button>
-            <button id="loadSkeletonButton" class="btn btn-load" type="button">
-              載入骨架
+            <input
+              id="synthBpmInput"
+              class="topbar__url-input topbar__bpm-input"
+              type="number"
+              min="40"
+              max="300"
+              value="120"
+              title="BPM（選歌後可自動帶入；可手動改）"
+            />
+            <button id="addSynthTraceButton" class="btn btn-load" type="button">
+              生成舞者
             </button>
             <button
-              id="clearLoadedSkeletonButton"
-              class="btn btn-load btn-load--danger"
-              type="button"
-              title="清除已載入的使用者／游泳骨架（Delete）"
-            >
-              清除載入
-            </button>
-            <button
-              id="deleteSelectedSkeletonButton"
-              class="btn btn-load btn-load--danger"
-              type="button"
-              style="display: none"
-              title="刪除 Mode1 選中的骨架（或剛載入的）；Delete 亦可"
-            >
-              刪除選中骨架
-            </button>
-            <button
-              id="toggleMode1DemoButton"
+              id="skeletonSettingsButton"
               class="btn btn-load"
               type="button"
             >
-              隱藏骨架
+              設置骨架
             </button>
-            <button
-              id="loadMode2SkeletonButton"
-              class="btn btn-load"
-              type="button"
-              style="display: none"
-            >
-              載入骨架
-            </button>
-            <button
-              id="toggleMode2DemoABCButton"
-              class="btn btn-load"
-              type="button"
-              style="display: none"
-            >
-              關閉/顯示骨架
-            </button>
-            <button
-              id="restoreMode2BindingButton"
-              class="btn btn-load"
-              type="button"
-              style="display: none"
-            >
-              恢復本首歌預設骨架
-            </button>
-            <span id="synthControls" style="display: none">
-              <input
-                id="synthBpmInput"
-                class="topbar__url-input topbar__bpm-input"
-                type="number"
-                min="40"
-                max="300"
-                value="120"
-                title="BPM"
-              />
-              <select
-                id="synthGrooveSelect"
-                class="topbar__url-input topbar__groove-select"
-                title="律動類型"
-              >
+            <!-- 隱藏：打分模式／舊頂欄控制（邏輯仍可能由設置視窗觸發） -->
+            <select id="modeSelect" class="topbar__mode-select" hidden aria-hidden="true">
+              <option value="mode2" selected>Mode 1</option>
+              <option value="mode1">Mode 2</option>
+            </select>
+            <select id="hintModeSelect" class="topbar__mode-select" hidden aria-hidden="true">
+              <option value="easy" selected>Easy</option>
+              <option value="hard">Hard</option>
+              <option value="user">使用者(姿勢)</option>
+            </select>
+            <button id="loadSkeletonButton" type="button" hidden>載入骨架</button>
+            <button id="clearLoadedSkeletonButton" type="button" hidden>清除載入</button>
+            <button id="deleteSelectedSkeletonButton" type="button" hidden>刪除選中骨架</button>
+            <button id="toggleMode1DemoButton" type="button" hidden>隱藏骨架</button>
+            <button id="loadMode2SkeletonButton" type="button" hidden>載入骨架</button>
+            <button id="toggleMode2DemoABCButton" type="button" hidden>關閉/顯示骨架</button>
+            <button id="restoreMode2BindingButton" type="button" hidden>恢復本首歌預設骨架</button>
+            <span id="synthControls" hidden>
+              <select id="synthGrooveSelect" title="律動類型">
                 <option value="swing">Swing</option>
                 <option value="bounce" selected>Bounce</option>
               </select>
-              <select
-                id="synthBounceDirSelect"
-                class="topbar__url-input topbar__bounce-dir-select"
-                title="Bounce 方向（僅 Bounce）"
-              >
+              <select id="synthBounceDirSelect" title="Bounce 方向">
                 <option value="down" selected>down</option>
                 <option value="up">up</option>
               </select>
-              <select
-                id="synthFootSelect"
-                class="topbar__url-input topbar__foot-select"
-                title="踏步模式"
-              >
+              <select id="synthFootSelect" title="踏步模式">
                 <option value="plant" selected>釘地</option>
-                <option value="single">單腳踏（同側）</option>
-                <option value="double">原地交替（雙腳）</option>
-                <option value="side">側一步（step-touch）</option>
+                <option value="single">單腳踏</option>
+                <option value="double">原地交替</option>
               </select>
-              <select
-                id="synthFootSideSelect"
-                class="topbar__url-input topbar__foot-side-select"
-                title="單腳踏：哪一腳（MediaPipe 左／右）"
-              >
+              <select id="synthFootSideSelect" title="單腳：左／右">
                 <option value="L" selected>左腳</option>
                 <option value="R">右腳</option>
               </select>
-              <select
-                id="synthPatternSelect"
-                class="topbar__url-input topbar__pattern-select"
-                title="動作 Pattern（檢視用）"
-              >
+              <select id="synthPatternSelect" title="動作 Pattern">
                 <option value="random">隨機</option>
                 <option value="mix" selected>Mix（全部混合）</option>
                 <option value="wave">左右揮手</option>
                 <option value="surrender">雙手投降舉</option>
                 <option value="clap">胸前拍手</option>
               </select>
-              <button
-                id="addSynthTraceButton"
-                class="btn btn-load"
-                type="button"
-              >
-                生成舞者
-              </button>
             </span>
             <input
               id="skeletonFileInput"
@@ -156,25 +104,8 @@
             />
           </div>
           <div class="topbar__controls-group topbar__controls-group--right">
-            <select
-              id="modeSelect"
-              class="topbar__mode-select"
-              aria-label="模式"
-            >
-              <option value="mode2" selected>Mode 1</option>
-              <option value="mode1">Mode 2</option>
-            </select>
-            <select
-              id="hintModeSelect"
-              class="topbar__mode-select"
-              title="選「使用者」並載入不綁歌曲 JSON：姿勢吻合即可，不受速度快慢影響"
-            >
-              <option value="easy" selected>Easy</option>
-              <option value="hard">Hard</option>
-              <option value="user">使用者(姿勢)</option>
-            </select>
             <button id="startCameraButton" class="btn btn-camera" type="button">
-              啟動攝影機
+              啟動鏡頭
             </button>
             <label
               class="record-bind-toggle"
@@ -205,6 +136,93 @@
           </div>
         </div>
       </header>
+
+      <div class="modal-backdrop" id="skeletonSettingsBackdrop" aria-hidden="true">
+        <div
+          class="modal modal--settings"
+          role="dialog"
+          aria-modal="true"
+          aria-label="設置骨架"
+        >
+          <div class="modal__header">
+            <div class="modal__title">設置骨架</div>
+            <button
+              class="modal__close"
+              id="skeletonSettingsCloseButton"
+              type="button"
+            >
+              關閉
+            </button>
+          </div>
+          <div class="modal__body modal__body--settings">
+            <section class="settings-section">
+              <h3 class="settings-section__title">骨架</h3>
+              <div class="settings-section__row">
+                <button id="settingsLoadSkeletonButton" class="btn btn-load" type="button">
+                  載入骨架
+                </button>
+                <button id="settingsToggleSkeletonButton" class="btn btn-load" type="button">
+                  關閉／顯示骨架
+                </button>
+                <button id="settingsRestoreSkeletonButton" class="btn btn-load" type="button">
+                  恢復本首歌預設骨架
+                </button>
+              </div>
+            </section>
+            <section class="settings-section">
+              <h3 class="settings-section__title">生成舞者設置</h3>
+              <label class="settings-check">
+                <input id="synthRandomMixCheckbox" type="checkbox" checked />
+                每次生成時隨機混和（律動／方向／踏腳）
+              </label>
+              <div class="settings-grid" id="synthManualSettings">
+                <label class="settings-field">
+                  <span>律動</span>
+                  <select id="settingsGrooveSelect" class="topbar__url-input">
+                    <option value="swing">Swing</option>
+                    <option value="bounce" selected>Bounce</option>
+                  </select>
+                </label>
+                <label class="settings-field" id="settingsBounceDirField">
+                  <span>Bounce 方向</span>
+                  <select id="settingsBounceDirSelect" class="topbar__url-input">
+                    <option value="down" selected>down</option>
+                    <option value="up">up</option>
+                  </select>
+                </label>
+                <label class="settings-field">
+                  <span>踏腳</span>
+                  <select id="settingsFootSelect" class="topbar__url-input">
+                    <option value="plant" selected>釘地</option>
+                    <option value="single">單腳踏</option>
+                    <option value="double">原地交替</option>
+                  </select>
+                </label>
+                <label class="settings-field" id="settingsFootSideField">
+                  <span>單腳哪一側</span>
+                  <select id="settingsFootSideSelect" class="topbar__url-input">
+                    <option value="L" selected>左腳</option>
+                    <option value="R">右腳</option>
+                  </select>
+                </label>
+                <label class="settings-field">
+                  <span>動作</span>
+                  <select id="settingsPatternSelect" class="topbar__url-input">
+                    <option value="random">隨機</option>
+                    <option value="mix" selected>Mix（全部混合）</option>
+                    <option value="wave">左右揮手</option>
+                    <option value="surrender">雙手投降舉</option>
+                    <option value="clap">胸前拍手</option>
+                  </select>
+                </label>
+              </div>
+              <p class="settings-hint">
+                主畫面按「生成舞者」會套用以上設定。已移除側一步。
+              </p>
+            </section>
+          </div>
+        </div>
+      </div>
 
       <div class="modal-backdrop" id="songModalBackdrop" aria-hidden="true">
         <div
@@ -382,6 +400,6 @@
       }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="./posedanceTest.js?build=swim-bg-v1"></script>
+    <script type="module" src="./posedanceTest.js?build=ui-compact-v1"></script>
   </body>
 </html>
