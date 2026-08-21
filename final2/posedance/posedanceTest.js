@@ -268,6 +268,25 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function setBootLoading(on, text) {
+  const el = els.bootLoading || $("bootLoading");
+  const textEl = els.bootLoadingText || $("bootLoadingText");
+  if (textEl && typeof text === "string" && text) textEl.textContent = text;
+  if (!el) return;
+  if (on) {
+    el.classList.remove("is-done");
+    el.setAttribute("aria-busy", "true");
+    el.hidden = false;
+  } else {
+    el.classList.add("is-done");
+    el.setAttribute("aria-busy", "false");
+    // 等淡出後再 hidden，避免閃爍
+    window.setTimeout(() => {
+      if (el.classList.contains("is-done")) el.hidden = true;
+    }, 280);
+  }
+}
+
 const consoleUiStatus = {
   lastLogAt: 0,
   lastSig: "",
@@ -547,6 +566,8 @@ function initDomRefs() {
 
   els.ytWrapper = $("ytPlayerWrapper");
   els.ytDragHandle = $("ytDragHandle");
+  els.bootLoading = $("bootLoading");
+  els.bootLoadingText = $("bootLoadingText");
   els.ytResizeHandle = $("ytResizeHandle");
   els.ytResizeHandleTL = $("ytResizeHandleTL");
   els.ytResizeHandleTR = $("ytResizeHandleTR");
@@ -4333,6 +4354,7 @@ function updateUiLoop() {
 
 async function main() {
   initDomRefs();
+  setBootLoading(true, "載入中…");
   // debug handle for DevTools
   window.__posedanceTestState = state;
   setModeUiText();
@@ -4348,6 +4370,7 @@ async function main() {
   initYouTubePlayerIfPossible();
 
   try {
+    setBootLoading(true, "載入骨架與場景…");
     const [easy, hard] = await Promise.all([
       loadDemoTrace(DEMO_TRACE_PATHS.easy),
       loadDemoTrace(DEMO_TRACE_PATHS.hard),
@@ -5107,9 +5130,14 @@ async function main() {
     });
   }
 
+  setBootLoading(true, "準備鏡頭…");
   initBeachScene();
   await initPose();
   updateUiLoop();
+  setBootLoading(false);
 }
 
-main();
+main().catch((err) => {
+  console.error("[Boot] 啟動失敗", err);
+  setBootLoading(true, "載入失敗，請重新整理");
+});

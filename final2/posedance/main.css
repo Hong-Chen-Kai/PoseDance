@@ -709,6 +709,53 @@ body {
   }
 }
 
+/* 開頁載入（各電腦速度不同，給使用者明確回饋） */
+.boot-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.92);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.boot-loading.is-done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boot-loading__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 36px rgba(15, 23, 42, 0.12);
+}
+
+.boot-loading__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(37, 99, 235, 0.18);
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: modal-applying-spin 0.75s linear infinite;
+}
+
+.boot-loading__text {
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: #0f172a;
+  letter-spacing: 0.02em;
+}
+
 .modal__header {
   display: flex;
   align-items: center;

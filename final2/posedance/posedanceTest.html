@@ -5,9 +5,21 @@
     <title>Pose Dance</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./main.css?v=merge-1" />
+    <link rel="stylesheet" href="./main.css?v=boot-loading-1" />
 </head>
   <body>
+    <div
+      id="bootLoading"
+      class="boot-loading"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div class="boot-loading__card">
+        <div class="boot-loading__spinner" aria-hidden="true"></div>
+        <div class="boot-loading__text" id="bootLoadingText">載入中…</div>
+      </div>
+    </div>
     <div class="app">
       <header class="topbar topbar--compact">
         <div class="topbar__controls">
@@ -399,6 +411,6 @@
       }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="./posedanceTest.js?build=swim-enter-2s"></script>
+    <script type="module" src="./posedanceTest.js?build=boot-loading-1"></script>
   </body>
 </html>
