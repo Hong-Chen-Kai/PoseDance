@@ -207,17 +207,17 @@ const state = {
     energyMinWeight: 0.1,
     /** 不綁歌曲：每幀最多比對幾個 demo 樣本（均勻抽樣） */
     freeMaxCompare: 90,
-    /** 不綁歌曲：分數曲線（折中） */
-    freeK: 1.7,
-    /** 不綁歌曲：達標門檻 */
+    /** 不綁歌曲：分數曲線（愈大愈嚴） */
+    freeK: 1.85,
+    /** 不綁歌曲：達標門檻（文案用；進海邊看 swim.orange.enterThreshold） */
     freePassScore: 86,
     /** 不綁歌曲：上半身有效點下限 */
     freeMinValidPoints: 4,
     /** 載入自由姿勢時裁掉頭／尾（秒） */
     freeTrimHeadSec: 2,
     freeTrimTailSec: 2,
-    /** 不綁歌曲：近窗手腕速度低於此視為站立（正規化座標／秒） */
-    freeWristSpeedMin: 0.15,
+    /** 不綁歌曲：近窗手腕速度低於此視為站立（正規化座標／秒；愈大愈要用力划） */
+    freeWristSpeedMin: 0.18,
     /** 手腕速度統計時間窗（秒） */
     freeWristWindowSec: 0.3,
   },
@@ -245,9 +245,10 @@ const state = {
     overall: [],
     orange: (() => {
       const g = createOrangeGateState();
-      g.enterThreshold = 82;
-      g.exitThreshold = 75;
-      g.enterRequireSec = 1.5;
+      // 分數需夠高才算「像划水」；連續維持 enterRequireSec 才進海邊
+      g.enterThreshold = 86;
+      g.exitThreshold = 80;
+      g.enterRequireSec = 2;
       g.exitRequireSec = 5;
       return g;
     })(),
