@@ -50,7 +50,7 @@ function createOrangeGateState() {
     exitBadSec: 0,
     window: [],
     lastT: null,
-    enterThreshold: 86,
+    enterThreshold: 85,
     enterRequireSec: 2,
     enterInstantMajorityRatio: 0.6,
     exitThreshold: 80,
@@ -210,7 +210,7 @@ const state = {
     /** 不綁歌曲：分數曲線（愈大愈嚴） */
     freeK: 1.85,
     /** 不綁歌曲：達標門檻（文案用；進海邊看 swim.orange.enterThreshold） */
-    freePassScore: 86,
+    freePassScore: 85,
     /** 不綁歌曲：上半身有效點下限 */
     freeMinValidPoints: 4,
     /** 載入自由姿勢時裁掉頭／尾（秒） */
@@ -246,7 +246,7 @@ const state = {
     orange: (() => {
       const g = createOrangeGateState();
       // 分數需夠高才算「像划水」；連續維持 enterRequireSec 才進海邊
-      g.enterThreshold = 86;
+      g.enterThreshold = 85;
       g.exitThreshold = 80;
       g.enterRequireSec = 2;
       g.exitRequireSec = 5;
@@ -3889,6 +3889,9 @@ function getSynthTraceForHud() {
 function updateSynthPatternHud(tScore) {
   const el = els.synthPatternHud;
   if (!el) return;
+  // 暫時關閉：生成舞者左上角「動作銜接」提示
+  el.style.display = "none";
+  return;
   if (state.ui?.mode !== "mode2") {
     el.style.display = "none";
     return;
