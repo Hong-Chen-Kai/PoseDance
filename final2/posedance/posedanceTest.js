@@ -238,12 +238,16 @@ const state = {
 
   /**
    * 背景划水偵測（預載 swim.json，不畫示範骨架）
-   * 達標 → 切海邊；失敗 → 接回
+   * 達標 → 切海邊；停止划水約 5 秒 → 接回黑畫面
    */
   swim: {
     trace: null,
     overall: [],
-    orange: createOrangeGateState(),
+    orange: (() => {
+      const g = createOrangeGateState();
+      g.exitRequireSec = 5;
+      return g;
+    })(),
     ready: false,
   },
 
