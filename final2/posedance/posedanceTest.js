@@ -245,6 +245,9 @@ const state = {
     overall: [],
     orange: (() => {
       const g = createOrangeGateState();
+      g.enterThreshold = 82;
+      g.exitThreshold = 75;
+      g.enterRequireSec = 1.5;
       g.exitRequireSec = 5;
       return g;
     })(),
@@ -3950,6 +3953,75 @@ function initBeachScene() {
   }
 }
 
+/** 由現有 overall buffer 重算加權平均（不寫入） */
+function peekOverall(buffer) {
+  if (!Array.isArray(buffer) || !buffer.length) return null;
+  let sumW = 0;
+  let sum = 0;
+  for (const it of buffer) {
+    if (!it) continue;
+    const iw = Number.isFinite(it.w) ? it.w : 1;
+    const is = Number.isFinite(it.score) ? it.score : null;
+    if (is === null) continue;
+    sumW += iw;
+    sum += iw * is;
+  }
+  if (!(sumW > 0)) return null;
+  return sum / sumW;
+}
+
+/**
+ * 背景划水偵測 → 海邊場景（Mode1／Mode2 皆需呼叫；不畫示範骨架）
+ * @param {{ wristSpeed?: number }} [opts]
+ * @returns {boolean} 目前是否維持海邊
+ */
+function tickBackgroundSwimDetect(opts = {}) {
+  const userLm = state.latestUserLandmarks;
+  const wallT = performance.now() / 1000;
+  let swimOrange = false;
+
+  if (userLm && state.swim.trace) {
+    const wristSpeed =
+      typeof opts.wristSpeed === "number"
+        ? opts.wristSpeed
+        : updateAndGetWristSpeed(userLm);
+    const rSwim = computePoseBestScoreD(userLm, state.swim.trace, { wristSpeed });
+    let overallSwimNum = null;
+    if (rSwim.ok) {
+      const ov = pushOverall(state.swim.overall, wallT, rSwim.score, 1);
+      if (typeof ov === "number") overallSwimNum = ov;
+    } else {
+      // 單幀失敗仍用近窗整體分，避免 enter 計時一直被清零
+      overallSwimNum = peekOverall(state.swim.overall);
+    }
+    const swimInstant = rSwim.ok ? rSwim.score : null;
+    swimOrange = updateOrangeState(
+      wallT,
+      swimInstant,
+      overallSwimNum,
+      state.swim.orange,
+    );
+  } else if (!userLm && state.swim.orange.active) {
+    state.swim.orange.active = false;
+    state.swim.orange.enterGoodSec = 0;
+    state.swim.orange.exitBadSec = 0;
+    state.swim.orange.window = [];
+    state.swim.orange.lastT = null;
+    swimOrange = false;
+  }
+
+  syncBeachScene(Boolean(swimOrange));
+
+  if (els.poseInfoText && state.swim.ready && state.cameraRunning) {
+    els.poseInfoText.style.display = "";
+    els.poseInfoText.textContent = swimOrange
+      ? "划水中 · 海邊場景"
+      : "鏡頭開啟 · 划水可切換海邊";
+  }
+
+  return Boolean(swimOrange);
+}
+
 function updateUiLoop() {
   requestAnimationFrame(updateUiLoop);
 
@@ -3980,6 +4052,8 @@ function updateUiLoop() {
     if (typeof tScore === "number" && Number.isFinite(tScore)) {
       updateMode2VideoMismatchWarn();
     }
+    // 背景划水必須在此執行（精簡 UI 鎖定 mode2，不可 early-return 跳過）
+    tickBackgroundSwimDetect();
     drawMode2Overlay(tMode2);
     return;
   }
@@ -4001,6 +4075,7 @@ function updateUiLoop() {
   const freeLoaded = isFreePoseTrace(state.demo.loaded);
   const wallT = performance.now() / 1000;
   const wristSpeed = userLm ? updateAndGetWristSpeed(userLm) : 0;
+  const swimOrange = tickBackgroundSwimDetect({ wristSpeed });
 
   // Similarity
   let rEasy = { ok: false, score: 0 };
@@ -4061,30 +4136,7 @@ function updateUiLoop() {
     }
   }
 
-  // ---- 背景划水偵測（不顯示模板骨架／HUD）
-  let swimOrange = false;
-  if (userLm && state.swim.trace) {
-    const rSwim = computePoseBestScoreD(userLm, state.swim.trace, { wristSpeed });
-    let overallSwimNum = null;
-    if (rSwim.ok) {
-      const ov = pushOverall(state.swim.overall, wallT, rSwim.score, 1);
-      if (typeof ov === "number") overallSwimNum = ov;
-    }
-    const swimInstant = rSwim.ok ? rSwim.score : null;
-    swimOrange = updateOrangeState(
-      wallT,
-      swimInstant,
-      overallSwimNum,
-      state.swim.orange,
-    );
-  } else if (!userLm && state.swim.orange.active) {
-    // 失去骨架時立刻退出海邊
-    state.swim.orange.active = false;
-    state.swim.orange.enterGoodSec = 0;
-    state.swim.orange.exitBadSec = 0;
-    state.swim.orange.window = [];
-    state.swim.orange.lastT = null;
-  }
+  // ---- 背景划水已由 tickBackgroundSwimDetect 處理
 
   if (userLm && (canUseTime || freeLoaded)) {
     setUi({
@@ -4149,17 +4201,8 @@ function updateUiLoop() {
   // 使用者骨架高亮：划水達標或歌曲提示達標
   const userGood = Boolean(swimOrange || isOrange);
 
-  // 背景划水達標 → 海邊；否則接回（不依賴手動載入／提示模式）
-  syncBeachScene(Boolean(swimOrange));
-
-  if (els.poseInfoText) {
-    if (state.swim.ready && state.cameraRunning) {
-      // 背景偵測不顯示分數，保持輕量提示
-      els.poseInfoText.style.display = "";
-      els.poseInfoText.textContent = swimOrange
-        ? "划水中 · 海邊場景"
-        : "攝影機開啟 · 划水可切換海邊";
-    } else if (freeLoaded && hintMode === "user") {
+  if (els.poseInfoText && !(state.swim.ready && state.cameraRunning)) {
+    if (freeLoaded && hintMode === "user") {
       els.poseInfoText.style.display = "";
       if (!userLm) {
         els.poseInfoText.textContent = "不綁歌曲：請啟動鏡頭做動作";
