@@ -1,0 +1,16 @@
+# posedance — local / not for runtime git noise
+node_modules/
+tools/
+archive/
+posedance-lab-deploy/
+../posedance-lab-deploy/
+
+# Intermediate song production (if recreated later)
+song-skeletons/**/mode2/generated/
+song-skeletons/**/mode2/library/
+song-skeletons/**/mode2/sources/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp
