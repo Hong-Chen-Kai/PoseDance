@@ -4,13 +4,23 @@ import { createSceneWorld, SCENE_LABELS } from "./scenes/sceneWorld.js";
 // 程序化骨架：動態載入，避免 404 導致整頁失效（?build= 避免瀏覽器快取舊版）
 const PROCEDURAL_IMPORT_BUILD = "foot-d4-v7";
 let _synthModule = null;
-const _synthReady = import(`./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`)
+const _synthReady = import(
+  `./proceduralSkeleton.js?build=${PROCEDURAL_IMPORT_BUILD}`
+)
   .then((m) => {
     _synthModule = m;
     const build = m.PROCEDURAL_SKELETON_BUILD || "?";
-    console.log("[Synth] proceduralSkeleton.js 載入成功", { build, importBuild: PROCEDURAL_IMPORT_BUILD });
+    console.log("[Synth] proceduralSkeleton.js 載入成功", {
+      build,
+      importBuild: PROCEDURAL_IMPORT_BUILD,
+    });
   })
-  .catch((e) => { console.warn("[Synth] proceduralSkeleton.js 載入失敗（程序化舞者功能停用）", e); });
+  .catch((e) => {
+    console.warn(
+      "[Synth] proceduralSkeleton.js 載入失敗（程序化舞者功能停用）",
+      e,
+    );
+  });
 
 function createSyntheticTrace(opts) {
   if (!_synthModule) return null;
@@ -24,7 +34,6 @@ function getSyntheticPatternInfoAtTime(trace, t) {
   if (!_synthModule?.getSyntheticPatternInfoAtTime) return null;
   return _synthModule.getSyntheticPatternInfoAtTime(trace, t);
 }
-
 
 const DEMO_SOURCE_ASPECT = 16 / 9;
 /** 預設歌曲：小蘋果舞蹈用版本（與 demo / song-skeletons 一致；勿再用 rickroll placeholder） */
@@ -103,7 +112,13 @@ const state = {
   videoId: null,
   lastLoadedVideoId: null,
 
-  demo: { easy: null, hard: null, loaded: null, defaultEasy: null, defaultHard: null },
+  demo: {
+    easy: null,
+    hard: null,
+    loaded: null,
+    defaultEasy: null,
+    defaultHard: null,
+  },
 
   mode2: {
     traces: [], // Array<{ id, name, data, enabled }>
@@ -208,7 +223,7 @@ const state = {
     /** 不綁歌曲：每幀最多比對幾個 demo 樣本（均勻抽樣） */
     freeMaxCompare: 90,
     /** 不綁歌曲：分數曲線（愈大愈嚴） */
-    freeK: 1.85,
+    freeK: 1.8,
     /** 不綁歌曲：達標門檻（文案用；進海邊看 swim.orange.enterThreshold） */
     freePassScore: 85,
     /** 不綁歌曲：上半身有效點下限 */
@@ -217,7 +232,7 @@ const state = {
     freeTrimHeadSec: 2,
     freeTrimTailSec: 2,
     /** 不綁歌曲：近窗手腕速度低於此視為站立（正規化座標／秒；愈大愈要用力划） */
-    freeWristSpeedMin: 0.18,
+    freeWristSpeedMin: 0.14,
     /** 手腕速度統計時間窗（秒） */
     freeWristWindowSec: 0.3,
   },
@@ -437,7 +452,8 @@ function hideMode1DemoSlot(id) {
 
 function hideAllMode1DemoSlots() {
   if (!state.ui.mode1DemoSlotsHidden) state.ui.mode1DemoSlotsHidden = {};
-  for (const id of MODE1_DEMO_SLOT_IDS) state.ui.mode1DemoSlotsHidden[id] = true;
+  for (const id of MODE1_DEMO_SLOT_IDS)
+    state.ui.mode1DemoSlotsHidden[id] = true;
   state.ui.mode1DemoDeleteRects = {};
   if (
     state.interact?.selectedId &&
@@ -455,7 +471,8 @@ function hideAllMode1DemoSlots() {
 
 function showAllMode1DemoSlots() {
   if (!state.ui.mode1DemoSlotsHidden) state.ui.mode1DemoSlotsHidden = {};
-  for (const id of MODE1_DEMO_SLOT_IDS) state.ui.mode1DemoSlotsHidden[id] = false;
+  for (const id of MODE1_DEMO_SLOT_IDS)
+    state.ui.mode1DemoSlotsHidden[id] = false;
   state.ui.mode1DemoEnabled = true;
   if (els.toggleMode1DemoButton) {
     els.toggleMode1DemoButton.textContent = "隱藏骨架";
@@ -477,9 +494,7 @@ function cloneMode2Traces(traces) {
     .filter((trace) => trace && trace.data)
     .map((trace, index) => ({
       id:
-        typeof trace.id === "string" && trace.id
-          ? trace.id
-          : `trace_${index}`,
+        typeof trace.id === "string" && trace.id ? trace.id : `trace_${index}`,
       name:
         typeof trace.name === "string" && trace.name
           ? trace.name
@@ -780,7 +795,10 @@ function computeMode2GridRects(w, h, avoidRect, count, baseSizeRect) {
     const overlap = rectIntersectionArea(p, avoidRect);
     if (overlap <= 1) return p;
     // shrink height a bit (simple heuristic)
-    const shrink = Math.min(p.dh * 0.25, Math.max(0, overlap / Math.max(1, p.dw)));
+    const shrink = Math.min(
+      p.dh * 0.25,
+      Math.max(0, overlap / Math.max(1, p.dw)),
+    );
     return { ...p, oy: p.oy + shrink / 2, dh: Math.max(60, p.dh - shrink) };
   });
 
@@ -868,7 +886,9 @@ function autoLayoutMode2({ animate = true } = {}) {
 
   for (const id of ids) {
     const isPinned = Boolean(state.interact?.pinned?.[id]);
-    const rPinned = isPinned ? (state.interact?.rectOverrides?.[id] || getDrawRect(id, defaults)) : null;
+    const rPinned = isPinned
+      ? state.interact?.rectOverrides?.[id] || getDrawRect(id, defaults)
+      : null;
     if (rPinned) occupied.push(rPinned);
   }
 
@@ -926,7 +946,12 @@ function getPointerPosInOverlayCssPx(ev, canvasEl) {
 
 function rectContains(rect, x, y) {
   if (!rect) return false;
-  return x >= rect.ox && x <= rect.ox + rect.dw && y >= rect.oy && y <= rect.oy + rect.dh;
+  return (
+    x >= rect.ox &&
+    x <= rect.ox + rect.dw &&
+    y >= rect.oy &&
+    y <= rect.oy + rect.dh
+  );
 }
 
 function shrinkRect(rect, insetPx) {
@@ -1002,7 +1027,12 @@ function centerRectOnBBox(rect, bbox) {
   const rcy = rect.oy + rect.dh / 2;
   const bcx = bbox.ox + bbox.dw / 2;
   const bcy = bbox.oy + bbox.dh / 2;
-  return { ox: rect.ox + (rcx - bcx), oy: rect.oy + (rcy - bcy), dw: rect.dw, dh: rect.dh };
+  return {
+    ox: rect.ox + (rcx - bcx),
+    oy: rect.oy + (rcy - bcy),
+    dw: rect.dw,
+    dh: rect.dh,
+  };
 }
 
 function shrinkRectX(rect, insetPx) {
@@ -1014,7 +1044,11 @@ function shrinkRectX(rect, insetPx) {
 }
 
 function makeOffsetGetter(getXYV, offset) {
-  if (!offset || typeof offset.dx !== "number" || typeof offset.dy !== "number") {
+  if (
+    !offset ||
+    typeof offset.dx !== "number" ||
+    typeof offset.dy !== "number"
+  ) {
     return getXYV;
   }
   return (pt) => {
@@ -1062,7 +1096,9 @@ function getCenterTimeForSkeletonId(id) {
   if (typeof tLast === "number" && Number.isFinite(tLast)) return tLast;
   if (isMode2TraceSkeletonId(id)) {
     const traceId = id.slice("m2_trace_".length);
-    const tr = (state.mode2?.traces || []).find((t) => String(t.id) === traceId);
+    const tr = (state.mode2?.traces || []).find(
+      (t) => String(t.id) === traceId,
+    );
     const t0 = tr?.data?.samples?.[0]?.t;
     if (typeof t0 === "number" && Number.isFinite(t0)) return t0;
     return 0;
@@ -1076,7 +1112,9 @@ function getDeleteButtonRectForBBox(bbox, size = 22, pad = 6) {
   const oy = typeof bbox.oy === "number" ? bbox.oy : bbox.y;
   const dw = typeof bbox.dw === "number" ? bbox.dw : bbox.w;
   const dh = typeof bbox.dh === "number" ? bbox.dh : bbox.h;
-  if (![ox, oy, dw, dh].every((n) => typeof n === "number" && Number.isFinite(n))) {
+  if (
+    ![ox, oy, dw, dh].every((n) => typeof n === "number" && Number.isFinite(n))
+  ) {
     return null;
   }
   return {
@@ -1200,7 +1238,10 @@ function setUi({
   const now = performance.now();
   const mode = modeDisplayLabel();
   const sig = `${mode}|${easy}|${overallEasy}|${hard}|${overallHard}|${loaded}|${overallLoaded}`;
-  if (sig !== consoleUiStatus.lastSig && now - consoleUiStatus.lastLogAt >= 250) {
+  if (
+    sig !== consoleUiStatus.lastSig &&
+    now - consoleUiStatus.lastLogAt >= 250
+  ) {
     consoleUiStatus.lastSig = sig;
     consoleUiStatus.lastLogAt = now;
     console.log(
@@ -1230,7 +1271,10 @@ function clearOverlayCanvas() {
   const dpr = window.devicePixelRatio || 1;
   const targetW = Math.max(1, Math.floor(w * dpr));
   const targetH = Math.max(1, Math.floor(h * dpr));
-  if (els.overlayCanvas.width !== targetW || els.overlayCanvas.height !== targetH) {
+  if (
+    els.overlayCanvas.width !== targetW ||
+    els.overlayCanvas.height !== targetH
+  ) {
     els.overlayCanvas.width = targetW;
     els.overlayCanvas.height = targetH;
   }
@@ -1328,7 +1372,10 @@ function tickRecorder(tScore) {
     }
     if (rec.active && state.latestUserLandmarks) {
       if (tScore - rec.lastRecordedT >= RECORD_SAMPLE_MIN_DT) {
-        rec.samples.push({ t: tScore, lm: toLmArray(state.latestUserLandmarks) });
+        rec.samples.push({
+          t: tScore,
+          lm: toLmArray(state.latestUserLandmarks),
+        });
         rec.lastRecordedT = tScore;
       }
     }
@@ -1421,12 +1468,14 @@ function applyMode(mode) {
     els.clearLoadedSkeletonButton.style.display = "none";
   if (els.deleteSelectedSkeletonButton)
     els.deleteSelectedSkeletonButton.style.display = "none";
-  if (els.loadMode2SkeletonButton) els.loadMode2SkeletonButton.style.display = "none";
+  if (els.loadMode2SkeletonButton)
+    els.loadMode2SkeletonButton.style.display = "none";
   if (els.toggleMode2DemoABCButton)
     els.toggleMode2DemoABCButton.style.display = "none";
   if (els.restoreMode2BindingButton)
     els.restoreMode2BindingButton.style.display = "none";
-  if (els.toggleMode1DemoButton) els.toggleMode1DemoButton.style.display = "none";
+  if (els.toggleMode1DemoButton)
+    els.toggleMode1DemoButton.style.display = "none";
   if (els.demoScaleBottom) els.demoScaleBottom.style.display = "none";
   if (els.mode2WarnText) els.mode2WarnText.style.display = "none";
   if (els.synthControls) els.synthControls.style.display = "none";
@@ -1533,22 +1582,44 @@ function getDefaultRectsMode2(w, h, videoAspect) {
   const PAD = 8;
   const GAP = 12;
   const sideW = Math.max(140, Math.floor(w * 0.26));
-  const topH = Math.max(120, Math.floor(h * 0.40));
+  const topH = Math.max(120, Math.floor(h * 0.4));
   const bottomH = Math.max(120, h - PAD * 2 - topH);
   const centerW = Math.max(160, w - PAD * 2 - sideW * 2 - GAP);
 
-  const rectLeftBottomArea = { ox: PAD, oy: PAD + topH, dw: sideW, dh: bottomH };
+  const rectLeftBottomArea = {
+    ox: PAD,
+    oy: PAD + topH,
+    dw: sideW,
+    dh: bottomH,
+  };
   const rectRightBottomArea = {
     ox: PAD + sideW + GAP + centerW,
     oy: PAD + topH,
     dw: sideW,
     dh: bottomH,
   };
-  const rectTopCenterArea = { ox: PAD + sideW + GAP, oy: PAD, dw: centerW, dh: topH };
+  const rectTopCenterArea = {
+    ox: PAD + sideW + GAP,
+    oy: PAD,
+    dw: centerW,
+    dh: topH,
+  };
 
-  const containLeftBottom = computeContainRect(rectLeftBottomArea.dw, rectLeftBottomArea.dh, DEMO_SOURCE_ASPECT);
-  const containRightBottom = computeContainRect(rectRightBottomArea.dw, rectRightBottomArea.dh, DEMO_SOURCE_ASPECT);
-  const containTopCenter = computeContainRect(rectTopCenterArea.dw, rectTopCenterArea.dh, DEMO_SOURCE_ASPECT);
+  const containLeftBottom = computeContainRect(
+    rectLeftBottomArea.dw,
+    rectLeftBottomArea.dh,
+    DEMO_SOURCE_ASPECT,
+  );
+  const containRightBottom = computeContainRect(
+    rectRightBottomArea.dw,
+    rectRightBottomArea.dh,
+    DEMO_SOURCE_ASPECT,
+  );
+  const containTopCenter = computeContainRect(
+    rectTopCenterArea.dw,
+    rectTopCenterArea.dh,
+    DEMO_SOURCE_ASPECT,
+  );
 
   // Base 3 slots (same as previous A/B/C layout); overlay_canvas is mirrored, so left/right are swapped in canvas coords.
   const slot0 = {
@@ -1669,7 +1740,8 @@ function getTightBBoxFromLandmarks(points, getXYV, rect, padPx = 8) {
   let maxX = -Infinity;
   let maxY = -Infinity;
   let n = 0;
-  const offset = state.interact?.poseOffsets?.[state.interact?.selectedId] ?? null;
+  const offset =
+    state.interact?.poseOffsets?.[state.interact?.selectedId] ?? null;
   const getXYV2 = makeOffsetGetter(getXYV, offset);
   for (let i = 0; i < 33; i += 1) {
     const p = getXYV2(points?.[i]);
@@ -1688,8 +1760,8 @@ function getTightBBoxFromLandmarks(points, getXYV, rect, padPx = 8) {
   const pad = Math.max(0, padPx || 0);
   const ox = minX - pad;
   const oy = minY - pad;
-  const dw = (maxX - minX) + pad * 2;
-  const dh = (maxY - minY) + pad * 2;
+  const dw = maxX - minX + pad * 2;
+  const dh = maxY - minY + pad * 2;
   return { ox, oy, dw, dh };
 }
 
@@ -1702,7 +1774,12 @@ function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
   if (state.ui.mode === "mode2") {
     const { lm, getter } = getSkeletonLandmarksForIdAtTime(id, tScore);
     const bbox = lm
-      ? getTightBBoxFromLandmarks(lm, makeOffsetGetter(getter, offset), drawRect, extraPadPx)
+      ? getTightBBoxFromLandmarks(
+          lm,
+          makeOffsetGetter(getter, offset),
+          drawRect,
+          extraPadPx,
+        )
       : null;
     return bbox || drawRect;
   }
@@ -1714,29 +1791,41 @@ function getSkeletonBBoxRectForId(id, defaultRects, tScore, extraPadPx = 8) {
       : "easy";
   const isRecordingMode = Boolean(state.recorder?.armed);
   const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
-  const demoLm = trace?.samples ? getDemoLandmarksAtTime(trace.samples, tScore) : null;
+  const demoLm = trace?.samples
+    ? getDemoLandmarksAtTime(trace.samples, tScore)
+    : null;
 
   const isUser = id === SKELETON_IDS.m1_user;
   const lm = isUser ? state.latestUserLandmarks : demoLm;
   const getter = isUser ? getLmXYV : getArrXYV;
   const bbox = lm
-    ? getTightBBoxFromLandmarks(lm, makeOffsetGetter(getter, offset), drawRect, extraPadPx)
+    ? getTightBBoxFromLandmarks(
+        lm,
+        makeOffsetGetter(getter, offset),
+        drawRect,
+        extraPadPx,
+      )
     : null;
   return bbox || drawRect;
 }
 
 function getSkeletonLandmarksForIdAtTime(id, tScore) {
   if (state.ui.mode === "mode2") {
-    if (id === SKELETON_IDS.m2_user) return { lm: state.latestUserLandmarks, getter: getLmXYV };
+    if (id === SKELETON_IDS.m2_user)
+      return { lm: state.latestUserLandmarks, getter: getLmXYV };
     if (isMode2TraceSkeletonId(id)) {
       const traceId = id.slice("m2_trace_".length);
-      const tr = (state.mode2?.traces || []).find((t) => String(t.id) === traceId);
+      const tr = (state.mode2?.traces || []).find(
+        (t) => String(t.id) === traceId,
+      );
       if (tr?.synthetic) {
         const lm = getSyntheticLandmarksAtTime(tr, tScore);
         return { lm, getter: getArrXYV };
       }
       const samples = tr?.data?.samples;
-      const lm = Array.isArray(samples) ? getDemoLandmarksAtTime(samples, tScore) : null;
+      const lm = Array.isArray(samples)
+        ? getDemoLandmarksAtTime(samples, tScore)
+        : null;
       return { lm, getter: getArrXYV };
     }
     return { lm: null, getter: getArrXYV };
@@ -1748,7 +1837,9 @@ function getSkeletonLandmarksForIdAtTime(id, tScore) {
       : "easy";
   const isRecordingMode = Boolean(state.recorder?.armed);
   const trace = isRecordingMode ? null : getDemoTraceByMode(hintMode);
-  const demoLm = trace?.samples ? getDemoLandmarksAtTime(trace.samples, tScore) : null;
+  const demoLm = trace?.samples
+    ? getDemoLandmarksAtTime(trace.samples, tScore)
+    : null;
 
   const isUser = id === SKELETON_IDS.m1_user;
   const lm = isUser ? state.latestUserLandmarks : demoLm;
@@ -1756,9 +1847,24 @@ function getSkeletonLandmarksForIdAtTime(id, tScore) {
   return { lm, getter };
 }
 
-function constrainRectBySkeletonBBox({ id, rect, w, h, tScore, padPx = 8, anchor = null }) {
-  if (!id || !rect || !(typeof w === "number" && w > 0) || !(typeof h === "number" && h > 0)) return rect;
-  if (!(typeof tScore === "number" && Number.isFinite(tScore))) return clampRectToCanvas(rect, w, h);
+function constrainRectBySkeletonBBox({
+  id,
+  rect,
+  w,
+  h,
+  tScore,
+  padPx = 8,
+  anchor = null,
+}) {
+  if (
+    !id ||
+    !rect ||
+    !(typeof w === "number" && w > 0) ||
+    !(typeof h === "number" && h > 0)
+  )
+    return rect;
+  if (!(typeof tScore === "number" && Number.isFinite(tScore)))
+    return clampRectToCanvas(rect, w, h);
 
   const { lm, getter } = getSkeletonLandmarksForIdAtTime(id, tScore);
   if (!lm) return clampRectToCanvas(rect, w, h);
@@ -1769,9 +1875,13 @@ function constrainRectBySkeletonBBox({ id, rect, w, h, tScore, padPx = 8, anchor
   if (!bbox) return clampRectToCanvas(r, w, h);
 
   if (bbox.dw > w || bbox.dh > h) {
-    const sDown = Math.min(w / Math.max(1e-6, bbox.dw), h / Math.max(1e-6, bbox.dh), 1);
-    const ax = anchor?.x ?? (r.ox + r.dw / 2);
-    const ay = anchor?.y ?? (r.oy + r.dh / 2);
+    const sDown = Math.min(
+      w / Math.max(1e-6, bbox.dw),
+      h / Math.max(1e-6, bbox.dh),
+      1,
+    );
+    const ax = anchor?.x ?? r.ox + r.dw / 2;
+    const ay = anchor?.y ?? r.oy + r.dh / 2;
     r = scaleRectAboutAnchor(r, ax, ay, sDown);
     bbox = getTightBBoxFromLandmarks(lm, getter, r, padPx) || bbox;
   }
@@ -1852,7 +1962,9 @@ function restoreDefaultSongBinding() {
  * UI 之後仍可手動改數字覆寫。
  */
 async function applyTempoFromManifest(manifest, manifestUrl) {
-  const modeRaw = String(manifest?.tempoMode || "").trim().toLowerCase();
+  const modeRaw = String(manifest?.tempoMode || "")
+    .trim()
+    .toLowerCase();
   const mode = modeRaw === "auto" || modeRaw === "manual" ? modeRaw : null;
   let bpm = null;
   let source = null;
@@ -1953,10 +2065,7 @@ async function loadMode2TracesFromManifest(manifest, manifestUrl) {
     const traceUrl = resolveBindingAssetUrl(urlRaw, manifestUrl);
     const data = await loadDemoTrace(traceUrl);
     loadedTraces.push({
-      id:
-        typeof def?.id === "string" && def.id
-          ? def.id
-          : `bound_${i}`,
+      id: typeof def?.id === "string" && def.id ? def.id : `bound_${i}`,
       name:
         typeof def?.name === "string" && def.name
           ? def.name
@@ -1991,9 +2100,10 @@ function resolveSongBindingTargetMode(manifest, hasMode1, hasMode2) {
 async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   const manifest = manifestInfo?.manifest;
   const manifestUrl = manifestInfo?.manifestUrl;
-  const mode1Def = manifest?.mode1 && typeof manifest.mode1 === "object"
-    ? manifest.mode1
-    : null;
+  const mode1Def =
+    manifest?.mode1 && typeof manifest.mode1 === "object"
+      ? manifest.mode1
+      : null;
   const mode2Defs = getMode2TraceDefsFromManifest(manifest);
   const hasMode1 = !!(mode1Def?.easy || mode1Def?.hard);
   const hasMode2 = mode2Defs.length > 0;
@@ -2012,8 +2122,16 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   let boundEasy = state.demo.defaultEasy;
   let boundHard = state.demo.defaultHard;
   if (hasMode1) {
-    const loadedEasy = await loadMode1TraceFromBinding(mode1Def, "easy", manifestUrl);
-    const loadedHard = await loadMode1TraceFromBinding(mode1Def, "hard", manifestUrl);
+    const loadedEasy = await loadMode1TraceFromBinding(
+      mode1Def,
+      "easy",
+      manifestUrl,
+    );
+    const loadedHard = await loadMode1TraceFromBinding(
+      mode1Def,
+      "hard",
+      manifestUrl,
+    );
     if (loadedEasy) boundEasy = loadedEasy;
     if (loadedHard) boundHard = loadedHard;
     else if (loadedEasy) boundHard = loadedEasy;
@@ -2026,7 +2144,10 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   if (state.demo.hard) computeDemoPartEnergyForTrace(state.demo.hard);
 
   if (hasMode2) {
-    const loadedTraces = await loadMode2TracesFromManifest(manifest, manifestUrl);
+    const loadedTraces = await loadMode2TracesFromManifest(
+      manifest,
+      manifestUrl,
+    );
     applyMode2Traces(loadedTraces);
   } else {
     applyMode2Traces(state.mode2.defaultTraces);
@@ -2043,8 +2164,7 @@ async function applySongBinding(manifestInfo, { autoplay = false } = {}) {
   // 精簡 UI：即使 binding 標 mode1，仍鎖定生成舞者模式
   applyMode("mode2");
   if (targetMode === "mode1" && els.hintModeSelect) {
-    const hintMode =
-      mode1Def?.defaultHintMode === "hard" ? "hard" : "easy";
+    const hintMode = mode1Def?.defaultHintMode === "hard" ? "hard" : "easy";
     els.hintModeSelect.value = hintMode;
     state.ui.hintMode = hintMode;
   }
@@ -2098,7 +2218,9 @@ async function restoreCurrentSongMode2Binding() {
 
 function parseYoutubeUrlFromText(text) {
   if (!text) return null;
-  const m = String(text).match(/https?:\/\/(?:www\.)?(?:youtu\.be\/[^\s]+|youtube\.com\/[^\s]+)/i);
+  const m = String(text).match(
+    /https?:\/\/(?:www\.)?(?:youtu\.be\/[^\s]+|youtube\.com\/[^\s]+)/i,
+  );
   return m ? m[0] : null;
 }
 
@@ -2130,14 +2252,16 @@ function updateSongModalInteractionLock() {
   const locked = !!state.music.applying;
   if (els.songApplyingOverlay) {
     els.songApplyingOverlay.hidden = !locked;
-    els.songApplyingOverlay.setAttribute("aria-busy", locked ? "true" : "false");
+    els.songApplyingOverlay.setAttribute(
+      "aria-busy",
+      locked ? "true" : "false",
+    );
   }
   if (els.songModalCloseButton) els.songModalCloseButton.disabled = locked;
   if (els.songSearchButton) els.songSearchButton.disabled = locked;
   if (els.songSearchInput) els.songSearchInput.disabled = locked;
   if (els.songPrevPageButton) {
-    els.songPrevPageButton.disabled =
-      locked || state.music.page <= 1;
+    els.songPrevPageButton.disabled = locked || state.music.page <= 1;
   }
   if (els.songNextPageButton) {
     els.songNextPageButton.disabled =
@@ -2162,7 +2286,9 @@ function setSongApplying(active) {
 
 function renderSongCategories() {
   if (!els.songCategories) return;
-  const cats = Array.isArray(state.music.categories) ? state.music.categories : [];
+  const cats = Array.isArray(state.music.categories)
+    ? state.music.categories
+    : [];
   const selected = state.music.selectedCategory;
   const parts = [];
   parts.push(
@@ -2231,7 +2357,9 @@ function renderSongList() {
         if (state.music.applying) return;
         const midEnc = btn.getAttribute("data-mid") || "";
         const mid = midEnc ? decodeURIComponent(midEnc) : "";
-        const it = (Array.isArray(m.items) ? m.items : []).find((x) => String(x?.id || "") === mid);
+        const it = (Array.isArray(m.items) ? m.items : []).find(
+          (x) => String(x?.id || "") === mid,
+        );
         if (!it) return;
 
         setSongApplying(true);
@@ -2240,7 +2368,9 @@ function renderSongList() {
         try {
           try {
             const binding = await loadSongBindingManifest(mid);
-            loadedByBinding = await applySongBinding(binding, { autoplay: false });
+            loadedByBinding = await applySongBinding(binding, {
+              autoplay: false,
+            });
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             restoreDefaultSongBinding();
@@ -2658,7 +2788,10 @@ function setRecordUi(tScore) {
       const elapsed = Math.max(0, tScore - rec.armStartPlayerTimeSec);
       remain = Math.max(0, rec.delaySec - elapsed);
     } else if (typeof rec.armStartWallMs === "number") {
-      const elapsed = Math.max(0, (performance.now() - rec.armStartWallMs) / 1000);
+      const elapsed = Math.max(
+        0,
+        (performance.now() - rec.armStartWallMs) / 1000,
+      );
       remain = Math.max(0, rec.delaySec - elapsed);
     }
     els.recordButton.textContent = `準備錄製（${Math.ceil(remain)}s）`;
@@ -2942,10 +3075,24 @@ function drawClassicAvatar(ctx, points, getXYV, rect, options = {}) {
       ? options.colorByConnection
       : () => baseColor;
   const id = options.skeletonId || null;
-  const offset = id ? state.interact?.poseOffsets?.[id] ?? null : null;
+  const offset = id ? (state.interact?.poseOffsets?.[id] ?? null) : null;
   const getter2 = makeOffsetGetter(getXYV, offset);
-  drawPoseConnections(ctx, points, getter2, rect, colorByConnection, options.lineWidth || 3);
-  drawPosePoints(ctx, points, getter2, rect, baseColor, options.pointRadius || 3.5);
+  drawPoseConnections(
+    ctx,
+    points,
+    getter2,
+    rect,
+    colorByConnection,
+    options.lineWidth || 3,
+  );
+  drawPosePoints(
+    ctx,
+    points,
+    getter2,
+    rect,
+    baseColor,
+    options.pointRadius || 3.5,
+  );
 }
 
 function drawUserAvatar(ctx, points, getXYV, rect, options = {}) {
@@ -3158,12 +3305,20 @@ function computeMeanDistUpperBody(userLandmarks, demoLmArray) {
  * @returns {object} 同一 trace（原地修改）
  */
 function trimFreePoseTrace(trace) {
-  if (!isFreePoseTrace(trace) || !Array.isArray(trace.samples) || !trace.samples.length) {
+  if (
+    !isFreePoseTrace(trace) ||
+    !Array.isArray(trace.samples) ||
+    !trace.samples.length
+  ) {
     return trace;
   }
   const cfg = state.similarity;
-  const headSec = Number.isFinite(cfg.freeTrimHeadSec) ? cfg.freeTrimHeadSec : 1;
-  const tailSec = Number.isFinite(cfg.freeTrimTailSec) ? cfg.freeTrimTailSec : 2;
+  const headSec = Number.isFinite(cfg.freeTrimHeadSec)
+    ? cfg.freeTrimHeadSec
+    : 1;
+  const tailSec = Number.isFinite(cfg.freeTrimTailSec)
+    ? cfg.freeTrimTailSec
+    : 2;
   const samples = trace.samples;
   const tFirst = samples[0]?.t;
   const tLast = samples[samples.length - 1]?.t;
@@ -3269,7 +3424,11 @@ function readWristXY(userLandmarks, index) {
   if (typeof lm.x === "number" && typeof lm.y === "number") {
     return { x: lm.x, y: lm.y };
   }
-  if (Array.isArray(lm) && typeof lm[0] === "number" && typeof lm[1] === "number") {
+  if (
+    Array.isArray(lm) &&
+    typeof lm[0] === "number" &&
+    typeof lm[1] === "number"
+  ) {
     return { x: lm[0], y: lm[1] };
   }
   return null;
@@ -3505,8 +3664,15 @@ function drawPoseConnections(
     const pa = getXYV(points?.[a]);
     const pb = getXYV(points?.[b]);
     if (!pa || !pb) continue;
-    if ((typeof pa.v === "number" && pa.v < 0.5) || (typeof pb.v === "number" && pb.v < 0.5)) continue;
-    const c = typeof colorByConnection === "function" ? colorByConnection(a, b) : "rgba(255,255,255,0.95)";
+    if (
+      (typeof pa.v === "number" && pa.v < 0.5) ||
+      (typeof pb.v === "number" && pb.v < 0.5)
+    )
+      continue;
+    const c =
+      typeof colorByConnection === "function"
+        ? colorByConnection(a, b)
+        : "rgba(255,255,255,0.95)";
     ctx.strokeStyle = c;
     ctx.beginPath();
     ctx.moveTo(rect.ox + pa.x * rect.dw, rect.oy + pa.y * rect.dh);
@@ -3539,7 +3705,12 @@ function getDemoTraceByMode(mode) {
   return state.demo.easy;
 }
 
-function updateOrangeState(nowT, instantScore, overallScore, orangeSt = state.orange) {
+function updateOrangeState(
+  nowT,
+  instantScore,
+  overallScore,
+  orangeSt = state.orange,
+) {
   const st = orangeSt || state.orange;
   if (!Number.isFinite(nowT)) return st.active;
   const dt = typeof st.lastT === "number" ? Math.max(0, nowT - st.lastT) : 0;
@@ -3553,11 +3724,15 @@ function updateOrangeState(nowT, instantScore, overallScore, orangeSt = state.or
   const enterOkInstant =
     typeof instantScore === "number" && instantScore >= enterThr;
 
-  const exitOkOverall = typeof overallScore === "number" && overallScore >= exitThr;
-  const exitOkInstant = typeof instantScore === "number" && instantScore >= exitThr;
+  const exitOkOverall =
+    typeof overallScore === "number" && overallScore >= exitThr;
+  const exitOkInstant =
+    typeof instantScore === "number" && instantScore >= exitThr;
 
   st.window.push({ t: nowT, enterOk: enterOkInstant, exitOk: exitOkInstant });
-  const winSec = st.active ? Math.max(st.exitRequireSec, 0.5) : Math.max(st.enterRequireSec, 0.5);
+  const winSec = st.active
+    ? Math.max(st.exitRequireSec, 0.5)
+    : Math.max(st.enterRequireSec, 0.5);
   const cutoff = nowT - winSec;
   while (st.window.length && st.window[0].t < cutoff) st.window.shift();
 
@@ -3767,7 +3942,8 @@ function drawMode2Overlay(tScore) {
   for (const id of ids) {
     const target = state.interact?.layoutTargets?.[id];
     if (!target) continue;
-    const cur = state.interact?.rectOverrides?.[id] || getDrawRect(id, defaults);
+    const cur =
+      state.interact?.rectOverrides?.[id] || getDrawRect(id, defaults);
     const next = lerpRect(cur, target, 0.18);
     state.interact.rectOverrides[id] = next;
     // stop when close enough
@@ -3790,7 +3966,10 @@ function drawMode2Overlay(tScore) {
   const dpr = window.devicePixelRatio || 1;
   const targetW = Math.max(1, Math.floor(w * dpr));
   const targetH = Math.max(1, Math.floor(h * dpr));
-  if (els.overlayCanvas.width !== targetW || els.overlayCanvas.height !== targetH) {
+  if (
+    els.overlayCanvas.width !== targetW ||
+    els.overlayCanvas.height !== targetH
+  ) {
     els.overlayCanvas.width = targetW;
     els.overlayCanvas.height = targetH;
   }
@@ -3821,7 +4000,9 @@ function drawMode2Overlay(tScore) {
     const rect = getDrawRect(id, defaultRects);
     const lm = tr.synthetic
       ? getSyntheticLandmarksAtTime(tr, t)
-      : (tr?.data?.samples ? getDemoLandmarksAtTime(tr.data.samples, t) : null);
+      : tr?.data?.samples
+        ? getDemoLandmarksAtTime(tr.data.samples, t)
+        : null;
     if (!rect || !lm) continue;
     const trColor = tr.synthetic ? "rgba(0,180,255,0.95)" : demoColor;
     const off = state.interact?.poseOffsets?.[id] ?? null;
@@ -3848,7 +4029,9 @@ function drawMode2Overlay(tScore) {
     // Use the container draw-rect for selection UI so the box stays stable
     // even when the skeleton's tight bbox changes frame-by-frame.
     const rSel0 = getDrawRect(sel, defaultRects);
-    const rSel = rSel0 ? shrinkRectX(rSel0, Math.max(6, rSel0.dw * 0.08)) : null;
+    const rSel = rSel0
+      ? shrinkRectX(rSel0, Math.max(6, rSel0.dw * 0.08))
+      : null;
     if (rSel) {
       ctx.strokeStyle = "rgba(255,255,255,0.55)";
       ctx.lineWidth = 1.5;
@@ -3860,7 +4043,12 @@ function drawMode2Overlay(tScore) {
       ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
       ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
-      ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
+      ctx.fillRect(
+        rSel.ox + rSel.dw - hs,
+        rSel.oy + rSel.dh - hs,
+        hs * 2,
+        hs * 2,
+      );
 
       // delete button (only for mode2 traces) — 加大較好點
       if (isMode2TraceSkeletonId(sel)) {
@@ -3922,8 +4110,14 @@ function syncSceneCanvasSize() {
   const canvas = els.sceneCanvas;
   if (!world || !canvas) return;
   const wrap = els.cameraWrapper || canvas.parentElement;
-  const w = Math.max(1, Math.floor(wrap?.clientWidth || canvas.clientWidth || 1));
-  const h = Math.max(1, Math.floor(wrap?.clientHeight || canvas.clientHeight || 1));
+  const w = Math.max(
+    1,
+    Math.floor(wrap?.clientWidth || canvas.clientWidth || 1),
+  );
+  const h = Math.max(
+    1,
+    Math.floor(wrap?.clientHeight || canvas.clientHeight || 1),
+  );
   world.setSize(w, h);
 }
 
@@ -4010,7 +4204,9 @@ function tickBackgroundSwimDetect(opts = {}) {
       typeof opts.wristSpeed === "number"
         ? opts.wristSpeed
         : updateAndGetWristSpeed(userLm);
-    const rSwim = computePoseBestScoreD(userLm, state.swim.trace, { wristSpeed });
+    const rSwim = computePoseBestScoreD(userLm, state.swim.trace, {
+      wristSpeed,
+    });
     let overallSwimNum = null;
     if (rSwim.ok) {
       const ov = pushOverall(state.swim.overall, wallT, rSwim.score, 1);
@@ -4143,16 +4339,16 @@ function updateUiLoop() {
 
   if (userLm && state.demo.loaded?.samples?.length) {
     if (freeLoaded) {
-      rLoaded = computePoseBestScoreD(userLm, state.demo.loaded, { wristSpeed });
+      rLoaded = computePoseBestScoreD(userLm, state.demo.loaded, {
+        wristSpeed,
+      });
     } else if (canUseTime) {
       rLoaded = computeWindowScoreD(userLm, state.demo.loaded, tScore);
     }
     okLoaded = rLoaded.ok ? rLoaded.score.toFixed(0) : "—";
     if (rLoaded.ok) {
       const clock = freeLoaded ? wallT : tScore;
-      const wg = freeLoaded
-        ? 1
-        : computeEnergyGateWeight(rLoaded.ErefWin);
+      const wg = freeLoaded ? 1 : computeEnergyGateWeight(rLoaded.ErefWin);
       const ov = pushOverall(state.overall.loaded, clock, rLoaded.score, wg);
       if (typeof ov === "number") {
         overallLoadedNum = ov;
@@ -4219,7 +4415,9 @@ function updateUiLoop() {
         : overallEasyNum;
   const orangeClock = canUseTime ? tScore : null;
   const isOrange =
-    userLm && typeof orangeClock === "number" && !(hintMode === "user" && freeLoaded)
+    userLm &&
+    typeof orangeClock === "number" &&
+    !(hintMode === "user" && freeLoaded)
       ? updateOrangeState(orangeClock, selectedInstant, selectedOverall)
       : false;
 
@@ -4253,7 +4451,10 @@ function updateUiLoop() {
       const dpr = window.devicePixelRatio || 1;
       const targetW = Math.max(1, Math.floor(w * dpr));
       const targetH = Math.max(1, Math.floor(h * dpr));
-      if (els.overlayCanvas.width !== targetW || els.overlayCanvas.height !== targetH) {
+      if (
+        els.overlayCanvas.width !== targetW ||
+        els.overlayCanvas.height !== targetH
+      ) {
         els.overlayCanvas.width = targetW;
         els.overlayCanvas.height = targetH;
       }
@@ -4264,7 +4465,9 @@ function updateUiLoop() {
 
       // Draw in the same contain-rect as the camera video (object-fit: contain)
       const videoAspect =
-        els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+        els.inputVideo &&
+        els.inputVideo.videoWidth &&
+        els.inputVideo.videoHeight
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaultRects = getDefaultRectsMode1(w, h, videoAspect);
@@ -4274,7 +4477,9 @@ function updateUiLoop() {
       // User skeleton（划水達標或歌曲提示達標時高亮）
       const blueColor = "rgba(59,130,246,0.95)";
       const redColor = "rgba(239,68,68,0.95)";
-      const baseColor = userGood ? USER_SKELETON_COLOR_GOOD : USER_SKELETON_COLOR;
+      const baseColor = userGood
+        ? USER_SKELETON_COLOR_GOOD
+        : USER_SKELETON_COLOR;
       const highlightParts = userGood
         ? new Set(ALL_AVATAR_PARTS)
         : isRecordingMode
@@ -4325,7 +4530,9 @@ function updateUiLoop() {
         // Use the container draw-rect for selection UI so the box stays stable
         // even when the skeleton's tight bbox changes frame-by-frame.
         const rSel0 = getDrawRect(sel, defaultRects);
-        const rSel = rSel0 ? shrinkRectX(rSel0, Math.max(6, rSel0.dw * 0.08)) : null;
+        const rSel = rSel0
+          ? shrinkRectX(rSel0, Math.max(6, rSel0.dw * 0.08))
+          : null;
         if (rSel) {
           ctx.strokeStyle = "rgba(255,255,255,0.55)";
           ctx.lineWidth = 1.5;
@@ -4337,7 +4544,12 @@ function updateUiLoop() {
           ctx.fillRect(rSel.ox - hs, rSel.oy - hs, hs * 2, hs * 2);
           ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy - hs, hs * 2, hs * 2);
           ctx.fillRect(rSel.ox - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
-          ctx.fillRect(rSel.ox + rSel.dw - hs, rSel.oy + rSel.dh - hs, hs * 2, hs * 2);
+          ctx.fillRect(
+            rSel.ox + rSel.dw - hs,
+            rSel.oy + rSel.dh - hs,
+            hs * 2,
+            hs * 2,
+          );
 
           if (
             MODE1_DEMO_SLOT_IDS.includes(sel) &&
@@ -4400,8 +4612,7 @@ async function main() {
   if (els.hintModeSelect) {
     els.hintModeSelect.addEventListener("change", () => {
       const raw = els.hintModeSelect.value;
-      const v =
-        raw === "hard" ? "hard" : raw === "user" ? "user" : "easy";
+      const v = raw === "hard" ? "hard" : raw === "user" ? "user" : "easy";
       state.ui.hintMode = v;
       state.orange.active = false;
       state.orange.enterGoodSec = 0;
@@ -4439,7 +4650,8 @@ async function main() {
     });
     els.skeletonFileInput.addEventListener("change", async () => {
       if (state.ui.mode === "mode2") return;
-      const file = els.skeletonFileInput.files && els.skeletonFileInput.files[0];
+      const file =
+        els.skeletonFileInput.files && els.skeletonFileInput.files[0];
       if (!file) return;
       try {
         const data = await loadTraceFromFile(file);
@@ -4573,8 +4785,7 @@ async function main() {
         groove === "bounce" ? "" : "none";
     }
     if (els.settingsFootSideField) {
-      els.settingsFootSideField.style.display =
-        foot === "single" ? "" : "none";
+      els.settingsFootSideField.style.display = foot === "single" ? "" : "none";
     }
     const randomOn = Boolean(els.synthRandomMixCheckbox?.checked);
     if (els.synthManualSettings) {
@@ -4619,7 +4830,15 @@ async function main() {
         "mix";
     }
 
-    return { bpm, grooveMode, bounceDir, footMode, footSide, patternMode, randomMix };
+    return {
+      bpm,
+      grooveMode,
+      bounceDir,
+      footMode,
+      footSide,
+      patternMode,
+      randomMix,
+    };
   }
 
   function openSkeletonSettingsModal() {
@@ -4647,7 +4866,8 @@ async function main() {
   }
   if (els.skeletonSettingsBackdrop) {
     els.skeletonSettingsBackdrop.addEventListener("click", (ev) => {
-      if (ev.target === els.skeletonSettingsBackdrop) closeSkeletonSettingsModal();
+      if (ev.target === els.skeletonSettingsBackdrop)
+        closeSkeletonSettingsModal();
     });
   }
 
@@ -4668,9 +4888,18 @@ async function main() {
     });
   }
 
-  els.settingsGrooveSelect?.addEventListener("change", syncSynthSettingsVisibility);
-  els.settingsFootSelect?.addEventListener("change", syncSynthSettingsVisibility);
-  els.synthRandomMixCheckbox?.addEventListener("change", syncSynthSettingsVisibility);
+  els.settingsGrooveSelect?.addEventListener(
+    "change",
+    syncSynthSettingsVisibility,
+  );
+  els.settingsFootSelect?.addEventListener(
+    "change",
+    syncSynthSettingsVisibility,
+  );
+  els.synthRandomMixCheckbox?.addEventListener(
+    "change",
+    syncSynthSettingsVisibility,
+  );
   syncSynthSettingsVisibility();
 
   if (els.addSynthTraceButton) {
@@ -4745,7 +4974,9 @@ async function main() {
       const tScore = getPlayerTimeSafe();
 
       const videoAspect =
-        els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+        els.inputVideo &&
+        els.inputVideo.videoWidth &&
+        els.inputVideo.videoHeight
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
@@ -4843,7 +5074,9 @@ async function main() {
       {
         const tCenter = getCenterTimeForSkeletonId(picked);
         const { lm, getter } = getSkeletonLandmarksForIdAtTime(picked, tCenter);
-        const off = lm ? computeCenterOffsetFromLandmarks(lm, getter, 0.5) : null;
+        const off = lm
+          ? computeCenterOffsetFromLandmarks(lm, getter, 0.5)
+          : null;
         if (off) state.interact.poseOffsets[picked] = off;
       }
 
@@ -4864,7 +5097,8 @@ async function main() {
 
     const onPointerMove = (ev) => {
       const d = state.interact.drag;
-      if (!d?.active || !d.id || !d.kind || !d.startPointer || !d.startRect) return;
+      if (!d?.active || !d.id || !d.kind || !d.startPointer || !d.startRect)
+        return;
       const pos = getPointerPosInOverlayCssPx(ev, els.overlayCanvas);
       if (!pos) return;
       const { x, y } = pos;
@@ -4902,7 +5136,14 @@ async function main() {
                 ? { x: start.ox + dx, y: start.oy + start.dh + dy }
                 : { x: start.ox + start.dw + dx, y: start.oy + start.dh + dy };
 
-        const dist0 = Math.hypot((start.ox + (d.corner === "tl" || d.corner === "bl" ? 0 : start.dw)) - opp.x, (start.oy + (d.corner === "tl" || d.corner === "tr" ? 0 : start.dh)) - opp.y);
+        const dist0 = Math.hypot(
+          start.ox +
+            (d.corner === "tl" || d.corner === "bl" ? 0 : start.dw) -
+            opp.x,
+          start.oy +
+            (d.corner === "tl" || d.corner === "tr" ? 0 : start.dh) -
+            opp.y,
+        );
         const dist1 = Math.hypot(curCorner.x - opp.x, curCorner.y - opp.y);
         const s = dist0 > 1 ? dist1 / dist0 : 1;
 
@@ -4910,12 +5151,21 @@ async function main() {
       }
 
       // Constrain by tight bbox (white selection box), not container rect.
-      r = constrainRectBySkeletonBBox({ id: d.id, rect: r, w, h, tScore, padPx: 8, anchor });
+      r = constrainRectBySkeletonBBox({
+        id: d.id,
+        rect: r,
+        w,
+        h,
+        tScore,
+        padPx: 8,
+        anchor,
+      });
       state.interact.rectOverrides[d.id] = r;
       // mark as user-adjusted (pinned)
       state.interact.pinned[d.id] = true;
       // stop any pending auto-layout animation for this id
-      if (state.interact.layoutTargets?.[d.id]) delete state.interact.layoutTargets[d.id];
+      if (state.interact.layoutTargets?.[d.id])
+        delete state.interact.layoutTargets[d.id];
       ev.preventDefault();
     };
 
@@ -4942,7 +5192,9 @@ async function main() {
       const w = Math.max(1, Math.floor(els.overlayCanvas.clientWidth));
       const h = Math.max(1, Math.floor(els.overlayCanvas.clientHeight));
       const videoAspect =
-        els.inputVideo && els.inputVideo.videoWidth && els.inputVideo.videoHeight
+        els.inputVideo &&
+        els.inputVideo.videoWidth &&
+        els.inputVideo.videoHeight
           ? els.inputVideo.videoWidth / Math.max(1, els.inputVideo.videoHeight)
           : DEMO_SOURCE_ASPECT;
       const defaults = getDefaultRectsForCurrentMode(w, h, videoAspect);
@@ -4957,10 +5209,19 @@ async function main() {
       const cx = r0.ox + r0.dw / 2;
       const cy = r0.oy + r0.dh / 2;
       let r = scaleRectAboutAnchor(r0, cx, cy, s);
-      r = constrainRectBySkeletonBBox({ id, rect: r, w, h, tScore, padPx: 8, anchor: { x: cx, y: cy } });
+      r = constrainRectBySkeletonBBox({
+        id,
+        rect: r,
+        w,
+        h,
+        tScore,
+        padPx: 8,
+        anchor: { x: cx, y: cy },
+      });
       state.interact.rectOverrides[id] = r;
       state.interact.pinned[id] = true;
-      if (state.interact.layoutTargets?.[id]) delete state.interact.layoutTargets[id];
+      if (state.interact.layoutTargets?.[id])
+        delete state.interact.layoutTargets[id];
       ev.preventDefault();
     };
 
@@ -5030,7 +5291,9 @@ async function main() {
       openSongModal();
       if (!state.music.categories.length) await loadCategories();
       state.music.page = 1;
-      state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
+      state.music.q = els.songSearchInput
+        ? els.songSearchInput.value.trim()
+        : "";
       await loadMidisPage();
     });
   }
@@ -5108,7 +5371,9 @@ async function main() {
   if (els.songSearchButton) {
     els.songSearchButton.addEventListener("click", async () => {
       state.music.page = 1;
-      state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
+      state.music.q = els.songSearchInput
+        ? els.songSearchInput.value.trim()
+        : "";
       await loadMidisPage();
     });
   }
@@ -5116,7 +5381,9 @@ async function main() {
     els.songSearchInput.addEventListener("keydown", async (e) => {
       if (e.key !== "Enter") return;
       state.music.page = 1;
-      state.music.q = els.songSearchInput ? els.songSearchInput.value.trim() : "";
+      state.music.q = els.songSearchInput
+        ? els.songSearchInput.value.trim()
+        : "";
       await loadMidisPage();
     });
   }
