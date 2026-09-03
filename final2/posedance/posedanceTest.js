@@ -264,13 +264,17 @@ const state = {
     orange: (() => {
       const g = createOrangeGateState();
       // 分數需夠高才算「像划水」；連續維持 enterRequireSec 才進海邊
-      g.enterThreshold = 85;
-      g.exitThreshold = 80;
-      g.enterRequireSec = 2;
+      g.enterThreshold = 90;
+      g.exitThreshold = 82;
+      g.enterRequireSec = 2.8;
+      g.enterInstantMajorityRatio = 0.75;
       g.exitRequireSec = 5;
       return g;
     })(),
     ready: false,
+    /** 划水專用：雙手都要動，且比一般自由姿勢更用力 */
+    wristEachMin: 0.12,
+    wristSpeedMin: 0.22,
   },
 
   /** 海邊場景 */
@@ -1292,6 +1296,7 @@ function clearOverlayCanvas() {
 }
 
 function stopCameraIfRunning() {
+  _cameraPumpId += 1;
   state.poseLoopActive = false;
   state.cameraRunning = false;
   if (state.cameraStream) {
@@ -1302,6 +1307,15 @@ function stopCameraIfRunning() {
   if (els.startCameraButton) els.startCameraButton.textContent = "啟動鏡頭";
   state.latestUserLandmarks = null;
   state.latestMultiLandmarks = [];
+  state.swim.overall = [];
+  if (state.swim.orange) {
+    state.swim.orange.active = false;
+    state.swim.orange.enterGoodSec = 0;
+    state.swim.orange.exitBadSec = 0;
+    state.swim.orange.window = [];
+    state.swim.orange.lastT = null;
+  }
+  syncBeachScene(false);
   if (els.poseInfoText) els.poseInfoText.style.display = "none";
   drawUserOverlay();
   setRecordUi(getPlayerTimeSafe());
@@ -3442,10 +3456,10 @@ function readWristXY(userLandmarks, index) {
 }
 
 /**
- * 近 0.3s 雙手手腕速度（正規化座標／秒）；取左右較大者（單手有動即可）
- * 無論是否過門檻都會更新軌跡。
+ * 近窗雙手手腕速度（正規化座標／秒）
+ * @returns {{ speed: number, speedL: number, speedR: number }}
  */
-function updateAndGetWristSpeed(userLandmarks) {
+function updateAndGetWristMotion(userLandmarks) {
   const cfg = state.similarity;
   const windowSec = Number.isFinite(cfg.freeWristWindowSec)
     ? cfg.freeWristWindowSec
@@ -3453,23 +3467,34 @@ function updateAndGetWristSpeed(userLandmarks) {
   const now = performance.now();
   const lw = readWristXY(userLandmarks, POSE_LANDMARKS.LEFT_WRIST);
   const rw = readWristXY(userLandmarks, POSE_LANDMARKS.RIGHT_WRIST);
-  if (!lw || !rw) return 0;
+  if (!lw || !rw) return { speed: 0, speedL: 0, speedR: 0 };
 
   const hist = state.wristMotion.history;
   hist.push({ t: now, lx: lw.x, ly: lw.y, rx: rw.x, ry: rw.y });
   const cutoff = now - windowSec * 1000;
   while (hist.length && hist[0].t < cutoff) hist.shift();
 
-  if (hist.length < 2) return 0;
+  if (hist.length < 2) return { speed: 0, speedL: 0, speedR: 0 };
   const a = hist[0];
   const b = hist[hist.length - 1];
   const dt = (b.t - a.t) / 1000;
-  if (!(dt >= 0.05)) return 0;
+  if (!(dt >= 0.05)) return { speed: 0, speedL: 0, speedR: 0 };
 
   const speedL = dist2({ x: b.lx, y: b.ly }, { x: a.lx, y: a.ly }) / dt;
   const speedR = dist2({ x: b.rx, y: b.ry }, { x: a.rx, y: a.ry }) / dt;
   const speed = Math.max(speedL, speedR);
-  return Number.isFinite(speed) ? speed : 0;
+  return {
+    speed: Number.isFinite(speed) ? speed : 0,
+    speedL: Number.isFinite(speedL) ? speedL : 0,
+    speedR: Number.isFinite(speedR) ? speedR : 0,
+  };
+}
+
+/**
+ * 近 0.3s 雙手手腕速度；取左右較大者（單手有動即可）
+ */
+function updateAndGetWristSpeed(userLandmarks) {
+  return updateAndGetWristMotion(userLandmarks).speed;
 }
 
 /**
@@ -3485,9 +3510,11 @@ function computePoseBestScoreD(userLandmarks, trace, opts = {}) {
     typeof opts.wristSpeed === "number"
       ? opts.wristSpeed
       : updateAndGetWristSpeed(userLandmarks);
-  const speedMin = Number.isFinite(cfg.freeWristSpeedMin)
-    ? cfg.freeWristSpeedMin
-    : 0.12;
+  const speedMin = Number.isFinite(opts.speedMin)
+    ? opts.speedMin
+    : Number.isFinite(cfg.freeWristSpeedMin)
+      ? cfg.freeWristSpeedMin
+      : 0.12;
   if (!(wristSpeed >= speedMin)) {
     return {
       ok: false,
@@ -3809,10 +3836,11 @@ function drawUserOverlay() {
 let _poseUiBound = false;
 let PoseModelMultiRef = null;
 let _cameraStarting = false;
+let _cameraPumpId = 0;
 
 async function ensurePoseModelMulti() {
   if (PoseModelMultiRef) return PoseModelMultiRef;
-  const mod = await import("./poseTaskMulti.js?build=people-mode-1");
+  const mod = await import("./poseTaskMulti.js?build=people-mode-2");
   PoseModelMultiRef = mod.PoseModelMulti;
   return PoseModelMultiRef;
 }
@@ -3822,6 +3850,7 @@ async function startCameraSession() {
   if (state.cameraRunning || _cameraStarting) return;
   _cameraStarting = true;
   const dual = isDualPeopleMode();
+  const pumpId = ++_cameraPumpId;
 
   try {
     els.startCameraButton.disabled = true;
@@ -3890,7 +3919,7 @@ async function startCameraSession() {
     };
 
     const cameraPump = () => {
-      if (!state.poseLoopActive) return;
+      if (!state.poseLoopActive || pumpId !== _cameraPumpId) return;
       if (els.inputVideo.readyState === els.inputVideo.HAVE_ENOUGH_DATA) {
         pendingFrame = els.inputVideo;
         if (!isProcessing) processFrames();
@@ -4057,6 +4086,8 @@ function drawMode2Overlay(tScore) {
 
   const rectUser = getDrawRect(SKELETON_IDS.m2_user, defaultRects);
 
+  const DUAL_COLORS = ["#E53935", "#FB8C00"];
+
   // Draw traces first (behind), then user skeleton on top.
   const traces = state.mode2?.traces || [];
   for (const tr of traces) {
@@ -4076,7 +4107,25 @@ function drawMode2Overlay(tScore) {
     drawPosePoints(ctx, lm, getter2, rect, trColor, 4.5);
   }
 
-  if (state.latestUserLandmarks) {
+  if (isDualPeopleMode()) {
+    const list = Array.isArray(state.latestMultiLandmarks)
+      ? state.latestMultiLandmarks
+      : [];
+    for (let i = 0; i < list.length; i += 1) {
+      const lm = list[i];
+      if (!lm) continue;
+      const color = DUAL_COLORS[i] || DUAL_COLORS[0];
+      drawUserAvatar(ctx, lm, getLmXYV, rectUser, {
+        skeletonId: SKELETON_IDS.m2_user,
+        baseColor: color,
+        highlightColor: color,
+        highlightParts: new Set(),
+        colorByConnection: () => color,
+        lineWidth: 3,
+        pointRadius: 3.5,
+      });
+    }
+  } else if (state.latestUserLandmarks) {
     drawUserAvatar(ctx, state.latestUserLandmarks, getLmXYV, rectUser, {
       skeletonId: SKELETON_IDS.m2_user,
       baseColor: userColor,
@@ -4297,22 +4346,29 @@ function tickBackgroundSwimDetect(opts = {}) {
   let swimOrange = false;
 
   if (userLm && state.swim.trace) {
-    const wristSpeed =
-      typeof opts.wristSpeed === "number"
-        ? opts.wristSpeed
-        : updateAndGetWristSpeed(userLm);
-    const rSwim = computePoseBestScoreD(userLm, state.swim.trace, {
-      wristSpeed,
-    });
+    const motion = updateAndGetWristMotion(userLm);
+    const eachMin = Number.isFinite(state.swim.wristEachMin)
+      ? state.swim.wristEachMin
+      : 0.12;
+    const swimSpeedMin = Number.isFinite(state.swim.wristSpeedMin)
+      ? state.swim.wristSpeedMin
+      : 0.22;
+    const bothMoving = motion.speedL >= eachMin && motion.speedR >= eachMin;
+    const rSwim = bothMoving
+      ? computePoseBestScoreD(userLm, state.swim.trace, {
+          wristSpeed: motion.speed,
+          speedMin: swimSpeedMin,
+        })
+      : { ok: false, reason: "swim_one_hand", score: 0 };
     let overallSwimNum = null;
     if (rSwim.ok) {
       const ov = pushOverall(state.swim.overall, wallT, rSwim.score, 1);
       if (typeof ov === "number") overallSwimNum = ov;
     } else {
-      // 單幀失敗仍用近窗整體分，避免 enter 計時一直被清零
-      overallSwimNum = peekOverall(state.swim.overall);
+      // 失敗幀寫入 0，避免舊高分在 4 秒窗裡把亂動判成划水
+      overallSwimNum = pushOverall(state.swim.overall, wallT, 0, 1);
     }
-    const swimInstant = rSwim.ok ? rSwim.score : null;
+    const swimInstant = rSwim.ok ? rSwim.score : 0;
     swimOrange = updateOrangeState(
       wallT,
       swimInstant,
