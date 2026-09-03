@@ -141,6 +141,8 @@ const state = {
     mode1DemoDeleteRects: {},
     /** 載入 JSON 的刪除鈕（相容舊邏輯） */
     mode1LoadedDeleteRect: null,
+    /** single：現有 Heavy 單人；dual：Full 雙人僅骨架 */
+    peopleMode: "single",
   },
 
   interact: {
@@ -207,6 +209,7 @@ const state = {
   poseLoopActive: false,
   cameraStream: null,
   latestUserLandmarks: null,
+  latestMultiLandmarks: [],
 
   // Similarity (Phase 1: time window only)
   similarity: {
@@ -555,6 +558,8 @@ function initDomRefs() {
   els.synthPatternSelect = $("synthPatternSelect");
   els.addSynthTraceButton = $("addSynthTraceButton");
   els.startCameraButton = $("startCameraButton");
+  els.peopleModeToggle = $("peopleModeToggle");
+  els.nextGroupButton = $("nextGroupButton");
   els.toggleMode1DemoButton = $("toggleMode1DemoButton");
   els.bindSongToggle = $("bindSongToggle");
   els.bindSongLabel = $("bindSongLabel");
@@ -1296,6 +1301,8 @@ function stopCameraIfRunning() {
   if (els.inputVideo) els.inputVideo.srcObject = null;
   if (els.startCameraButton) els.startCameraButton.textContent = "啟動鏡頭";
   state.latestUserLandmarks = null;
+  state.latestMultiLandmarks = [];
+  if (els.poseInfoText) els.poseInfoText.style.display = "none";
   drawUserOverlay();
   setRecordUi(getPlayerTimeSafe());
 }
@@ -3800,27 +3807,43 @@ function drawUserOverlay() {
 }
 
 let _poseUiBound = false;
+let PoseModelMultiRef = null;
+let _cameraStarting = false;
 
-async function initPose() {
-  if (!els.startCameraButton) return;
-  // 防止 main／熱重載重複綁定造成連點多次開關
-  if (_poseUiBound) return;
-  _poseUiBound = true;
+async function ensurePoseModelMulti() {
+  if (PoseModelMultiRef) return PoseModelMultiRef;
+  const mod = await import("./poseTaskMulti.js?build=people-mode-1");
+  PoseModelMultiRef = mod.PoseModelMulti;
+  return PoseModelMultiRef;
+}
 
-  els.startCameraButton.addEventListener("click", async () => {
-    if (state.cameraRunning) {
-      stopCameraIfRunning();
-      return;
-    }
+async function startCameraSession() {
+  if (!els.startCameraButton || !els.inputVideo) return;
+  if (state.cameraRunning || _cameraStarting) return;
+  _cameraStarting = true;
+  const dual = isDualPeopleMode();
 
-    try {
-      els.startCameraButton.disabled = true;
+  try {
+    els.startCameraButton.disabled = true;
+    let detectFn = null;
+
+    if (dual) {
+      const Multi = await ensurePoseModelMulti();
+      const poseInstance = await Multi.init();
+      if (!poseInstance) throw new Error("MediaPipe 雙人 PoseLandmarker 初始化失敗");
+      Multi.resetFilters();
+      Multi.setCallback((result) => {
+        const list = Array.isArray(result?.allLandmarks)
+          ? result.allLandmarks
+          : [];
+        state.latestMultiLandmarks = list;
+        state.latestUserLandmarks = null;
+      });
+      detectFn = (frame, timestampUs) => Multi.detect(frame, timestampUs);
+    } else {
       const poseInstance = await PoseModel.init();
       if (!poseInstance) throw new Error("MediaPipe PoseLandmarker 初始化失敗");
-
-      // 啟用 OneEuroFilter 防抖（全身 33 點 x/y/z）
       PoseModel.setLandmarkPreprocessor(filterLandmarksOneEuro);
-
       PoseModel.setCallback((result) => {
         if (
           !result ||
@@ -3832,63 +3855,105 @@ async function initPose() {
         }
         state.latestUserLandmarks = result.landmarks;
       });
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false,
-      });
-      state.cameraStream = stream;
-      els.inputVideo.srcObject = stream;
-      await els.inputVideo.play();
-
-      // 偵測與繪製已解耦：
-      // - updateUiLoop（rAF）負責 Canvas／骨架繪製，不 await detect
-      // - 下方 cameraPump 只丟影格；processFrames 非同步推論，不阻塞繪製
-      let lastTimestamp = 0;
-      let isProcessing = false;
-      let pendingFrame = null;
-
-      const processFrames = async () => {
-        if (isProcessing || !pendingFrame) return;
-        isProcessing = true;
-        const frame = pendingFrame;
-        pendingFrame = null;
-        try {
-          const currentTimestampMs = performance.now();
-          let timestampUs = Math.floor(currentTimestampMs * 1000);
-          if (timestampUs <= lastTimestamp) timestampUs = lastTimestamp + 1;
-          lastTimestamp = timestampUs;
-          await PoseModel.detect(frame, timestampUs);
-        } catch (err) {
-          console.error("Pose detect failed:", err);
-        } finally {
-          isProcessing = false;
-          if (pendingFrame) processFrames();
-        }
-      };
-
-      const cameraPump = () => {
-        if (!state.poseLoopActive) return;
-        if (els.inputVideo.readyState === els.inputVideo.HAVE_ENOUGH_DATA) {
-          pendingFrame = els.inputVideo;
-          if (!isProcessing) processFrames();
-        }
-        requestAnimationFrame(cameraPump);
-      };
-
-      state.poseLoopActive = true;
-      cameraPump();
-      state.cameraRunning = true;
-      els.startCameraButton.textContent = "關閉鏡頭";
-      els.startCameraButton.disabled = false;
-      setRecordUi(getPlayerTimeSafe());
-    } catch (err) {
-      console.error(err);
-      els.startCameraButton.disabled = false;
-      els.startCameraButton.textContent = "啟動鏡頭";
-      setRecordUi(getPlayerTimeSafe());
+      detectFn = (frame, timestampUs) => PoseModel.detect(frame, timestampUs);
     }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false,
+    });
+    state.cameraStream = stream;
+    els.inputVideo.srcObject = stream;
+    await els.inputVideo.play();
+
+    let lastTimestamp = 0;
+    let isProcessing = false;
+    let pendingFrame = null;
+
+    const processFrames = async () => {
+      if (isProcessing || !pendingFrame) return;
+      isProcessing = true;
+      const frame = pendingFrame;
+      pendingFrame = null;
+      try {
+        const currentTimestampMs = performance.now();
+        let timestampUs = Math.floor(currentTimestampMs * 1000);
+        if (timestampUs <= lastTimestamp) timestampUs = lastTimestamp + 1;
+        lastTimestamp = timestampUs;
+        await detectFn(frame, timestampUs);
+      } catch (err) {
+        console.error("Pose detect failed:", err);
+      } finally {
+        isProcessing = false;
+        if (pendingFrame) processFrames();
+      }
+    };
+
+    const cameraPump = () => {
+      if (!state.poseLoopActive) return;
+      if (els.inputVideo.readyState === els.inputVideo.HAVE_ENOUGH_DATA) {
+        pendingFrame = els.inputVideo;
+        if (!isProcessing) processFrames();
+      }
+      requestAnimationFrame(cameraPump);
+    };
+
+    state.poseLoopActive = true;
+    cameraPump();
+    state.cameraRunning = true;
+    els.startCameraButton.textContent = "關閉鏡頭";
+    els.startCameraButton.disabled = false;
+    setRecordUi(getPlayerTimeSafe());
+  } catch (err) {
+    console.error(err);
+    stopCameraIfRunning();
+    els.startCameraButton.disabled = false;
+    els.startCameraButton.textContent = "啟動鏡頭";
+    setRecordUi(getPlayerTimeSafe());
+  } finally {
+    _cameraStarting = false;
+  }
+}
+
+async function initPose() {
+  if (!els.startCameraButton) return;
+  if (_poseUiBound) return;
+  _poseUiBound = true;
+
+  syncPeopleModeUi();
+
+  els.startCameraButton.addEventListener("click", async () => {
+    if (state.cameraRunning) {
+      stopCameraIfRunning();
+      return;
+    }
+    await startCameraSession();
   });
+
+  if (els.peopleModeToggle) {
+    els.peopleModeToggle.addEventListener("change", async () => {
+      const dual = Boolean(els.peopleModeToggle.checked);
+      state.ui.peopleMode = dual ? "dual" : "single";
+      syncPeopleModeUi();
+      const wasRunning = state.cameraRunning;
+      if (wasRunning) stopCameraIfRunning();
+      if (dual && PoseModelMultiRef) PoseModelMultiRef.resetFilters();
+      if (wasRunning) await startCameraSession();
+    });
+  }
+
+  if (els.nextGroupButton) {
+    els.nextGroupButton.addEventListener("click", () => {
+      if (!isDualPeopleMode()) return;
+      if (PoseModelMultiRef) PoseModelMultiRef.resetFilters();
+      state.latestMultiLandmarks = [];
+      if (els.poseInfoText && state.cameraRunning) {
+        els.poseInfoText.style.display = "";
+        els.poseInfoText.textContent = "下一組 · 請兩位入鏡";
+      }
+      console.log("[PoseMulti] 下一組");
+    });
+  }
 }
 
 function getPlayerTimeSafe() {
@@ -4191,10 +4256,42 @@ function peekOverall(buffer) {
 
 /**
  * 背景划水偵測 → 海邊場景（Mode1／Mode2 皆需呼叫；不畫示範骨架）
+ * 雙人模式不評分、不進場景。
  * @param {{ wristSpeed?: number }} [opts]
  * @returns {boolean} 目前是否維持海邊
  */
+function isDualPeopleMode() {
+  return state.ui.peopleMode === "dual";
+}
+
+function syncPeopleModeUi() {
+  const dual = isDualPeopleMode();
+  if (els.peopleModeToggle) {
+    els.peopleModeToggle.checked = dual;
+    els.peopleModeToggle.setAttribute("aria-checked", dual ? "true" : "false");
+  }
+  if (els.nextGroupButton) {
+    els.nextGroupButton.hidden = !dual;
+  }
+}
+
 function tickBackgroundSwimDetect(opts = {}) {
+  if (isDualPeopleMode()) {
+    if (state.swim.orange.active) {
+      state.swim.orange.active = false;
+      state.swim.orange.enterGoodSec = 0;
+      state.swim.orange.exitBadSec = 0;
+      state.swim.orange.window = [];
+      state.swim.orange.lastT = null;
+    }
+    syncBeachScene(false);
+    if (els.poseInfoText && state.cameraRunning) {
+      els.poseInfoText.style.display = "";
+      els.poseInfoText.textContent = "雙人模式 · 僅顯示骨架";
+    }
+    return false;
+  }
+
   const userLm = state.latestUserLandmarks;
   const wallT = performance.now() / 1000;
   let swimOrange = false;

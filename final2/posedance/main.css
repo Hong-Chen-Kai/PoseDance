@@ -1166,6 +1166,64 @@ body {
   cursor: not-allowed;
 }
 
+.people-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.people-mode-toggle__side {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.people-mode-toggle__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.people-mode-toggle__track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #94a3b8;
+  transition: background 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.people-mode-toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.people-mode-toggle__input:checked + .people-mode-toggle__track {
+  background: #ea580c;
+}
+
+.people-mode-toggle__input:checked + .people-mode-toggle__track::after {
+  transform: translateX(16px);
+}
+
 /* —— 亮色主題補齊（覆蓋檔案中段 modal；舞台維持黑底） —— */
 .modal__header {
   border-bottom-color: var(--pd-line);
