@@ -5,7 +5,7 @@
     <title>Pose Dance</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./main.css?v=boot-loading-1" />
+    <link rel="stylesheet" href="./main.css?v=people-mode-1" />
 </head>
   <body>
     <div
@@ -117,6 +117,30 @@
           <div class="topbar__controls-group topbar__controls-group--right">
             <button id="startCameraButton" class="btn btn-camera" type="button">
               啟動鏡頭
+            </button>
+            <label
+              class="people-mode-toggle"
+              title="單人：Heavy 評分／場景；雙人：Full 僅顯示骨架"
+            >
+              <span class="people-mode-toggle__side">單人</span>
+              <input
+                id="peopleModeToggle"
+                class="people-mode-toggle__input"
+                type="checkbox"
+                role="switch"
+                aria-checked="false"
+                aria-label="單人／雙人鏡頭"
+              />
+              <span class="people-mode-toggle__track" aria-hidden="true"></span>
+              <span class="people-mode-toggle__side">雙人</span>
+            </label>
+            <button
+              id="nextGroupButton"
+              class="btn btn-load"
+              type="button"
+              hidden
+            >
+              下一組
             </button>
             <label
               class="record-bind-toggle"
@@ -411,6 +435,6 @@
       }
     </script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="./posedanceTest.js?build=hide-synth-hud"></script>
+    <script type="module" src="./posedanceTest.js?build=people-mode-1"></script>
   </body>
 </html>
