@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>PoseDance · YouTube 環境對照測試</title>
+  <link rel="icon" href="data:,">
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f7f5;color:#163633;font:18px/1.6 system-ui,sans-serif}main{max-width:1000px;margin:32px auto;padding:24px}h1{font-size:30px}label{display:block}input{width:100%;padding:12px;font:inherit}button{font:inherit;padding:10px 18px;border:1px solid #74938b;border-radius:8px;background:white;color:#163633;cursor:pointer}button:disabled{opacity:.5;cursor:default}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}#player-host{min-height:280px}#player-host iframe{display:block;width:min(100%,640px);height:360px;min-width:200px;min-height:200px;border:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#e8efeb;padding:16px;border-radius:8px;font-size:14px}#error{color:#9d2525}small{display:block}code{overflow-wrap:anywhere}@media(max-width:500px){main{padding:14px}#player-host iframe{height:270px}}
+  </style>
+</head>
+<body><main>
+  <h1>YouTube 環境對照測試</h1>
+  <p>比較相同影片在本機 HTTP 與 GitHub Pages HTTPS 的結果。本頁只測官方播放器，不包含 SMPL、攝影機、音訊下載或節拍配對。</p>
+  <p>目前來源：<code id="origin"></code></p>
+  <label>影片網址或 ID<input id="video-input" value="https://www.youtube.com/watch?v=PBwAxmrE194" spellcheck="false"></label>
+  <div class="buttons"><button id="load">載入輸入影片</button><button id="example">載入官方示例</button><button id="target">載入指定音樂影片</button></div>
+  <div id="player-host"></div>
+  <div class="buttons"><button id="play" disabled>播放</button><button id="pause" disabled>暫停</button><button id="dispose">停止並釋放播放器</button></div>
+  <p id="status" role="status">尚未載入；按鈕操作前不會連線 YouTube。</p><p id="error" role="alert"></p>
+  <pre id="snapshot">尚無媒體時間。</pre>
+  <details open><summary>事件紀錄</summary><pre id="log"></pre></details>
+  <small>150/101 為 YouTube 回報的嵌入拒絕；153 為來源識別問題。錯誤碼保留原值，不能單憑文字判定不同部署環境必然相同。未通過的影片不會被繞過限制。</small>
+</main>
+<script type="module">
+const $=id=>document.getElementById(id),events=[];
+let player=null,poll=null,token=0,apiPromise=null,ready=false;
+$('origin').textContent=location.origin;
+function log(type,data={}){events.push({type,atMs:performance.now(),origin:location.origin,...data});if(events.length>200)events.shift();$('log').textContent=JSON.stringify(events,null,2);}
+function parse(input){const text=input.trim();if(/^[\w-]{11}$/.test(text))return text;const u=new URL(text);if(!['https:','http:'].includes(u.protocol)||u.username||u.password||u.port)throw Error('無效網址');const p=u.pathname.split('/').filter(Boolean),host=u.hostname;let id;if(host==='youtu.be'&&p.length===1)id=p[0];else if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(host)){if(u.pathname==='/watch'&&u.searchParams.getAll('v').length===1)id=u.searchParams.get('v');else if(['shorts','embed','live'].includes(p[0])&&p.length===2)id=p[1];}if(!/^[\w-]{11}$/.test(id??''))throw Error('請輸入單一YouTube影片網址或11字元ID');return id;}
+function api(){if(window.YT?.Player)return Promise.resolve(window.YT);if(apiPromise)return apiPromise;apiPromise=new Promise((resolve,reject)=>{const script=document.createElement('script'),timer=setTimeout(()=>finish(Error('API_TIMEOUT')),15000);function finish(error){clearTimeout(timer);script.onerror=null;if(error){script.remove();apiPromise=null;reject(error);}else resolve(window.YT);}window.onYouTubeIframeAPIReady=()=>finish();script.src='https://www.youtube.com/iframe_api';script.onerror=()=>finish(Error('API_LOAD_FAILED'));document.head.append(script);});return apiPromise;}
+function read(){if(!player||!ready)return;try{const sample={videoURL:player.getVideoUrl(),timeSeconds:player.getCurrentTime(),durationSeconds:player.getDuration(),rawState:player.getPlayerState(),readAtMonotonicMs:performance.now(),origin:location.origin};$('snapshot').textContent=JSON.stringify(sample,null,2);}catch(e){log('readerror',{message:e.message});}}
+function clear(){clearInterval(poll);poll=null;ready=false;$('play').disabled=$('pause').disabled=true;try{player?.destroy();}catch{}player=null;$('player-host').replaceChildren();$('snapshot').textContent='尚無媒體時間。';}
+function fail(error){$('error').textContent=error.message;log('failure',{message:error.message});}
+async function load(input){const g=++token;clear();$('error').textContent='';try{if(!['http:','https:'].includes(location.protocol))throw Error('請使用HTTP伺服器或GitHub Pages，不能直接雙擊HTML。');const id=parse(input);$('status').textContent='載入官方播放器…';log('load',{videoId:id});const YT=await api();if(g!==token)return;const node=document.createElement('div');$('player-host').append(node);player=new YT.Player(node,{width:640,height:360,videoId:id,playerVars:{autoplay:0,controls:1,playsinline:1,enablejsapi:1,origin:location.origin,widget_referrer:location.origin+'/'},events:{onReady(){if(g!==token)return;ready=true;$('play').disabled=$('pause').disabled=false;$('status').textContent='播放器就緒；請按播放。';log('ready',{videoId:id});poll=setInterval(read,200);read();},onStateChange(e){if(g!==token)return;log('state',{videoId:id,rawState:e.data});$('status').textContent='官方播放狀態：'+({[-1]:'尚未播放',0:'已結束',1:'播放中',2:'已暫停',3:'緩衝中',5:'已準備'})[e.data];read();},onError(e){if(g!==token)return;$('error').textContent='YOUTUBE_'+e.data;log('providererror',{videoId:id,code:e.data});$('status').textContent='官方播放器回報錯誤，請保留此頁的來源與事件紀錄。';},onAutoplayBlocked(){if(g===token)log('autoplayblocked',{videoId:id});}}});}catch(e){if(g===token){$('status').textContent='載入失敗';fail(e);}}}
+$('load').onclick=()=>load($('video-input').value);
+$('example').onclick=()=>{ $('video-input').value='M7lc1UVf-VE';load($('video-input').value);};
+$('target').onclick=()=>{ $('video-input').value='PBwAxmrE194';load($('video-input').value);};
+$('play').onclick=()=>{if(ready){log('playrequest');player.playVideo();}};
+$('pause').onclick=()=>{if(ready){log('pauserequest');player.pauseVideo();}};
+$('dispose').onclick=()=>{token++;clear();$('status').textContent='播放器已釋放。';log('disposed');};
+window.addEventListener('pagehide',()=>{token++;clear();});
+</script>
+</body></html>
