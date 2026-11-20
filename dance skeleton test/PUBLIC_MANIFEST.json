@@ -1163,8 +1163,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "e03002e3a5c1a5df85e248a4e01dd974d621323283e5c9d5dd3837aa0babb79a",
-      "bytes": 6000
+      "sha256": "32a2a74497bb2588fe59a204db9e84d99536b14253664ce04e6c6d12d3c56c6f",
+      "bytes": 5848
     },
     {
       "path": "krump-graph.json",
