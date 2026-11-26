@@ -1,4 +1,4 @@
-import{openQualified}from'./qualified-style.mjs';
+import{openQualified}from'./qualified-style.mjs?v=3bd374e86c94a8f8f7565b9de5003094213311f1a176bfbbbd547a5f9a597a63';
 // External-clock adapter: transport and animation authority belong to the coordinator.
 export async function createRollingDancer(stage,common){const[{createView},{GraphPairCache,futureFrames},{createWorkerDecoder},{transform},{blend}]=await Promise.all([import(common.viewURL),import(common.cacheURL),import(common.workerURL),import(common.mathURL),import(common.blendURL)]);const view=createView(stage);let ctx=null,cache=null,worker=null,generation=0,mode='mesh',disposed=false,sample=null,renderedMusic=0,drawn=0,busy=false;const resources=[],visits={},errors=[];
 function inspect(){return{disposed,busy,generation,frame:sample?.position??0,renderedMusic,drawn,node:sample?.left.node,style:ctx?.options.style,route:ctx?.choice.route,graph:ctx?.pool.rollingGraph.id,endingPlan:ctx?.endingPlan,queue:ctx?.pool.scheduler.inspect(),cache:cache?.stats(),worker:worker?.stats(),view:view.inspect(),mode,visits:{...visits},resources:[...resources],errors:[...errors]};}
