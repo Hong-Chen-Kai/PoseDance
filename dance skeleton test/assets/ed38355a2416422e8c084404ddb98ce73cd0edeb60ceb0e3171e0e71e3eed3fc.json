@@ -1,0 +1,133 @@
+{
+  "schema": "posedance-rolling-graph-v1",
+  "id": "popping-v4r2-SU",
+  "version": "4.0.0-review.2",
+  "qualification": "ISOLATED_REVIEW_ROUTE",
+  "formal_registration": false,
+  "entry": "S",
+  "pool_frames": 2296,
+  "nodes": [
+    {
+      "id": "S",
+      "asset": "S",
+      "pool": [
+        0,
+        342
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sBM_cAll_d10_mPO0_ch01",
+      "source_frames": [
+        240,
+        582
+      ]
+    },
+    {
+      "id": "U",
+      "asset": "U",
+      "pool": [
+        342,
+        602
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sBM_cAll_d12_mPO2_ch01",
+      "source_frames": [
+        24,
+        284
+      ]
+    },
+    {
+      "id": "RU_AB",
+      "asset": "RU_AB",
+      "pool": [
+        2042,
+        2065
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "RU_BA",
+      "asset": "RU_BA",
+      "pool": [
+        2065,
+        2088
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "S>RU_AB",
+      "from": "S",
+      "to": "RU_AB",
+      "motion_edge": "REVIEW_SU",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    },
+    {
+      "id": "RU_AB>U",
+      "from": "RU_AB",
+      "to": "U",
+      "motion_edge": "REVIEW_SU",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    },
+    {
+      "id": "U>RU_BA",
+      "from": "U",
+      "to": "RU_BA",
+      "motion_edge": "REVIEW_US",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    },
+    {
+      "id": "RU_BA>S",
+      "from": "RU_BA",
+      "to": "S",
+      "motion_edge": "REVIEW_US",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "transform": {
+        "r": [
+          0.9971908289618545,
+          0.0,
+          0.07490294142668447,
+          0.0,
+          1.0,
+          0.0,
+          -0.07490294142668447,
+          0.0,
+          0.9971908289618545
+        ],
+        "t": [
+          -3.787757265597212,
+          0.0,
+          2.444838467866857
+        ]
+      },
+      "placement_delta": 1,
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    }
+  ],
+  "parentGraphSHA": "10911fdef1216a7e0fc34caa11a160b0202a3ff72ad5a2f3f98af0ae679bb53c",
+  "excludedPhrases": [
+    "C2",
+    "L",
+    "T"
+  ],
+  "parentReviewGraphSHA": "6c141ddcc0dfdf20872cc5659e68904de67ed59f3e61c6dcca806f459c0535d2"
+}

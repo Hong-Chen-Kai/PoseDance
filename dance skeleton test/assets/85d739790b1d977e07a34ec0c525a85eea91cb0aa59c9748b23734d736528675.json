@@ -1,0 +1,130 @@
+{
+  "schema": "posedance-rolling-graph-v1",
+  "id": "popping-v4r2-pair-C3",
+  "version": "4.0.0-review.2",
+  "qualification": "ISOLATED_REVIEW_ROUTE",
+  "formal_registration": false,
+  "entry": "S",
+  "pool_frames": 2296,
+  "nodes": [
+    {
+      "id": "S",
+      "asset": "S",
+      "pool": [
+        0,
+        342
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sBM_cAll_d10_mPO0_ch01",
+      "source_frames": [
+        240,
+        582
+      ]
+    },
+    {
+      "id": "C3",
+      "asset": "C3",
+      "pool": [
+        962,
+        1322
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sFM_cAll_d12_mPO1_ch16",
+      "source_frames": [
+        90,
+        450
+      ]
+    },
+    {
+      "id": "S_C3",
+      "asset": "S_C3",
+      "pool": [
+        2134,
+        2157
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "C3_S",
+      "asset": "C3_S",
+      "pool": [
+        2157,
+        2180
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "S_via_S_C3",
+      "from": "S",
+      "to": "S_C3",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "S_C3_to_C3",
+      "from": "S_C3",
+      "to": "C3",
+      "transform": {
+        "r": [
+          0.6911384611891878,
+          0.0,
+          0.7227223723291272,
+          0.0,
+          1.0,
+          0.0,
+          -0.7227223723291272,
+          0.0,
+          0.6911384611891878
+        ],
+        "t": [
+          -21.039265194881715,
+          0.0,
+          -18.746645154364934
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C3_via_C3_S",
+      "from": "C3",
+      "to": "C3_S",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C3_S_to_S",
+      "from": "C3_S",
+      "to": "S",
+      "transform": {
+        "r": [
+          0.9994003916710256,
+          0.0,
+          0.034624516282552205,
+          0.0,
+          1.0,
+          0.0,
+          -0.034624516282552205,
+          0.0,
+          0.9994003916710256
+        ],
+        "t": [
+          58.40177079064544,
+          0.0,
+          -2.7221268852772678
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    }
+  ],
+  "parentGraphSHA": "10911fdef1216a7e0fc34caa11a160b0202a3ff72ad5a2f3f98af0ae679bb53c",
+  "excludedPhrases": [
+    "C2",
+    "L",
+    "T"
+  ],
+  "parentReviewGraphSHA": "6c141ddcc0dfdf20872cc5659e68904de67ed59f3e61c6dcca806f459c0535d2"
+}

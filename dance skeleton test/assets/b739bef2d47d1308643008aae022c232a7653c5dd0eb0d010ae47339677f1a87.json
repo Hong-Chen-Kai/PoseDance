@@ -1,0 +1,114 @@
+{
+  "schema": "posedance-continuous-motion-profile-v1",
+  "id": "house-cutloop-uniform-tempo-bpm1-v1",
+  "style": "house",
+  "scope": "INHERITED_PROFILE_NEW_TIME_BINDING",
+  "parent_graph_id": "house-cutloop-v1",
+  "parent_graph_sha256": "f9ab9821a0809c2dc9b44993e0a4abdb9dbe2a359ce6f5dec611596fd0a2d07b",
+  "source_bpm": 130,
+  "house_controlled_rate_range": [
+    0.75,
+    1.25
+  ],
+  "contact": "CONTACT_UNVERIFIED",
+  "first_beat": null,
+  "loop_beat_phase": "UNVERIFIED",
+  "prefix_frames": 1757,
+  "cycle_frames": 345,
+  "cycle_segments": [
+    {
+      "stream": "base",
+      "frames": [
+        1757,
+        2091
+      ],
+      "asset": "b01-cutloop334"
+    },
+    {
+      "stream": "bridge",
+      "frames": [
+        0,
+        11
+      ],
+      "asset": "cutloop-return11"
+    }
+  ],
+  "ghost_source_frame": 1757,
+  "accepted_cycle_edge": {
+    "id": "B01_CUT_RETURN_V1",
+    "from_asset": "b01-cutloop334",
+    "to_asset": "b01-cutloop334",
+    "transition_asset": "cutloop-return11",
+    "from_source": 348,
+    "to_source": 15,
+    "placement_delta": 1,
+    "qualification": "CUTLOOP_11_FRAME_PLUS_HUMAN_V1"
+  },
+  "placement": {
+    "schema": "PLANAR_OCCURRENCE_REGISTRATION_V1",
+    "Y": [
+      [
+        0.9744622116410872,
+        0.0,
+        0.2245515488335834
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        -0.2245515488335834,
+        0.0,
+        0.9744622116410872
+      ]
+    ],
+    "u": [
+      29.585607335657315,
+      0.0,
+      -16.655474041065432
+    ],
+    "scope": "G^k作用整段及橋接；不變速、不瞬間Root重設",
+    "source_finite_max_occurrence": 47,
+    "continuous_max_occurrence": null,
+    "numeric_domain": "JavaScript safe-integer frame/occurrence；不是固定演出時長上限"
+  },
+  "revisit_policy": "REPEAT_SAME_ACCEPTED_EDGE_UNTIL_MUSIC_END_OR_USER_STOP",
+  "placement_scope": "來源同一固定SE2等變，超過舊有限方案47次是本runtime新版策略；不改舊Graph/切點/接縫。",
+  "working_set": {
+    "pool_frames": 2103,
+    "cache_chunks": 4,
+    "inflight": 1,
+    "worker_records": 128,
+    "occurrence_trace": 64
+  },
+  "human_evidence_sha256": "b495496d74ef445507f350fd7b01904aa03089a3e150983482c059246315d01b",
+  "stop_policy": "STOP_ON_AUDIO_ENDED_OR_EXPLICIT_STOP_AT_CURRENT_POSE",
+  "seed_policy": "單一合法後繼，固定來源/版本/Seed/音樂時間可重現；不儲存無限路徑陣列",
+  "cycle_bounds": {
+    "min": [
+      -70.44532012939453,
+      58.408573150634766,
+      -187.56553649902344
+    ],
+    "max": [
+      22.863685607910156,
+      206.9598388671875,
+      -79.35596466064453
+    ]
+  },
+  "prefix_bounds": {
+    "min": [
+      -80.43707586942043,
+      56.77466292585244,
+      -191.06554316421798
+    ],
+    "max": [
+      129.68370769979893,
+      235.0711919655455,
+      6.712421732343998
+    ]
+  },
+  "parent_profile": "house-cutloop-continuous-v1",
+  "qualification_id": "house-cutloop-uniform-tempo-bpm1-v1"
+}

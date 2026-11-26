@@ -1,25 +1,11 @@
-# PoseDance｜dance skeleton test
+# PoseDance Web V1 —1126
 
-十舞風自然持續分支展示。選擇舞風 → 選擇本機音樂或「使用測試音」 → 播放。可暫停、繼續、重播、停止、Seek，以及人體／骨架切換。舞者沿正式合法Graph持續編舞，直到音樂結束或使用者停止。歌曲僅於瀏覽器內讀取，不上傳。
+公開入口：https://hong-chen-kai.github.io/PoseDance/dance%20skeleton%20test/
 
-線上入口：https://hong-chen-kai.github.io/PoseDance/dance%20skeleton%20test/
+選擇舞風與60至130之間的整數或小數BPM，貼上允許嵌入的YouTube單支影片網址，按載入影片及開始跳舞。演出設定可選起始秒數與3/5分鐘；人體/24關節骨架、浮動播放器寬高獨立縮放、時間軸及視角控制均保留。
 
-請使用支援WebGL、Web Crypto、DecompressionStream的新版Chrome／Edge。需連線下載Three.js模組與動作區塊；初次載入可能需要等待。來源區塊按需載入，RAM Cache最多四塊；以content hash命名的動作檔可由瀏覽器磁碟快取重用。
+本目錄是純靜態網站，不需Node或本機API；使用支援WebGL、WebCrypto、DecompressionStream的現代Chrome/Edge。Chunk按需無損還原，由原SHA及Worker逐幀驗證；Queue≤8、Cache≤4。
 
-## 本機啟動
+本機預覽可由儲存庫根目錄執行 `python -m http.server 8382 --bind 127.0.0.1`，開啟含本目錄的網址。不要以file協定開啟。Three.js及YouTube需網際網路連線；不提供使用者姿態評分或比較。
 
-從儲存庫根目錄執行：
-
-```powershell
-python -m http.server 8080 --bind 127.0.0.1
-```
-
-開啟 http://127.0.0.1:8080/dance%20skeleton%20test/ 。請勿直接雙擊HTML使用file協定。
-
-## 範圍
-
-此版沿用十舞風已正式登錄的Graph、Seed及已接受接縫；不是全舞風BPM跟拍完成版。來源、授權及已知限制見[ATTRIBUTION.md](ATTRIBUTION.md)。原本研究工作區、私有音樂與模型檔不包含在本資料夾。
-
-## 無損資料格式
-
-`.xbgz`只減少傳輸大小，不改動畫數值：保留原64-byte AISTSG01/v5 header，各vertices/joints/root陣列按影格做uint32 XOR差分，body重排為四個位元組平面後gzip。瀏覽器先解gzip、還原位元組排列與XOR，再使用原SHA-256及逐幀hash驗證、原Worker解碼。每個區塊均在發布前反解核對原bytes，無重取樣、無Forward、無新增動作幀。
+來源、授權與限制見[ATTRIBUTION.md](ATTRIBUTION.md)；版本及無損傳輸摘要見RELEASE_1126.json。來源commit847c5b1fafddbf9a39f5ff727029e320324b26c7，本目錄只做靜態部署適配，不代表整套PoseDance最終完成。

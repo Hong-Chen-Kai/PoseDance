@@ -1,0 +1,421 @@
+{
+  "schema": "posedance-rolling-graph-v1",
+  "id": "popping-v4r2-five",
+  "version": "4.0.0-review.2",
+  "qualification": "ISOLATED_REVIEW_ROUTE",
+  "formal_registration": false,
+  "entry": "S",
+  "pool_frames": 2296,
+  "nodes": [
+    {
+      "id": "S",
+      "asset": "S",
+      "pool": [
+        0,
+        342
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sBM_cAll_d10_mPO0_ch01",
+      "source_frames": [
+        240,
+        582
+      ]
+    },
+    {
+      "id": "U",
+      "asset": "U",
+      "pool": [
+        342,
+        602
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sBM_cAll_d12_mPO2_ch01",
+      "source_frames": [
+        24,
+        284
+      ]
+    },
+    {
+      "id": "C3",
+      "asset": "C3",
+      "pool": [
+        962,
+        1322
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sFM_cAll_d12_mPO1_ch16",
+      "source_frames": [
+        90,
+        450
+      ]
+    },
+    {
+      "id": "C4",
+      "asset": "C4",
+      "pool": [
+        1322,
+        1682
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sBM_cAll_d11_mPO1_ch09",
+      "source_frames": [
+        48,
+        408
+      ]
+    },
+    {
+      "id": "C6",
+      "asset": "C6",
+      "pool": [
+        1682,
+        2042
+      ],
+      "kind": "phrase",
+      "source_sequence": "gPO_sBM_cAll_d11_mPO1_ch05",
+      "source_frames": [
+        48,
+        408
+      ]
+    },
+    {
+      "id": "RU_AB",
+      "asset": "RU_AB",
+      "pool": [
+        2042,
+        2065
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "RU_BA",
+      "asset": "RU_BA",
+      "pool": [
+        2065,
+        2088
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "S_C3",
+      "asset": "S_C3",
+      "pool": [
+        2134,
+        2157
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "C3_S",
+      "asset": "C3_S",
+      "pool": [
+        2157,
+        2180
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "S_C4",
+      "asset": "S_C4",
+      "pool": [
+        2180,
+        2203
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "C4_S",
+      "asset": "C4_S",
+      "pool": [
+        2203,
+        2226
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "S_C6",
+      "asset": "S_C6",
+      "pool": [
+        2226,
+        2261
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    },
+    {
+      "id": "C6_S",
+      "asset": "C6_S",
+      "pool": [
+        2261,
+        2296
+      ],
+      "kind": "transition",
+      "source_sequence": null,
+      "source_frames": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "S>RU_AB",
+      "from": "S",
+      "to": "RU_AB",
+      "motion_edge": "REVIEW_SU",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    },
+    {
+      "id": "RU_AB>U",
+      "from": "RU_AB",
+      "to": "U",
+      "motion_edge": "REVIEW_SU",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    },
+    {
+      "id": "U>RU_BA",
+      "from": "U",
+      "to": "RU_BA",
+      "motion_edge": "REVIEW_US",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    },
+    {
+      "id": "RU_BA>S",
+      "from": "RU_BA",
+      "to": "S",
+      "motion_edge": "REVIEW_US",
+      "qualification": "INHERITED_ACCEPTED_MAPPING",
+      "transform": {
+        "r": [
+          0.9971908289618545,
+          0.0,
+          0.07490294142668447,
+          0.0,
+          1.0,
+          0.0,
+          -0.07490294142668447,
+          0.0,
+          0.9971908289618545
+        ],
+        "t": [
+          -3.787757265597212,
+          0.0,
+          2.444838467866857
+        ]
+      },
+      "placement_delta": 1,
+      "evidence": {
+        "human_sha256": "867070326f5755ace589222debbd4c48e4fc79184c78ce952d1b7353f9a1a9ce",
+        "numeric_sha256": "cf83a0e1286bf4dc0f67486ab101bedfc69c2c81f096f2d1f55aae1b238d83d4"
+      }
+    },
+    {
+      "id": "S_via_S_C3",
+      "from": "S",
+      "to": "S_C3",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "S_C3_to_C3",
+      "from": "S_C3",
+      "to": "C3",
+      "transform": {
+        "r": [
+          0.6911384611891878,
+          0.0,
+          0.7227223723291272,
+          0.0,
+          1.0,
+          0.0,
+          -0.7227223723291272,
+          0.0,
+          0.6911384611891878
+        ],
+        "t": [
+          -21.039265194881715,
+          0.0,
+          -18.746645154364934
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C3_via_C3_S",
+      "from": "C3",
+      "to": "C3_S",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C3_S_to_S",
+      "from": "C3_S",
+      "to": "S",
+      "transform": {
+        "r": [
+          0.9994003916710256,
+          0.0,
+          0.034624516282552205,
+          0.0,
+          1.0,
+          0.0,
+          -0.034624516282552205,
+          0.0,
+          0.9994003916710256
+        ],
+        "t": [
+          58.40177079064544,
+          0.0,
+          -2.7221268852772678
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "S_via_S_C4",
+      "from": "S",
+      "to": "S_C4",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "S_C4_to_C4",
+      "from": "S_C4",
+      "to": "C4",
+      "transform": {
+        "r": [
+          0.9633370574202902,
+          0.0,
+          0.26829408081583994,
+          0.0,
+          1.0,
+          0.0,
+          -0.26829408081583994,
+          0.0,
+          0.9633370574202902
+        ],
+        "t": [
+          0.6064571483454522,
+          0.0,
+          -19.712202157015142
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C4_via_C4_S",
+      "from": "C4",
+      "to": "C4_S",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C4_S_to_S",
+      "from": "C4_S",
+      "to": "S",
+      "transform": {
+        "r": [
+          0.8781165453997454,
+          0.0,
+          -0.47844679191652745,
+          0.0,
+          1.0,
+          0.0,
+          0.47844679191652745,
+          0.0,
+          0.8781165453997454
+        ],
+        "t": [
+          -52.37900571631858,
+          0.0,
+          33.71162025946454
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "S_via_S_C6",
+      "from": "S",
+      "to": "S_C6",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "S_C6_to_C6",
+      "from": "S_C6",
+      "to": "C6",
+      "transform": {
+        "r": [
+          0.637024690004977,
+          0.0,
+          0.7708433980544057,
+          0.0,
+          1.0,
+          0.0,
+          -0.7708433980544057,
+          0.0,
+          0.637024690004977
+        ],
+        "t": [
+          -7.883525184355985,
+          0.0,
+          -5.3482476664385326
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C6_via_C6_S",
+      "from": "C6",
+      "to": "C6_S",
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    },
+    {
+      "id": "C6_S_to_S",
+      "from": "C6_S",
+      "to": "S",
+      "transform": {
+        "r": [
+          0.5803308209259711,
+          0.0,
+          -0.8143808312352326,
+          0.0,
+          1.0,
+          0.0,
+          0.8143808312352326,
+          0.0,
+          0.5803308209259711
+        ],
+        "t": [
+          3.6341630975135235,
+          0.0,
+          5.778251490763614
+        ]
+      },
+      "qualification": "TECHNICAL_VISUAL_PENDING"
+    }
+  ],
+  "parentGraphSHA": "10911fdef1216a7e0fc34caa11a160b0202a3ff72ad5a2f3f98af0ae679bb53c",
+  "excludedPhrases": [
+    "C2",
+    "L",
+    "T"
+  ],
+  "parentReviewGraphSHA": "6c141ddcc0dfdf20872cc5659e68904de67ed59f3e61c6dcca806f459c0535d2"
+}

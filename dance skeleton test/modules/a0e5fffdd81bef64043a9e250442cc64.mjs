@@ -1,0 +1,3 @@
+﻿const need=(v,m)=>{if(!v)throw Error(m)};export function endingBounds(bpm,N){const native=(N-1)/60/(bpm/130);return{min:1.8*native,max:2.4*native,native};}
+export function endingCurve(u,N,T,bpm){const x=Math.max(0,Math.min(1,u)),D=N-1,A=bpm/130*60*T/D,h=A*x+(10-6*A)*x**3+(-15+8*A)*x**4+(6-3*A)*x**5,d=A+3*(10-6*A)*x*x+4*(-15+8*A)*x**3+5*(6-3*A)*x**4,dd=6*(10-6*A)*x+12*(-15+8*A)*x*x+20*(6-3*A)*x**3;need(A>=1.8-1e-10&&A<=2.4+1e-10,'ENDING_DURATION_SCOPE');return{frame:D*h,rate:D*d/T/60,rateDerivative:D*dd/T**2/60};}
+export function endingInverse(f,N,T,bpm){if(f>=N-1)return T;if(f<=0)return 0;let a=0,b=1;for(let i=0;i<58;i++){const u=(a+b)/2;if(endingCurve(u,N,T,bpm).frame<f)a=u;else b=u;}return(a+b)/2*T;}

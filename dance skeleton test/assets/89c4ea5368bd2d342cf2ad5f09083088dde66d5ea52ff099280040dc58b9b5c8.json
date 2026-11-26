@@ -1,0 +1,45 @@
+{
+  "schema": "posedance-house-continuous-tempo-technical-v1",
+  "id": "house-fixed-bpm-continuous-technical-v1.0.0",
+  "status": "TECHNICALLY_QUALIFIED",
+  "routeId": "house-cutloop-qualified-route-bpm1-v1",
+  "routeSHA": "b8f4960a4d23d367767bf25225c3aa81960f07f6fbb0c805138658491c7d2a0a",
+  "sourceManifestSHA": "b566e9620c27d407c78908927bcef9e223d18d5c973cb3ce703fb33ca05fb152",
+  "sourceBPM": 130,
+  "inputBPMRange": [
+    30,
+    300
+  ],
+  "technicalBPMRange": [
+    60,
+    162.5
+  ],
+  "technicalRateRange": [
+    0.46153846153846156,
+    1.25
+  ],
+  "ratio": 1,
+  "humanAcceptedSampledBPM": [
+    60,
+    70,
+    80,
+    100,
+    110,
+    120,
+    130
+  ],
+  "newBPMHumanStatus": "HUMAN_NATURALNESS_UNVERIFIED",
+  "scope": "Exact House B/B01/CutLoop constant-rate path only",
+  "argument": [
+    "Uniform positive scaling preserves all poses, spatial trajectory, source-frame order, graph edges and C0 seam geometry",
+    "Velocity scales by r, acceleration by r squared; minimum60/130 previously inspected and accepted, maximum1.25 inherited; intermediate values add no higher velocity/acceleration extrema",
+    "Temporal appearance, musical beat semantics and all new BPM human acceptance are NOT inferred"
+  ],
+  "legacyQualificationsUnchanged": true,
+  "evidenceFiles": [
+    "CONTINUOUS_PREFLIGHT.json",
+    "NODE_RESULT.json",
+    "CHROME_RESULT.json"
+  ],
+  "contact": "CONTACT_UNVERIFIED"
+}
