@@ -1,0 +1,27 @@
+{
+  "dateMarker": "1126",
+  "authorAndCommitterAreUserNotCursor": true,
+  "matchedCommitCount": 2,
+  "commits": [
+    {
+      "sha": "f29eb09b72995e859e0d3cf4d5973ea6090b6575",
+      "subject": "0822",
+      "coAuthor": "Cursor <cursoragent@cursor.com>"
+    },
+    {
+      "sha": "e94c01ad7b031aa2cf7bf4a19e8742240a82de88",
+      "subject": "Add musictest rhythm service and song tempo binding for posedance.",
+      "coAuthor": "Cursor <cursoragent@cursor.com>"
+    }
+  ],
+  "currentEffectiveAuthor": "Kai Hong (existing user configuration preserved)",
+  "activeDefaultHooksBefore": 0,
+  "commitTemplateBefore": "NOT_CONFIGURED",
+  "explicitCursorCoAuthorSettingFound": "NOT_FOUND_IN_SCANNED_WORKSPACE_AND_CURSOR_USER_SETTINGS",
+  "trueObservableCause": "Co-authored-by trailers in those two commit messages; this audit does not infer which historical UI generated them.",
+  "historicalRewritePerformed": false,
+  "commitsPotentiallyAffectedByRewritingEarliestMatchedCommit": 21,
+  "recommendedHistoricalPlan": "Only with separate explicit authorization: backup refs, coordinate collaborators, change only the two selected trailers, review descendant SHA changes, then separately authorize controlled force-with-lease and verify remaining refs/contributor cache. Keep real human credits and required licensing notices.",
+  "newCommitCursorCoAuthor": "MUST_BE_ABSENT",
+  "futureGuard": "Repo-local commit-msg rejects cursoragent@cursor.com trailer; only explicit POSEDANCE_ALLOW_CURSOR_COAUTHOR=1 bypass, and --no-verify can still bypass Git hooks."
+}

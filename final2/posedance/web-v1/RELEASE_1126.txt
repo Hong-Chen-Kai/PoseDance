@@ -1,0 +1,17 @@
+﻿1126 — PoseDance Web V1.0 source release
+
+This branch preserves the user-accepted ten-style integrated web application and the first UI revision dated 2026-11-26 (1126). It is a source-only Git save, not a newly deployed GitHub Pages site.
+
+Included: full-window SMPL display, mesh /24-joint skeleton switch, qualified per-style60..130 BPM routing, Popping4.0.0, YouTube IFrame authoritative clock, transport/timeline controls, independent floating-player width/height resizing, code-only runtime dependency snapshots and release records.
+
+Local operation: use the existing authorized full PoseDance workspace, with its verified local qualification and animation resource pack. From final2, run node posedance/web-v1/server.mjs or posedance/web-v1/Start_PoseDance.ps1. Open http://127.0.0.1:8380/.
+
+A fresh clone of this source-only branch intentionally lacks the animation and provenance pack. It will not be a playable deployment by itself. Do not replace missing assets with unqualified animations. runtime-sources/SOURCE_INDEX.json preserves exact JS dependencies; restore_runtime_sources.py can restore only those verified JS files without overwriting different local files. The full approved local resource pack must be supplied separately.
+
+Deployment remains gated: the deduplicated raw animation payload is1,305,541,036bytes, exceeding the published Pages site limit; the current application uses a Node HTTP allowlist service and origin-root URLs. Static packaging/base-path adaptation and a separately approved, attributed animation package are needed before a new public site can be claimed. Existing master and its Pages site are unchanged.
+
+No SMPL model, PKL, model NPZ, animation Binary, licensed music/video, credential, environment configuration, browser profile or local PID/log is included. See releases/1126/ASSET_REQUIREMENTS.json and THIRD_PARTY_NOTICES_1126.txt. These exclusions do not remove any existing local assets or historic qualifications.
+
+The source is not relicensed by this release. Existing project ownership and required third-party credits remain unchanged.
+
+For a fresh clone, the optional project-only agent-trailer guard can be enabled from the repository root with: git config --local core.hooksPath final2/posedance/web-v1/git-hooks . The guard rejects only the Cursor Agent email trailer, does not rewrite messages, and does not remove human or license credits. An explicitly authorized POSEDANCE_ALLOW_CURSOR_COAUTHOR=1 or Git --no-verify bypasses it; this is not a global IDE guarantee.

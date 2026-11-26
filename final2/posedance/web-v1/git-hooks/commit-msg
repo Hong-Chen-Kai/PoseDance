@@ -1,0 +1,7 @@
+#!/bin/sh
+# Reject only the unrequested Cursor Agent trailer; do not strip or rewrite credits.
+if [ "${POSEDANCE_ALLOW_CURSOR_COAUTHOR:-0}" != "1" ] && grep -Eiq '^Co-authored-by:.*<cursoragent@cursor[.]com>[[:space:]]*$' "$1"; then
+  printf '%s\n' 'Commit blocked: Cursor Agent co-author was not explicitly authorized. Review the message; historical commits are untouched.' >&2
+  exit 1
+fi
+exit 0

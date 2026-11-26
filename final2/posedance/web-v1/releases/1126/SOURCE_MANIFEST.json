@@ -1,0 +1,461 @@
+{
+  "dateMarker": "1126",
+  "files": [
+    {
+      "path": "final2/posedance/web-v1/.gitattributes",
+      "bytes": 9,
+      "sha256": "8b9c3028d6467ff3be7c793141927841d70f47f52d0590677438f488ca154992"
+    },
+    {
+      "path": "final2/posedance/web-v1/.gitignore",
+      "bytes": 41,
+      "sha256": "7ef810cda022a5d1516649c71cd5af386cd5b847295abac2dde14ecb0cc8091d"
+    },
+    {
+      "path": "final2/posedance/web-v1/app.mjs",
+      "bytes": 7169,
+      "sha256": "22597522880036dd3fe4238997a63b02afc37d6c51df26f093e80a5efbf60ae2"
+    },
+    {
+      "path": "final2/posedance/web-v1/catalog.mjs",
+      "bytes": 6959,
+      "sha256": "af4fb6ea5f8f3dc50cdceb066ec311e1518b961e5a85e8cc5de6ead36b0851eb"
+    },
+    {
+      "path": "final2/posedance/web-v1/floating-video.mjs",
+      "bytes": 2696,
+      "sha256": "2990da62a222fdd7725f94e430b59f61153673b74b49ae0d0b0b30a43d222529"
+    },
+    {
+      "path": "final2/posedance/web-v1/index.html",
+      "bytes": 2874,
+      "sha256": "886124a4d447537ebed352efb8fa6580444c0501e984f038e16188261db20b29"
+    },
+    {
+      "path": "final2/posedance/web-v1/prepare.py",
+      "bytes": 4767,
+      "sha256": "1358f142bfab564c35f6157ebf91de6683a8a72192bc1a472fb7c608f77edd13"
+    },
+    {
+      "path": "final2/posedance/web-v1/qualified-style.mjs",
+      "bytes": 4409,
+      "sha256": "fc3eff683e7c10f59e7c20244d64e75b4d967d3722c13f51ee78bfd1d66312ec"
+    },
+    {
+      "path": "final2/posedance/web-v1/RELEASE_1126.txt",
+      "bytes": 2541,
+      "sha256": "d6b30b8d83de3d84bef2f33bf5db0fe4d1ec6edd350541ab2895da9c9bdf5a4b"
+    },
+    {
+      "path": "final2/posedance/web-v1/report_candidate.py",
+      "bytes": 11772,
+      "sha256": "e898fc3eb468411c7312664e3533845e5f038c26e08e9857eccba9644e701b19"
+    },
+    {
+      "path": "final2/posedance/web-v1/restore_runtime_sources.py",
+      "bytes": 1026,
+      "sha256": "e4974aac590938081f8965238613518666c0da46f7f366a1e51cd5cb56a9d64b"
+    },
+    {
+      "path": "final2/posedance/web-v1/rolling-dancer.mjs",
+      "bytes": 3103,
+      "sha256": "56181391378c4e241a312b17f46624c0cb1f0bde56b823b2f26024565101cfd9"
+    },
+    {
+      "path": "final2/posedance/web-v1/server.mjs",
+      "bytes": 3302,
+      "sha256": "4c31a96596ba2dffed00103e1a0780822b778e94bb4cb8e950942ff9dcde128f"
+    },
+    {
+      "path": "final2/posedance/web-v1/stage-view.mjs",
+      "bytes": 11410,
+      "sha256": "fdf356903ed0095576d49f96174bc16b0c60cade52e43a77e2b9d9d12451ac14"
+    },
+    {
+      "path": "final2/posedance/web-v1/Start_PoseDance.ps1",
+      "bytes": 1117,
+      "sha256": "0e8e81ef2f31bddea16710b84fb4067cb50f76eb5d04dac29eee588dbc8f07c2"
+    },
+    {
+      "path": "final2/posedance/web-v1/style.css",
+      "bytes": 4675,
+      "sha256": "14738623675fbed5ac22c8d0a31cbe5ef6f08724fbeb1228ce916dfd627016d5"
+    },
+    {
+      "path": "final2/posedance/web-v1/sync-coordinator.mjs",
+      "bytes": 6048,
+      "sha256": "3a7fcd734a0dec4685e881fc3e58554f17cb2995ecbec31ddc3c1b973296d854"
+    },
+    {
+      "path": "final2/posedance/web-v1/THIRD_PARTY_NOTICES_1126.txt",
+      "bytes": 2394,
+      "sha256": "fb4b415b87751217a31e440f0441548f3a23c095616d9d9ba072642ffb3c4f1c"
+    },
+    {
+      "path": "final2/posedance/web-v1/youtube-clock.mjs",
+      "bytes": 9389,
+      "sha256": "5c6e9cee735193c994e4fa8172eb26d27ab94b21091535098e27645035cf630f"
+    },
+    {
+      "path": "final2/posedance/web-v1/git-hooks/commit-msg",
+      "bytes": 405,
+      "sha256": "60bac398c7ff397d915e427f06081c6e1cedc8e7b06b946ec2e30218dd64e09f"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/cdp.mjs",
+      "bytes": 2745,
+      "sha256": "d39ef9f41f2b149c00ba4fe791288235e92f629614a8b46c4b9e185603844a09"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/mock-player.mjs",
+      "bytes": 1026,
+      "sha256": "a15f38e8aacbc3ee621eeed36bbbd80d9b25fdbbd1fc987f004e2cf83cdc428f"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/real-youtube3.mjs",
+      "bytes": 4300,
+      "sha256": "7736d2406d920142dae18307f6f499b94f41f0e4119176040cff47a7433612b2"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-api-error.mjs",
+      "bytes": 1206,
+      "sha256": "a1e5827545687a8ba797b893b08e0c4087054c457dfd8dc655f9c9e7c0af3dfa"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-controls-final2.mjs",
+      "bytes": 8116,
+      "sha256": "59c485c681b09184d547abfeb1afadf99434588ac3a63080dac2cc8c708aa94a"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-edge3.mjs",
+      "bytes": 5001,
+      "sha256": "b4eda599213db646776dd67edd16e9cf738e3d4b8ad367532e3027dd2a88a278"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-final-ui.mjs",
+      "bytes": 1881,
+      "sha256": "d662a4d0ae988e4a048a6c5bf326ab034c7f0ae9d75172d7a832fddfd511a09c"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-native-seek2.mjs",
+      "bytes": 2506,
+      "sha256": "5675e7e9004e088bc54966e4d93bc6dd801e70198da0333d1cfb6c785eb0319c"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-node.mjs",
+      "bytes": 3108,
+      "sha256": "459d841513414040c93cee867bd864ce8c1ea047d2428919764ffd5572560edf"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-real-controls4.mjs",
+      "bytes": 6665,
+      "sha256": "f7657006a71c8f51d6d24d4c87a0ba1c479ede3d80466f5e0a051dc61bf9c1db"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-security.mjs",
+      "bytes": 1708,
+      "sha256": "7800bcb0d74cff60d68fdd17d5e147e49fb2b899e9767b15fc2d0140fd7e71ad"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-ui-adjustment01.mjs",
+      "bytes": 6564,
+      "sha256": "b9317badc9aedd49b586e61f65612b65ee6ff90344aefcec519dbc288f7108f5"
+    },
+    {
+      "path": "final2/posedance/web-v1/qa/test-ui-status01.mjs",
+      "bytes": 1662,
+      "sha256": "4081f9ab26211836d8e6665895456989e68a29cfaefe18278b7ee892b4c1e86f"
+    },
+    {
+      "path": "final2/posedance/web-v1/releases/1126/ASSET_REQUIREMENTS.json",
+      "bytes": 51560,
+      "sha256": "6fa1bc86857759cb9bb221d9d2bb8973d8448618d82e816b66bf8aa63bf317d4"
+    },
+    {
+      "path": "final2/posedance/web-v1/releases/1126/CURSOR_AUDIT.json",
+      "bytes": 1577,
+      "sha256": "9d0aa6abec0d5e9d8c821974826854fedbfc420208c5264b934bfd8c88606246"
+    },
+    {
+      "path": "final2/posedance/web-v1/releases/1126/HUMAN_ACCEPTANCE.json",
+      "bytes": 1589,
+      "sha256": "36915d049d90bcc8cce6786c7123e5767595679a93be5d2c46d1d5f7b9926b3d"
+    },
+    {
+      "path": "final2/posedance/web-v1/releases/1126/STYLE_REFERENCES.json",
+      "bytes": 28173,
+      "sha256": "78a708b4b16ca3d8a32132653e0ae59c96a7185f6a5fc70f8c3a2dc8061e726e"
+    },
+    {
+      "path": "final2/posedance/web-v1/releases/1126/VERSION.json",
+      "bytes": 1514,
+      "sha256": "1fca473ea7a1f8968dbedad2795f543630a2c577ac4db51fa613015e436d5b45"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SOURCE_INDEX.json",
+      "bytes": 17607,
+      "sha256": "ce47c90828b4caf382ee00912d1ef341a4119b126c13ad5a96b1cae84ecb4f36"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/chunk-cache.js",
+      "bytes": 5354,
+      "sha256": "f2b46bb1957df3e848b3b9c98f92f7a74c4e340c2ff8df4bbd7bcd10fb08c997"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/chunk-worker.js",
+      "bytes": 530,
+      "sha256": "09f3270cfe143cc7ae87ec6a8a7e63557935abb47f570668f95e991d41e3d23b"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/playlist-contract.js",
+      "bytes": 5166,
+      "sha256": "475fe035b3397ed5fe115b673d94dda1533695d28e23a566de4670b9a1bed319"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/qualification.mjs",
+      "bytes": 88693,
+      "sha256": "b5d439ffff4ef1b8ded2780ea8b4ce9d5667f2be2558ab974540293aeb4b35a3"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/reader-base.js",
+      "bytes": 1869,
+      "sha256": "ad36f6e389297b40e3a537a20e74b8b7dd662c56e56cfa3fa24a44eb63e2b6c5"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/stream-reader.js",
+      "bytes": 8631,
+      "sha256": "b5d27bbfa974ee2c43612af95d534b56836a3aff933011a0b09dd861068a4ceb"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/accepted-math.mjs",
+      "bytes": 2679,
+      "sha256": "4246334c39f46030490ff5cd163d35a13f03437d4ece42aa3d858f725b0cab79"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/accepted-tempo.mjs",
+      "bytes": 1376,
+      "sha256": "9c90cf654f572e6873ff7be279f564cad6d1eb54e883c083598f910113d7e93d"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/scheduler.mjs",
+      "bytes": 3742,
+      "sha256": "15b003fe647c887be93e7ddcd82c6ec3341fcad3747cdcbf20ce2cbe0d7daf1e"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/runtime/physical-reuse-cache.js",
+      "bytes": 1175,
+      "sha256": "93fe233c9010b4c2ea5764cd548ef5318f1aed8bbf184be72769ccaac873b69e"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/runtime/worker-decoder-bounded.js",
+      "bytes": 1970,
+      "sha256": "b99a6cce692e17afa35fa0fb47d7744a481da5b5462dab40316f233578fac5b7"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm1-time.mjs",
+      "bytes": 6533,
+      "sha256": "1761e66391aae0ccda08c1f1ef7bea125ab6ccda6e33af6a6501b0db2a8469cb"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm4-time.mjs",
+      "bytes": 7992,
+      "sha256": "9d4f727c6618255d3525a91c7b18453bedf13cd50e05f33f9c4458f79c9b123e"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm5-time.mjs",
+      "bytes": 7991,
+      "sha256": "27abaac632956050b64c10479396db9873221fb140b4c63ca4afd683f9c3d7b7"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-candidate-pins.mjs",
+      "bytes": 27703,
+      "sha256": "cabbaaaf8fd9e8cc2268795310e4b13d2a7426df5f406ab5370bf3a32e869fc6"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-human-pins.mjs",
+      "bytes": 1523,
+      "sha256": "4f9f4f58285e1386f100c197ea877d346643e241a6eb891f701d151a658ffe17"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-music-phrase-scheduler.mjs",
+      "bytes": 5546,
+      "sha256": "ce45eaa69d3f89939e7a2eb5b332a226618dcafd5031edaaf35db7f51a67cc28"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-time.mjs",
+      "bytes": 6070,
+      "sha256": "c95f5e5167d6ae4296e8a20a45ab12c52e40fab30bf9091f8f31d167f05e4f6d"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/continuous-pins.mjs",
+      "bytes": 1249,
+      "sha256": "f9e14355356b2ddda8079c073e2ef4b3c686b7bd8b7b0cbfc45f8749c9ad5c56"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/ending-time.mjs",
+      "bytes": 716,
+      "sha256": "0c38a9139993c93e8c569813a54133febc63563019a45090eb505bc6f157312c"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/human-pins.mjs",
+      "bytes": 2328,
+      "sha256": "bd08b56aa703e7b65868befe0c895f3992a02f0c4c909ceaac9fe60bd3c1116f"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/low-tempo-pins.mjs",
+      "bytes": 15301,
+      "sha256": "c072ebac4ba389918e3924c1512accf5023c2e97e60c4ecd4a02a4c9a45681ba"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/music-phrase-v7.mjs",
+      "bytes": 9170,
+      "sha256": "8122202985838c9d60d847fef182d83d8658a60abada94db8d62b38d9d40796c"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/phase-pins.mjs",
+      "bytes": 62209,
+      "sha256": "29b53c65d0f94801ba6cdbdec8815126d159f976bb8a34f0354c5d58bbb8064d"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/phase-time.mjs",
+      "bytes": 2350,
+      "sha256": "2a26bf841ea96ce41b52ab568ad1242bff5b9c9a307abe8f3dea19d2369af015"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/pins7.mjs",
+      "bytes": 46106,
+      "sha256": "f1d12a92a72b68c2cc2cd717bfda9b25086d605313059542a47354180a792207"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/preset-sha.mjs",
+      "bytes": 325,
+      "sha256": "e52b5a8d7ded12375d1764c874763fe6fabca6300fa75d660facb95861ac7d7e"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/qualification-pins.mjs",
+      "bytes": 23087,
+      "sha256": "12e25c3f609972257622306b15fc6f2ae1a425ef9ab9dd0acff124a335c0f094"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/qualified-time.mjs",
+      "bytes": 5850,
+      "sha256": "9e78a2b0ed0ae444ae6648cdb40eb19183ff242cc6b5f809e887dd3b705ef85c"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-baseline-review.mjs",
+      "bytes": 7770,
+      "sha256": "dab708208e0e273893616b84fbbcbb47d9f05f265c92da658fe6585215ddd94d"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-diversity.mjs",
+      "bytes": 9656,
+      "sha256": "fb04860e3b22ccfc1c09f29916811bf115116eb64f0fa5e90ba30f97eb898a28"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-runtime.mjs",
+      "bytes": 457,
+      "sha256": "704f032df3b4048cc08813f9c0eff8f391320d0ca1824c8072c612ff47683317"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/source-envelope.mjs",
+      "bytes": 1106,
+      "sha256": "6f01b66f6998bc5dbfbb75ea0aa366e51e4f5bf9250c7eae9ce0b06f47790b15"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/tempo-map.mjs",
+      "bytes": 3139,
+      "sha256": "1268ed0405ccceadcb1082c535c0621e5f05d0769a7540f60d66dca929a5b4e6"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/test-tone.mjs",
+      "bytes": 2069,
+      "sha256": "3d739cf659e84106f6e104e620c8f0c5e6c24afaeb3ce22c44ba300047d64011"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/viewer/graph-pair-cache.mjs",
+      "bytes": 2907,
+      "sha256": "56dc61724a87da4acd6f97b8338c9d7aa2b8d957c6efd46eac54b643e0828b95"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/viewer/pool-reader.mjs",
+      "bytes": 3773,
+      "sha256": "3ecdad142d26e1ac4d952c089ef13f9f5c927b63d6c154715614396e0aac1c3b"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-krump-bpm01/music/source-time.mjs",
+      "bytes": 1395,
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-la-bpm01/music/source-time.mjs",
+      "bytes": 1395,
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-locking-bpm01/music/source-time.mjs",
+      "bytes": 1395,
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-middle-continuous01/music/source-time.mjs",
+      "bytes": 1395,
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-middle-high01/music/source-time.mjs",
+      "bytes": 1753,
+      "sha256": "062452f87e34dcbb48fdf03c060ea7053c35d4d1bef44de023e8f1ef488022bd"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-middle-ready01/music/ending.mjs",
+      "bytes": 4294,
+      "sha256": "d5ee7ffbb9c58676db2ef69c0d30606dc79b0bd1ebf1ff2eb5e863dff8aec735"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/rolling-diversity.mjs",
+      "bytes": 9656,
+      "sha256": "fb04860e3b22ccfc1c09f29916811bf115116eb64f0fa5e90ba30f97eb898a28"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/tempo-map.mjs",
+      "bytes": 3139,
+      "sha256": "1268ed0405ccceadcb1082c535c0621e5f05d0769a7540f60d66dca929a5b4e6"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/phrase-graph.mjs",
+      "bytes": 5909,
+      "sha256": "8d5942523be6b20694926f8851e427655a10fbda65dde4f1c00ab6ffda88b75b"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/source-time.mjs",
+      "bytes": 1871,
+      "sha256": "b113af3e7e1e4d452b5275ba9e50a56430e3ecacb7a05098db02362dd77d116d"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-popping-bpm01/music/source-time.mjs",
+      "bytes": 1395,
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261125-street-bpm01/music/source-time.mjs",
+      "bytes": 1395,
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261126-breaking-bpm01/music/source-time.mjs",
+      "bytes": 1395,
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "path": "final2/posedance/web-v1/runtime-sources/SMPL/local_data/computational_dancer/run-20261126-popping-diversity03/music/source-time.mjs",
+      "bytes": 1284,
+      "sha256": "6a3a233911690e459fe37ef6572e5e6b269972f38e6476ae5613decce6c71ce7"
+    }
+  ],
+  "selfExcluded": true,
+  "forbiddenFiles": [],
+  "credentialPatternMatches": [],
+  "animationBinaryIncluded": false,
+  "totalSourceBytes": 656396,
+  "largestSourceBytes": 88693
+}

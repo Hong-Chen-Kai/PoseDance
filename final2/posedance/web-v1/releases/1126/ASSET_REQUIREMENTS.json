@@ -1,0 +1,1625 @@
+{
+  "uniqueBinaryCount": 269,
+  "uniqueBinaryBytes": 1305541036,
+  "largestBinaryBytes": 4978864,
+  "assetFiles": [
+    {
+      "sha256": "be168d15aebc011c8f53a88bfa3f8e3cd6112d221dd8af99d948f85d1e27075b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "204b6f6b1879744cbb11b3e0e3cfda3e26161d1c75ba83906fe7c5200a6b19e2",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "973f2d9d6ad37509d528f6fee0a13bf826a20ec8d6bbf864cfae154621c2482a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "0ae50544b866bf64886aa9a487eb1ebab11bca5e1f7775c43c7173387351653c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "27d94aa926c21df7fe2d57bfbc245b20023d521e9f228b14a50967298bc34b9d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "f87596c0ea3719a2503150d8f7d88c5676492a827a90253e17c8cf1ec2ad1ce6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4dc171a8c705c3559da6497b07f67d9bda6f770e4daf0156008c9c074e3864ce",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4e9cd427ab6c2b693c3028d19ec1c9af476a4b2d9c85cd721656d19127d3c423",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4bd0bfdc1d00587032c87cae06bff2428f7c86727f1b055f51795ab51ede2e0c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4459d0f4ae964f788c49976ba23d92c61e3f4cd232ad6bc8a07928ab2ca42cc5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "3bee6d2a0d8d2e8009b0aa30b41a70518dd3dac90b9c11b2ee7ad1968b6725f0",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5cdc3c7ff358b1ee588826feb24b7fff047fa694e0399077cc22b24da46fd005",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "41cc6017ded86d35b62b70cba904617cd0d1a1270afc6db15506bb7f2bd4625d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "26ca2b09723a07180dee69437782aa15754f5183ad3d185969db2411029f093c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a437f6f91efedae6304f8b182004e40e28a93bffc0c4d4bb4c08dacec5f536be",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "208ed7a5518d7e451423edc023ce74b97d905dddf6fdc02bbe65489544076448",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "54b62528c9e37e836d19f85a1c4a94278f9926e333f4d193c49ee595bc427bdd",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b9afe40449c0eccaf2d50fbf1f915e42b83030482ebeece260d4a89cdabd68e9",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "565784724dc9e07f6fe92df1e344d0107a74682264e1ec05bd4dfdd1e17574e7",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "03969dc11c98b9923ec25af88a9ed6f6681d773b29904dd30575f6871b45eb80",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "67a68efc1016d363c34c19e40aabdc8911593272381009b01f52bfcb425d849e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "3980fd067e0a80cc8254faa475f8ac5c7bff48ef2ad064833d4ca33773fb402e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d0fe91697e67c885db9c99c6d02615b76f1fd24130f4d6d965c0368702ee1db5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "dcef1a9483b72a1654f2ed9d18d36853ecfb50738c1b1f90e312897e8df8151a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "23edae9fb57b7f1c1c025a1b4282dbe6ca6313be1a54e18821387a720a9c171f",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "aed69b7ef08e1a1a37fd2766dd9bc80e7c389a60fcfd3f33d40f51a357993ec4",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b38351d433ef3efa5f3c42e09e9aafe20131071d1bcb640452dd495452c8281b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "90a25fb33a581004ae74e8da96c902d7bb2308ffec82706214794dedff2d3cf2",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "05a7f8c3b4d06fc64b27057ee81a1d7d0d4b6204f82f8973f1408fc9b864c9d2",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "fc4241632d848496b0870ee55bdb8564d5acf8d89dffa6aa8b062f3b37246ee8",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b758c08c03763375d4f9845a8d88ee32abcdb8ce72c73e2fd93d5c3248a243d5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c562a3ff77e98d8f802ac479e1cd085cd57baa0983a60c4f1753b307894ef8fe",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "bfa71c951cabe53de9ca334a863a8d5e089d285d3f3b22db17b365a0082aa4ad",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7d5b443553e92d7c294ad83adc6afb46828542ac3d18cf1afcc6f16eace1c0a7",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "511420892127bd4632a24b2167dc94e36667c08529d670b92a30ebdd9a425464",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b0b97afa92caf32af3bdaa1648148ccfe2c545a5a2d4c5e620efb03f0539e877",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "6c860ccf8b9e7adaab8706f6fa4913bb3018173422513893eac0b8425cbe40a5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "30ff2794600f80930dbb6cf31325446ebb4c8ac4648759781049348388041258",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d6fbdfa702b4743961511ec0184423ebe812f6836bb9c012494d7328e0dffbbf",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "095a469c611a3aeaed009c97d7636a40a9d55d14e9cdcdc6d5b3f45652896a3b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "0726d458fa1811d81216c23f493499aa8adfb93abf8a4d169c79dc6f3159ca04",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "ff6132d51ba48c85a47aeda46bab80dac23ea05f9fc93712ddd5891eedfb6f34",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "63fd784768e587309a0cb737b9f7718ecd01317916aacaedfbd48cd4c60f0d3c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "119dbfa5be8b41d0ab69bca527a397da4b84249209ca2bd15a4c54de54724c5a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "1475db6d12c6d31d9ace6c3cf3d1c299d5d83c23f6502f0d90e298dfdb80d250",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "81a4b786fd431f32c5bdddbd908939b438d2f83fedded8b8b6688af13766c53d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b4aa184d846d8d69dafdd2d9d5dbb310b50f1b1ec9ca9b6a252006996f5984c6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "22df36669f0913ce422d8e8431996df0ef95d9b336ffad271be32be79f09a21e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "1d6eebb4287758d8c9b004542bbd3c3a658324bcf3f9dd03b003e205b17a8ea7",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "e2ac69970d5c00d079b6ce0c96bad345c055c3e730ac060ade252e3fe4fc7219",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2a73b472bbe9622bde6cabb7e5970e0cc9546bf6a2fef3ac6f4fed6f28a6c98f",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "ae5864b4067e9f366cb4e3cf699f1910f8f4d4bc8733f45e1173713d0f828260",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "744e2586ce1b3e7d2cf5382aef402d864e018e314b4f2b0568e4aa9497791a6a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7f61a6c35319cf197a1a933f82ce2f19fddb45fe7094ba87896049023b6647ae",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d04362605507ea56fd17a96a4e0406678762a23d9aa22f75c37da4d4cb379586",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "23e6c20e153c2c8a90d9a273ff93b7abba9a7ba1d182c6607023f6e71a8a18d0",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "96640598ca6b5b5876e3b9750259d7fd064ea71e5fa299c57a1c6b290d66afc1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "0825c3d96a6b47d2d9409456a56ed87c2621211b9f95c7a12077e801d78bd6a7",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "95b55ab12274f33e8271a6cad6d81e00d7572fadbf0ddcdde59cb0e0caa05e32",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "483629a5a79416c8e7529bf062abd42d3bfcd44cdbd1a3bc6380a4515a34a530",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "6e26f01f23ddde8fd30a576c5dbd16e54da6e0895a887c4e5305f76e98a6b842",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a10d4f09471834156ffb2f0fc355d5fb460284fa3b011971e14b66ef2570bb34",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "28bbd7c7b5f1a0d7abe7caf2273dcc3d0df5f1739bacd39316b10e60c456516a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "550195b377a0f99256af6cdf563c30d3fd199de134c48bb4f533c3b00c6a0326",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a0518d101d7174fd6221eecf2ee2ad0e062c12e8fc691d2c358d6c8ad2def7be",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "78b6f60cd8ec5528fd385b37fab5018dcbebcebc2030a148f004d12ecea95065",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b2ee1d38e2a108e6d83aa788723c1d97a69b9341ff8f90155513669923bbfac6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "670283f3f004d99c0a4c97a1c428b5c0cd3beaa513196495be0650eeffae3063",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5534c2038e91f5c51a0b67bdbcf369918e2b177b7096972e61ae3aabe648b085",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "98de52356f636509bedb7f67b7795cea7909aff4f40cb3aa96e775abda6a4de4",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "07e97e034658837c2a1049c5647a466e1014f886b4ca97b329b4b70ea46ac8b6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "158c0462c2ab5e45a38eed344c67d334df095a59ad363e37151ada01cd4b1f63",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "06e298f2e7c953934b4c4b4167b9d3bcc32f1a6b7f70397d82f2f4dddc43e4f1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "bbb4da3d3a4e62bb6f97e8a82149a05635a1db73c50cb755137a6e17efb3cd2a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "637218ca2f52a3426479fb57ffb31be948357433842a3a0a4d049d42010c2bab",
+      "bytes": 3651184,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "f52359ff3ed6896a7294b721f3a1b06d1326a79a127d7d60a232b013627b957f",
+      "bytes": 165504,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "70eac72c22bb77118801d76b9fbcc0683b5e117b1c461664c7192a2145cddac5",
+      "bytes": 4398004,
+      "kind": "ending-animation",
+      "uploaded": false
+    },
+    {
+      "sha256": "1aeca46199832dcab8f5e45f349ce01355425de1050841f1a7de4ac4478364ea",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "497e14ae3d47be2f78129d1beb730afc250d2fce4c2b486eb294609c3969c02c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "39d18733a997d8b44709c0f70cb45f2dc169ef16a901303a18f8ce703a4be0bf",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "181cd93b18b483afb9a5e9ebcdddf1f9f8fdbd6dc55e5d06bd6e74878d3cf9ce",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "da2df6c57e754404863ccc3bdd9216bf73de6d18f427c8942ae0308011274c8b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "bc985d933131e4274202e291ce4ad47835fea91659979d0fc40f95c59bd299d2",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "6ded7c51ffc8d7d41d7c2211ba72a6f50756d2650a642355e531bbcd8602d30b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "f3b615cc9e06739f11454ec23a255a82bb261b996ffe706f3fd3bf924e0b40ee",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "05e5206e36a66b2e8934563d5fd47994f2ed2ba4d4fc9e3f8fe07e666aa95481",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "251a7daac9903e2ad224bfd21ac3697e80af11054958b7fdf0f2a9e5dde9178e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "0455913e7c031ae0e31d2dd38fe00b19ed0fe6175681ea120bc30dc14d46c912",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "19f6a6cc2e8430078adbdd1dc41eee4aa35a4292607a8ff5ef1fb5d9a3432eed",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5371fa5df16b96af507440de0e73381feea654dbf3cad4c158fb839083a0caf6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "1b23c73f53255dc10102923226bee2c43a32bf91149d68255d23db805f18a2b1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "cb3e6c0b3187d63be5f0c0988f00dda09216ac8b86dc8ef09453ea67acbf0aaa",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "378de27ea6f3dc03428722a60515f195f3b0204fc71fe46985599b181d740f8c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "fab8143187a61db7ca23caa672d45d3eedf877c64b836176bcb259de089e42fc",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "3d432e9e92f9c0987800fee8bba22df1a7e3dcb318d80f0daf3742e48a62a81b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c22ac0f931df6e8de228d699e5e64290c965d7d02e0f538f5a18b2de4af2123e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "68f0182a2b9092aee23420d821847da2071f0c8fb3a11332abe64f50f5611e0f",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "704339082072bf424410324b7375a1a14ff44c7dd375f7bc5c5186d606484484",
+      "bytes": 1742644,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "eaaf5c07bbbf7445312813383f6a28e2c5d3e2fb986a624ada3f1a214c198a21",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "fe088dc7692cdcf96fc559502fff598aa2de64b9aa14d6dc90c0f100699b7cde",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "9de44bf7656f296aca6e43bde7c1bc60f9c7c84c5de6877d4335defb0c8a0d35",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2cbe745274ed31f80e9c8947c5bce6e1177fb59bea238fcc459b66c0c04de129",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "e7e15f5fa0d944a862138bf4f736017359df473f888eaf7998ceeb62f52863bc",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "0455e66a4a6b595872df936e1b70ac63a81559318718467a36c20411663b5c91",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "aeca91f53bfa5054a0e17ade14946abd9e23552e41a3b55f98bad9382431c2e6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "35cd10329625e53a0f2a48ca25337a42b3bfc5c1d72cfa35d32e3048b11b11cb",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b2c1962e5867a41730c5e9ea6f848f006553726c5dcbbf7661580d8309bde37a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a3ec2a1cdc0582514a387451fc792bcbd5928e1d532558fcab3e6b1d78c60e12",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "9bef6c1314a27ce63a22a08c35093d87b684c1dffc7116b98214cf7869137e31",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "372fe2c1d175ed4acb11f43d737179b45fa693923aa1b91685bc1163104d1b3c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d1fb97d7b584125e5e6ebe34e1d7040bc81307c96bc8be3284fa94ffb06f02c1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5e233d5c83e4d064f4be30c12c122695297a2711cdecc5900a0c44f27961373c",
+      "bytes": 4232044,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a74849fdd817aa792250b91ccc2ac31fc9852df420b85ab89add28c65695c65f",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d690abb4dc5f1e39c841dcc0f32cf63ede9222331d576a7e957e6b111e7cf57b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "54a8b8aa33ffc52c7e8fd4657b5c0536f19adb7b54017eabbc997b1734683ca1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2319b6136f4b7735507d9dd0b22fe6636f7c51913d1009ea2f19a5b8718a0398",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "04f5de058a45e95c7ac2995c53205d748a16703edea6b7be39faa313f872baee",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a0e22403e6c93ad5abe3138a1a96c201e2deef2940ffb427dfef10fdbf856d90",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8a9deceb1a25b84266f36c6350d7143562c90725a6878ec06d5f355c33192f55",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5bef61dcb72c3ba4385720866c4819ef661b1be2e723d9aaddc394361ae07c24",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "cbd5d948c0b822b36e3bc1b1a92769430aefbe08990fea3254b009400e9038f1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a1a4dbeee65f14c0023206755240944fdc7456633d28e7b7b4519cbe72a74e80",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7defa84a78ee0964a859019b5da3ae88ec3d543478a77b4cbfdfefdaa764ae21",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c940ab50f60b63719211fed2e309b8cb343426665fb024442de62f443a7929f5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4901f907cb6698d70f75937a4224feb51b7144a46a9e725d2b7af8c36eb7bb0e",
+      "bytes": 331984,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "3629885e09727224075ccf5d57bdc72b3782d2b974edc775d9b773fd5b714d07",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b5710f5c2b77df7129d9bab82879f55fce73e0cc18571a79d1d49df4493bb75f",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7a33848d94121649297274e54e552887cdb9ff7a8ca28b53c745ced474262648",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2b4fed2ec265312eebc1bb6774f53ad6d349067acb9a80359e6cfc957c60fd21",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "adb6b0bbe0dd5872f18299cf5e632a47ecf3abafa4d544e452cc32f61dc34bb0",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "f1782386ac9150abf21b4979165f01a3fe16e9080379f0a69bd940a4521d1ec8",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "69b833aefa9e12493dc8bc2e87eeb21ca55ae0b63a8e660d2135f12321b532fc",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "42759a641136b4fe29ad3e4be1f24468086a9023ef5eba949c319d1125b707eb",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "6bd4263ec40173da1403025d0a66ab5408e3c8044adf8420e004b2b6aa057dba",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b3f653845b94686fd71f430355227c076b6bcc1eef5006493c1affcda4c4d6ff",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "ca17abfe9272287461e4002a4e9aee16e77a0adc2b6e580e48b51d9c7636e2fa",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "19b6a5d99c6395aac30387a265383f3b81e74ddf72e392884c9fb327a3d07f0a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "9ec0b15b07e00abf42eb771498e727cd6557eb7dd397cba0227d7bc30af84a28",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d51de976783c3f01fa3afa345e79b1bf633dc4b85a0ee511f8883b0c3beaca80",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "0a9f823d280f805454d9f313c6b40bc0113907201056dbcaf68754ea49b06bb2",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "3db478eeea8224f7570bc2ebd26633ee4301be5ab14f92dbada2a8b10cec4f1d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b584141fb9d5def3bbac8690435fcabfe3148aaabf2ed9b6f9d14dec4a047e56",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b3c3a01b2edf49b077920aeeace0b95c29a16a37b59d112ba60139e5f03063b7",
+      "bytes": 3402244,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "51f78589b5b4140ff5ae0f252ca3cae97a49f430bea6f38594d5c03dd7b511c0",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c54e420236e9ea5850e46ebf55ebd4fcd940becedb2aa205c3e6d509fd9d9d04",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "dade1033440e69a7570674ed6686765e5a2d095b6a03b1c519a83a8a312543d7",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8864fb257afbeb81b057064de2a0330ef1098928a3e27f09f1f08bf0df1bd4ef",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "92bfd0dfebf0c6706d5338a2cf320622b78631cc891011750a27ec69d73408e5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "bbae0700de070982f09e928160aac7b873035c355ff51775eb3d5add0e69051a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a7dd478e27efde6e0d54fa965aa7c65f936e59382adb0fab8cadf94078d04d24",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "9a3f57adfd39417a8db0bac91f64f8ecaeeb53e7200c3c73e41679431c066168",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b3d3a6298e689293587f598153eb834ab0ec30e201ab331fcf8c1f60bdd90502",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "63edbb36ae971943a12d06358fd7465aef7fc02f4daf6156c34e3baa3c7cac08",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8cc5858810372202ae35ec0c9a85dceecfcf9c4fffaf71144dc5cf06f6f55dbc",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "30329bbfa705e1692f11a5fc5b3d79688f75ef092ef7dc2338e7a13530245225",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8bef127a06a79f85dfa59c71c08fc8ad11bdb0f420369cde92e749687423be50",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "05734a4baf6135fb92a6bee210ff16a8310ddbd5f585dfd2c00e39c46374af49",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "1aefc22c6179a5780860b8a95052caf39f486a791ef1ec38a15417aa939a8d02",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2cad037e26b808b2e3700fbd197247bd1c8f24641ca3ea2baf78377bef56ecca",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "db5b319d30c68efdb82a0ffb0d92a47753b02143662d1498a1eef61f33874cec",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c64229f3156838c913a1164744ac79deb826e21241075d29faf6ba93dd10e139",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2656d676a5df5b84cbba0ba422a72fe134c148b39d2c457036839a4b5ade6759",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d86f143bfb421e3b9727e1178f97f1d7148ac6a6cb9137c5047b2c70f0359410",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "456f687a74bfc9ef28f37a60db76a48f8382468c610d6e7e631a3a1c16e74447",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "803da23a62b616dee2cf0dc93ae2dfdf4760f3a1426ee598d60c0c1039073b3c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "cc8e34e3c5979daa40ae7d496ef01bd1cff3216b32d17135697fc2943b7de0df",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "bf04be567e7d59d3a06c0988e4bfc36a96f7d13792293312ad1832d8dc6b7667",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "e1762fd2cdfd6c589968fb53a7264fd08fdd5bac6c183e472c348fc136ae7741",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "76ce89dd373fecb4f2f8673a96f0ac71ebad8eda54f47586e0a423bb2cf76410",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c66c907b7d968c50672835020a855199eb1da7079238f13865cb7df913ecf364",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "daa31b4f48028db3e84dcd32d0c80603343d387ab750e282c705b72359983a69",
+      "bytes": 414964,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "cd5e43c04b63814ecf72aa0d19189bdfe9efad4559683495b7ba2c94f12023ab",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7ee2570717a85b6a6605dff73853ae7714f8751516b152ab5f2e407966be0267",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d7c4e997d7a7734a732d91b9f3909ab21ae2396f090ef838cd0b6f99a459b00c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b10c0d487d8d9cc0efdb59604d22f81243feffb836d7a834df1e7312e2a753fa",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "72a9de434292020c2a93fa39a92116099e40d8a76e8aefd104034aab081d8dc5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "13f1687dda31f7cafa4c18fad0e7110f8250ce2c9f1744a4bfa39604d6d8ff9e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5e47589ca9a438a8de9bafd71a113ec4644c2e27e8ba1f9946179b26d3d54dfd",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "3bf8251c22d638135e5a118914e1c4926d5d5fd3f114ac8f3836f5cfb77c6519",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "534ef547a67581dcba63708bf9c0837297847a3f6369615d69159414cf42f856",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "f30cd789d187d70d7d7b5e68b7c6ec3fcaa7cb1dd0e631f665d1c79afe988535",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7d74ec37b1a300bde7a6070401a04f40517510d95abb189d7bc65ffd5315205a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "568f1216e51cb28ec49b3170b65aede1d164ae5d485df9b51341e64bb4115011",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "971633e2f942707c2995ed0c95bb5cd79ff9cb6e7c0b4707fc8ffde4a7bae123",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8be74701b43ed1f2d45f1a3734b9e60ef43c2d206b0bf5f84c09bdeda1bb20b9",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "db7f771f57d60c281f3a92e28aac3a6eb7a764c3c6a45e6b624dec097c8eb006",
+      "bytes": 3734164,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "70ef786e77390ff48bc5b4163b6af6fd3c656d427d504c80157f7d6aca328099",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "1c79a5626feb94a8b49e92379c63faff681f66011c58d8f4b67fe12c49fbb3b6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a545dd7c82c27963eef123a1545f4bceeb759be2027160f0227c3a54c981037c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a45906b5b4c02bb7642672193fd03f3b4291ede4d9dcd8ab2954caf02394574f",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "22e48bff3e5f96366aba9b3c8b907df4b95b67de3896255a36f0199ac8c91733",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "69264d195069823f6a0e03c5fb86645a93710e084144126d76956c602f337fd4",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "dea743539534f00cd3ccff6393e9c00bca176e26fd18b04f0aec95252fb298bf",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "fb05dcca095aa989e8836d362928e2d85d2ef57aae3628cf75c7b7398443ae28",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "78fcfbf479f035ec840b579d8435d74c97580925f6867566f6d12a3c76f81718",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b72ad79112c036f2c0c0fdb32281f3d066fbb9a021bb96df3283580be9812b9d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "f5c682ef50db2a235591179a163c2f252ebe94fd9a36ba8f3b77c0f750f98b6f",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "86d63c0c0f13d5cae507f6b68f86174cf4842088242f731887f6bbaa98264f53",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "cb025bb5b657d390a87fd9bd864dd81d2a4ce36a29d853b54aad73bcf0bc9481",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8f2aa9846e04fb10f1c1511f313ff54a68276e7aefb94e76247e1704e5a721ef",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "067523309737b676d9efc307e5385771bf9306160c37ec01ecceeec8cff537db",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "571890bb084e28894df8a7c864e8cfd9b9e5fef8320e34a9535bf82e7e205f51",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "cccaefe13d40db15c08879d40193558aa53f7a88c682965e1d24c3613f2e0d02",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7e9b32a623efcc9f43f79c9cfb5bd6c81b3095719fcbaec01c5eed7e93d4d86d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "bdb2198faf72527d6ca34a7561f21aefe7402bf86eb71e208943accc61f5cdff",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b16fc4352d29e2ab6409b290a0383b943cb8a87076397bca42fe4a57d4f22d63",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4f7f38ea505721f82ef2b5e3f134c7511e9df981f0ab83e9de089341f7e639f0",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8e0efe3afe9c742e2cb751e64df28de5542bb8651196ed9c00c21d12a5a049e7",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "912be4e7ba4c45251bfe04cfb32e83afa21e8bcf1a9d399df7852e25c4c7434d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "e5834d534f76faa92046ee75a6c1cb37d38ec621e5af83738fbd4ec29c61fb7e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8bb8f6c43572b441f19b5ad36eee9723d938086c3ab3c42517df447516ae6a57",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "e58c0740fa4d36630dd7cdb806f4522b81f428a318e27a6bb98179315105746b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "11eae7e7e29ed95fcc53bd3ad06aed412336aec636b7c9f317a8fb1d7597e716",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b11fb5bd21189bbf127e1b44c764b8245c42d62153107cb694f2aee86599893d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "eda14b2453fdcf740bb6226f68661054b456ea14b38bb034d2cf568a16335203",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "97cc4d2b19cc89a0f43e245effb4a94b73b2e7b78c2fc80e07d37a4a5912ed92",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "ea4d0138874cb70b2ed9783da6b0fe1c745c0ced0053998efdde32bb3c9aef77",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "bd1ac7560dec66fcd6d6cbc93d317e4af5f91c84290cce51fae1059d8970c040",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "8d7919ec5e8b44eff4d20e1fccb552f769f430c15371d78c33bfcdab26b72bf6",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "80f13f17d11c156a93fbad43bbaee8e4f4073d92528ee25fb64be1ac8233b8c5",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "dc9433102fe2c0bdfec4663be781f5c7861ea4f05f0f9832c4da89b2b330e429",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b376b998529d483b6bb34f531850b52375a6c0689aba4ec8d8153d941df98e4b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d900297ffe27c871da1223e505b9482c0898741b87af911f6514703719a9dc3e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "488a0e6ec36f70068dd56662d60daccea710a26f206becba450d1be2b1c4e340",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2e03df4d918d7be4f3118397766b5997a64d8886cfa8e3c13da92fbcceea7e8f",
+      "bytes": 1327744,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4b35d545655ababe9a528b30bb24dad27f475997c6a0ab8525f6243ba94679ec",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2a1dbcc0eb764afdb63b90beae474bb12be32de52401a67f6ea00de13de68a15",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4dc99e6633af7d8a2f9b9a80201ea3eb88e06aafff3c445fde7818745a7b88d8",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "ea166a91f90ff0f53e9902fd0f80c0c4e1090b241985dff42adee3dce3e3f247",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5e8e9ff515a53ccc2b8b025c18bb153a6fdb5e08dee1e8b3dc26f5cab2968eb2",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7c31c1fc19ba4010a286ba02a57d28652a1e25333ca5fc8b523310e40bcd5dec",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "9cd81ad0da8123c5c77a930b02ce4382adeca3c8871551b8584b5295020b7d65",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "859435c2d43a95a155c7b5cd992c6e224472f3e6c4139ea5def8b773d01ad562",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4477f499c593d672a3990cf49896c821be0166d6447d8595f713c78d491f5c71",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "833daa398c30668aaf301a38cf3d876d42d7a4495784806f2bc1d25bef462d2d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7afc8a548030f9e4877a15cddbdd493de6c682cb7eb01ac91f89088f4e1dc09e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "25ee0c6bbcff5fdb12d8bd85b611723c726eb8feb89c385632ee48d56825c7ef",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "a9485e6aa4ae835901de2311b1190929f515bcc6b767a373b9cde6bbbc3d709d",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "224bca11bd62b3b752f4798e0751f080812c8d4f71246831bddc826af2bf36a1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "0e48f56f39a66eeb3a4adabc185c71e946df0421c2f536aead42e4c376440901",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "690949e0c152a6c6c1961e8de88240d5663f5bf6e05105af43c3c34000a0c14f",
+      "bytes": 1825624,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c308755523da6faba23899d9b6107a121c0c1e2722414e12261ab8371407b515",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "16bdb449dccbc4e522b63a09fda26a97c3dbabf54c30fda024510eb49247d697",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "5f45eb14463de36ccc56a74071bc486d9a144efd792818ac091d6d9ced2164f7",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2058f233e1caf0878ba385cebe27be687775466aad67454121946142279231c4",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "9fa7bc6351608956968f81a873fd5f52625ebaeb4f2ed1db23fc89bf38186e29",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "f9bf740aea2fb576f19bd4b783bfa39ed1be56845c9b3f77d3a408861aca7dd1",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "32ef960b1ce14b1b73a6e89b245d509aa7801d63cbd86f561ac14df662d0e07a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b5f0c1d57a5ab9a98741df826eca916319082b1ea60897bdba88bd78ac52e464",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "04d59d63d9b90fb1385d733c12005c9089f635e7341ded7da6da3ea10b44dbe2",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "ea2a3484c2fcf138c4ae3f5cb1eb37ae23378a5991929ce875b1534eee82af1e",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4800f8546b95e7e43c698bb08a186d9ad671b8eb115e397c8ffb06f20bcbaf9c",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "52c27f64c8032562a4d1952838a00c751e85b8f7bfeeebdad14d0931340f011a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "15d079ba1ce5f7d29085b74cbd38f005e7946a69b284479e5fa5dde8bd1c619b",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "34fdc82c044054fe82c1f841087fd5109afdfded2232ad4539f4273bbb2e9436",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "15584d4898ed0952e07b125e8e060ce8c576671043b4c9ed048f5ea9c28ffa27",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "cf718ddd27b7d1dc4a62ded1fbc6806b006cbbee1c177512b1773965d29c14ab",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c6224b1bcef2d22f2fed004f5efe6478f52c20d5f753ed253e9f7951b12af379",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "3d8f64e6ea107f5f03fac02b047d1f6658e0ebd4dfaa6886d94733a839fb5caf",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "7b7df0f33c5a96304dd972a9b3f5f89342e3a3983c3442dd27c7d512d52c1ab9",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c8513cd5276ff3696c3a5cc0bb980c477f5be57ede687ff6c644f45236e0af05",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "c48f7ec20ec0fa3f0f60d63d0e5b5720108c7a62a21c1566ac078f885164b6de",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "d62593a20deb4895ec7a629647c6ac6da0fb5b75a34ea5e0b662667ebbec0f29",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "fc70693d85824083007f159addb4d6766e561ee3c6184f3676d19b1bdf372cea",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "2cc648092c9098d7e436b03ca4a303cd163f43392c7cec6066f4d582be68c5b3",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "4001c349299434df6b55e5ce0158cb53e67a88b52509eea7dc91dac6ab2b1d2a",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "b94045e4ca767a624f9da265c13ab161a7da3e3bcb7a42b0c2118c6ddc2743bc",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "59d16f07b02ec12424397f41cdffca75ae8dea8000e822d07420dd828d238c69",
+      "bytes": 4978864,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    },
+    {
+      "sha256": "19cc097f4a841525107ea979bf611a6e0b0cc4a092fc78fd8a4d22072c53f2f3",
+      "bytes": 746884,
+      "kind": "animation-or-topology",
+      "uploaded": false
+    }
+  ],
+  "binaryDataIncluded": false,
+  "localRuntimeResourcePackRequired": true,
+  "rawSMPLModelsAndPKLNeverIncluded": true,
+  "pagesGate": "Raw animation alone exceeds1GiB; Node server and root-relative URLs also require a separate static deployment adaptation. No new animation asset publication or Pages replacement this release."
+}

@@ -1,0 +1,4 @@
+**/profile/
+*.log
+*.pid
+__pycache__/

@@ -1,0 +1,551 @@
+{
+  "status": "LATEST_EXISTING_FORMAL_STYLE_REFERENCES_FOR_INTEGRATION_REVIEW",
+  "version": "1.0.0-local-review",
+  "styles": [
+    {
+      "style": "house",
+      "label": "House",
+      "formalGraphVersion": "3.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-repair05/formal/house/rolling-graph.json",
+        "sha256": "f1470c84c6b330e9dcceb404ae6fff64197978b8747fd233c68d15a34c785f77"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-repair05/formal/house/graph-registry.json",
+        "sha256": "6020c393161286b9379c59ef21dc20132b809e7c41cca6265619c1750bd8035f"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/continuous-qualification.json",
+          "sha256": "89c4ea5368bd2d342cf2ad5f09083088dde66d5ea52ff099280040dc58b9b5c8"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/qualification7.json",
+          "sha256": "5e1168db6a51c09e68641773343ea52c59e4d674171a00b1c68d25207c8c23d7"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/tempo-qualification.json",
+          "sha256": "864d7b9ddbd529991546858989fd669c1440be97782c7171d84029d981441d88"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/low-tempo-qualification.json",
+          "sha256": "b726c99de9b5105ac57054524fd1123f1c01ded50c11b8c4b7a855e03a78a57d"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-music01-shared01/MUSIC_STYLE_REGISTRY.json",
+          "sha256": "1a597c34b1bc8bd829a8d03c0d3bccc781709e6a15dc05994c3852233cd0442a"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/BPM7_REGISTRY.json",
+          "sha256": "f995a217805e52ee13fc472fdbfa81557ee3b95ac6b2fc5badfffd2136a4bde3"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/BPM5_REGISTRY.json",
+          "sha256": "4c8ae9d4d22f9a242e60b22c24f3a4269e627ae5166e35bd2623b83c26d15d09"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/HOUSE_TEMPO_REGISTRY.json",
+          "sha256": "c9c0bc50d9f4b476e94314add04a2ba3a923247b5584b4dc5eb2e910b25c5d40"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261124-bpm1-120-01/HUMAN_ACCEPTANCE.json",
+          "sha256": "ff3aa8f7f41433f8b88509bd914f16ffc992b37f99f6a679dbf8be5efe273934"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261124-bpm2-review01/NORMAL_ACCEPTANCE.json",
+          "sha256": "5d4668939e3a6d03dd9da1d2e8f2977e46ee245481849a3198c631170ef8a3c8"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261124-bpm3-house-slow01/HUMAN_ACCEPTANCE.json",
+          "sha256": "b50b3ac9679af1930c3e15856ca318f354044703f2db791bd80980ec145e69a9"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261124-bpm5-sampled01/HUMAN_ACCEPTANCE.json",
+          "sha256": "a2551cb83d5159052f5d4c33bba1b1604c7a351274a54c4b20253cd6575ad4d3"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261125-bpm6-phrase01/HUMAN_ACCEPTANCE.json",
+          "sha256": "76479d81f66278e075c88fcc1951bf21a5fce28b652f434cbb89f584cf01d4d5"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261125-bpm7-music01/HUMAN_ACCEPTANCE.json",
+          "sha256": "54895ca1473810da2e8fa8839376617637ad18e68db89702cdcb9b4ebcd6ee50"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-repair05/formal/house/playlist-assets/manifest.json",
+        "sha256": "b566e9620c27d407c78908927bcef9e223d18d5c973cb3ce703fb33ca05fb152"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "activeRoutePolicy": "100<=BPM<=117: exact qualified B01/U/T ending-v7; other60..130: original qualified CutLoop house-tempo. No new House route/speed qualification.",
+      "naturalEnding": "existing ending-v7 only in100..117 if a valid opportunity exists; baseline safeEOF fallback retained"
+    },
+    {
+      "style": "middle",
+      "label": "Middle Hip-Hop",
+      "formalGraphVersion": "3.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch02/formal/middle/rolling-graph.json",
+        "sha256": "6dd87ecfdcb099fc83d1b5c7ef20c03dda91f773a3340bf013983888eaf8a23f"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch02/formal/middle/graph-registry.json",
+        "sha256": "4aca11267c0f4cc5f9455237042a770ce220bba2923864d1e19459a44581c555"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-middle-bpm-final01/QUALIFICATION.json",
+          "sha256": "8effffc8ed657384949098ac3b2afad31437d025a052f1cc61b54eace7b1c640"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-middle-bpm-final01/REGISTRY.json",
+          "sha256": "79c9617f254a58463cc4d350f14c0c88fbd27ead3c1382a8eb6c82c1fdc0a856"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-middle-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "46deb15c504b017f0a78b9a0778a525222d4341547e6f652c1998c40b2f44504"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261125-music1-middle01/HUMAN_ACCEPTANCE.json",
+          "sha256": "c504aaa2c5f9e58a6f1878efc7f5fc8bf3b125e7563405049c42892223dfcbc1"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261125-music3-middle100-01/HUMAN_ACCEPTANCE.json",
+          "sha256": "8a9d779547487236ac3880eb99479babb2c87c5a17b628f611f777d085887175"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261125-middle-multibpm01/HUMAN_ACCEPTANCE.json",
+          "sha256": "3be23733fae78f201ea59f43feea011d9ceddf6dc51f255d4c4277dbba8c7f22"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261125-middle-high-accepted01/HUMAN_ACCEPTANCE.json",
+          "sha256": "06d0dc28261ffc73e1ce5739605355221736ab48e37fdf2ec0205245527e9b6c"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/human-feedback-20261125-middle-u130-accepted01/HUMAN_ACCEPTANCE.json",
+          "sha256": "0f8374c1f5f3c6106946c0507661b7e0143acc6bc64b74ca86fe52471bd8e12f"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch02/formal/middle/playlist-assets/manifest.json",
+        "sha256": "16eb099b95ab632588dc8d8abbf4b38a765d7f1745703597c1babc57c526b9d5"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-middle-continuous01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-middle-continuous01/QUALIFICATION.json",
+        "sha256": "f47403ba00c726327945b5ff50176ca53dc83a8dcfc720af72fa080224308175"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-middle-continuous01/music/source-time.mjs",
+        "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-middle-ready01/ENDING_CANDIDATE.json",
+        "sha256": "c1e9c2dabcc44d29bc4051f74fed7a4a3a0bb1d3afd4a29982ccc5c21ab0fc26"
+      }
+    },
+    {
+      "style": "ballet",
+      "label": "Ballet Jazz",
+      "formalGraphVersion": "2.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch04/formal/ballet/rolling-graph.json",
+        "sha256": "364c660fa3fd4b74c98400fef387b6d3cb18c740bf68360154c440644690bf18"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch04/formal/ballet/graph-registry.json",
+        "sha256": "e94675b0aa7443786dc62ba2dc61bbf58a0dd542b7f354263653114e3923f72e"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-ballet-bpm-final01/QUALIFICATION.json",
+          "sha256": "67382804298e7ebc997ff109223187df3191257bee557dc32c498d0674ffc738"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-ballet-bpm-final01/REGISTRY.json",
+          "sha256": "f48dd3f6d6b04728f2cb55b003db180e86f776c224010f0a2d83038ed14e591c"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-ballet-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "48aba5d3cc6873efcda6887251bb2cc22ed5af0b99f370786c01630d41618557"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch04/formal/ballet/playlist-assets/manifest.json",
+        "sha256": "30d656cd298d760c81f96fc8b8a686b797b98dc24d216268371f6e36ed7ac1f5"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-ballet-bpm01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/qualifications/ballet-music3.json",
+        "sha256": "839e33ca3657341921e2610e2f65d9260abc9a932acb47204de3b30bcf19155b"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/source-time.mjs",
+        "sha256": "b113af3e7e1e4d452b5275ba9e50a56430e3ecacb7a05098db02362dd77d116d"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-ballet-bpm01/ENDING_CANDIDATE.json",
+        "sha256": "00e55b3b9722d6a72918d10a9d2158fd3c22245db847d38166d45ed1c96781f6"
+      }
+    },
+    {
+      "style": "waack",
+      "label": "Waack",
+      "formalGraphVersion": "3.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261124-waack-register-street06/formal/waack/rolling-graph.json",
+        "sha256": "9304659942305a1aec64718fddfb2a66899af3400add136488def1b0f05dbaba"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261124-waack-register-street06/formal/waack/graph-registry.json",
+        "sha256": "d5eb65de4fc01e36ae0585bc8143aa01be33d5210228749e869e6a475eea2057"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-waack-bpm-final01/QUALIFICATION.json",
+          "sha256": "a215e87c65e084c075e864b982cb05a36f2ce178805b49cdeac8f5b66a2ebe1e"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-waack-bpm-final01/REGISTRY.json",
+          "sha256": "00afcd2a441131e863f5c9751415003bb10bb3f59d76ee2f742771f8d4b4eff4"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-waack-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "d49ccf6df528e1330c90c42b70736387f2e602d78f37f4757c49a0fdd22fb955"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261124-waack-register-street06/formal/waack/playlist-assets/manifest.json",
+        "sha256": "1a6c0dbf561fcf23a29bc35f6af2d2c23ab39214722af560f80e593c72b2177e"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-waack-bpm01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/qualifications/waack-music3.json",
+        "sha256": "8f22fe89889e2b8367472f2e3d7e401c660019fa6266208b31fdf6e74a0fba20"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/source-time.mjs",
+        "sha256": "b113af3e7e1e4d452b5275ba9e50a56430e3ecacb7a05098db02362dd77d116d"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-waack-bpm01/ENDING_CANDIDATE.json",
+        "sha256": "7c86d1ee7fe0265f642d086d2e68d916796154ec285c98ea563ea4955186d116"
+      }
+    },
+    {
+      "style": "street",
+      "label": "Street Jazz",
+      "formalGraphVersion": "3.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261124-street-register-bpm09/formal/street/rolling-graph.json",
+        "sha256": "8ff862c4c8eb590ea468354e2aef81c2dcedcea7d7f24fedf4e459dcfab3a49c"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261124-street-register-bpm09/formal/street/graph-registry.json",
+        "sha256": "91154491a04cb69ca9956e8423e4d0897f55b17296d76f8d0159677f27bb9c93"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-street-bpm-final01/QUALIFICATION.json",
+          "sha256": "114f7a226a8b53b12e88766850033e625d8792db918cab4f5af60ea85c521061"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-street-bpm-final01/REGISTRY.json",
+          "sha256": "4cb6a5d91ef698ea3215cc6b917242947e6403e3ba4925002e3929bc9c293044"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-street-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "df88932aa4c845dcc550b1686935a59d5a9e394492f0b841dcfe181f29e1a1eb"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261124-street-register-bpm09/formal/street/playlist-assets/manifest.json",
+        "sha256": "c8cf06918c0d1df1263a41aa925dcd47a58c044563ff24a9d053e16ab828b3fc"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-street-bpm01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-street-bpm01/QUALIFICATION.json",
+        "sha256": "06df13b5fa06323a0850de4a1abe7a5a72db900e3454724ba04df051cf424bae"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-street-bpm01/music/source-time.mjs",
+        "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-street-bpm01/ENDING_CANDIDATE.json",
+        "sha256": "b7fe82b6d6e3c4d40d7df341353901ea3147d0918e7c83e63ed89d395b5fe781"
+      }
+    },
+    {
+      "style": "locking",
+      "label": "Locking",
+      "formalGraphVersion": "3.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch03/formal/locking/rolling-graph.json",
+        "sha256": "83fc2f5512df3e1f995807fd32de7e87252b168601a7b50668b4cea60ace430d"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch03/formal/locking/graph-registry.json",
+        "sha256": "1319ba89b683cf8907e76802ab6c7fac6ecd13401e9f6679a9be0db20202ed91"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm-final01/QUALIFICATION.json",
+          "sha256": "3ef57d7df17cfde8bfe2a502e848b92f8d53e2ef18ebaf396a8788b7148ea79b"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm-final01/REGISTRY.json",
+          "sha256": "89443810d3b4a42135e04ce933c59800e32c8c37fcf1d0c92b50c3d88e0b9fcb"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "a642730cb40d40bcfe9c3e51c687a78d7705b56e4e5111d93ca1f63bdf071514"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch03/formal/locking/playlist-assets/manifest.json",
+        "sha256": "1178ab76aa3cf2ccdd4b8bf12f12c5c9a109a43017a6a2746444a130d08fa86c"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm01/QUALIFICATION.json",
+        "sha256": "9922d4562fada5f0c65fd9d93a7b6d2f0434f5fefeadbaa74d2ab2ff9a0762cb"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm01/music/source-time.mjs",
+        "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm01/ENDING_CANDIDATE.json",
+        "sha256": "7e2572bf909e7eb0315656d7a864140a9c5cbf88803bf1e742344164fa350fe1"
+      }
+    },
+    {
+      "style": "la",
+      "label": "LA-style Hip-Hop",
+      "formalGraphVersion": "3.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch03/formal/la/rolling-graph.json",
+        "sha256": "f66c22254301e6b8150831c47c4118a3a3a4e4bb85b982fce843a6a606f2269d"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch03/formal/la/graph-registry.json",
+        "sha256": "4f7f931cb7b8f67577625608981453242719ea944f4431278142a65af1ead4e2"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-la-bpm-final01/QUALIFICATION.json",
+          "sha256": "7917e63fc092e25ca9b06dfce255ed4ade273502066c399781f40b4fcecea227"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-la-bpm-final01/REGISTRY.json",
+          "sha256": "843eef3c8ed9cea266bcdd26e548159a6087a3e9eaed4282ee5a17cbe511e02a"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261125-la-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "84710961bb624ec6352a925e71d5947da9d2f80d07bc70e55ea76282f7e83a55"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch03/formal/la/playlist-assets/manifest.json",
+        "sha256": "1398d93e630e83f5808f62155ee253577ad065dfa1536eacdc5619348dd02b29"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-la-bpm01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-la-bpm01/QUALIFICATION.json",
+        "sha256": "e44da661a4f81391dfd5cb52c35deac860570adc2ec6356808411c3b05f84ba4"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-la-bpm01/music/source-time.mjs",
+        "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-la-bpm01/ENDING_CANDIDATE.json",
+        "sha256": "2a6812c4c50a97585e3836508e85942e6a298700c86d55f04e00c374c8097b07"
+      }
+    },
+    {
+      "style": "popping",
+      "label": "Popping",
+      "formalGraphVersion": "4.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity-final01/GRAPH.json",
+        "sha256": "ff032f2519aec7c28d46ebc975a7bb8da6896e2f14e098b76e03b3e5e1715f72"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity-final01/REGISTRY.json",
+        "sha256": "699f433a5382d25f8a4dee55293fff2e6c56b6050b6f2dedab9bccca1c1278a3"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity-final01/QUALIFICATION.json",
+          "sha256": "966cdbfa22cf4302ba9bdb9a0a975b0207d43796627252968d439d94c7779415"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity-final01/REGISTRY.json",
+          "sha256": "699f433a5382d25f8a4dee55293fff2e6c56b6050b6f2dedab9bccca1c1278a3"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity-final01/MANIFEST.json",
+          "sha256": "cd8bc2c50932e4b713d1292ee1618a0578cc2912e90a17a6afcfc0a2b9d3554b"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity02/pool/manifest.json",
+        "sha256": "ca30d186aa570e5736c08382a5175c065e1284636fa09eca59286d35b35a65de"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity03",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "activeRoutePolicy": "five sources S/U/C3/C4/C6 across60..130; C2/L/T excluded",
+      "formalRuntimeMapping": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity-final01/RUNTIME_REFERENCE.json",
+        "sha256": "2753d3f7a0bd2c27477f162f13b2697b35a789931ac1f83c11bfd7f3bbee216c"
+      },
+      "executionTimeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity03/QUALIFICATION.json",
+        "sha256": "4cf1a8414b47086d27147fda7b73b81bf1229ef2b0bceed1bacdfe30da3d4e1f"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity03/music/source-time.mjs",
+        "sha256": "6a3a233911690e459fe37ef6572e5e6b269972f38e6476ae5613decce6c71ce7"
+      },
+      "formal4MetadataToImmutableReview2Execution": "Explicitly authorized by formal RUNTIME_REFERENCE; exact same geometry, route order and timing; review archive not relabeled."
+    },
+    {
+      "style": "krump",
+      "label": "Krump",
+      "formalGraphVersion": "3.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-repair05/formal/krump/rolling-graph.json",
+        "sha256": "0e551e3a64aa409ddd7b9ad855f08e17b25feb0d575e6891d10fc85b5a830277"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-repair05/formal/krump/graph-registry.json",
+        "sha256": "6bf3ba8f610a8a923112bd0a2a798ad98f39accca91d36a5403ebfcdc6e8b987"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-krump-bpm-final01/QUALIFICATION.json",
+          "sha256": "682c1bd9710dd8a700913d721e41b93923f58786ce03f539280e49bd673cb911"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-krump-bpm-final01/REGISTRY.json",
+          "sha256": "9e642d551ab8188036998c0f4cee0506edb67f612610a3202d039a8126b92fc7"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-krump-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "3e8a39a99ac644533c74fe8a20e43a0a0862b7d1f0e4e22f8304df7659dc99fc"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-repair05/formal/krump/playlist-assets/manifest.json",
+        "sha256": "2a62bfcd767a947b0fa6a9ee76cab3137352033288ee4ed867858722d44de83c"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261125-krump-bpm01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-krump-bpm01/QUALIFICATION.json",
+        "sha256": "f71ff6866cc37b2426bdc28b40c90a84d0a696c36394f4763b9a8fad3253d75c"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-krump-bpm01/music/source-time.mjs",
+        "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261125-krump-bpm01/ENDING_CANDIDATE.json",
+        "sha256": "bb86fdcbb10473cb1efec664fc17b1b91fb582d3481102573d7ccb4cc2528099"
+      }
+    },
+    {
+      "style": "breaking",
+      "label": "Breaking",
+      "formalGraphVersion": "2.0.0",
+      "formalGraph": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch04/formal/breaking/rolling-graph.json",
+        "sha256": "663c41345e8850e112c3e36af4b12e2ef14411fe81173724c1c19890d1e246cd"
+      },
+      "formalRegistry": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch04/formal/breaking/graph-registry.json",
+        "sha256": "dcaff156031472eba0d70ba435b7faac86cba43d03eafa9bfecd8ef589714884"
+      },
+      "qualificationAndHumanEvidence": [
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm-final01/QUALIFICATION.json",
+          "sha256": "11308eafc899027353d33126a3de5ea0af6331c9e149f728c34d699a457e2b42"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm-final01/REGISTRY.json",
+          "sha256": "d056904a9dd28ccf2244c17c8b5cb7d1c33504e82d9727f16b624e47983b2215"
+        },
+        {
+          "file": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm-final01/HUMAN_ACCEPTANCE.json",
+          "sha256": "8058ac97f7bcba7e096f27932f06f15670c49a4640924d225385fa84456da5f1"
+        }
+      ],
+      "manifest": {
+        "file": "SMPL/local_data/computational_dancer/run-20261123-register-batch04/formal/breaking/playlist-assets/manifest.json",
+        "sha256": "5f46de38e3f64a0f7264e6d41f9769d6ca286ec99e47aa9746769a71c2209faf"
+      },
+      "runtimeArchive": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm01",
+      "commonUIBPMRange": [
+        60,
+        130
+      ],
+      "timeConfiguration": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm01/QUALIFICATION.json",
+        "sha256": "150dbab6fed601ed45a7149d64aaa49d40544092f4ede727e6397c81ec885f01"
+      },
+      "timeAdapter": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm01/music/source-time.mjs",
+        "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+      },
+      "endingCandidates": {
+        "file": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm01/ENDING_CANDIDATE.json",
+        "sha256": "c05566f4230374934179e83dd4ce76e8fd771e4da890de714ef19d2e319b4be4"
+      }
+    }
+  ],
+  "historicalCloseoutUnchanged": {
+    "file": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm-final01/TEN_STYLE_BPM_CLOSEOUT.json",
+    "sha256": "7d5c6607303c2e7f6ab9c0fe7ff1b84a7cbdc8e94a4dd840a5d1577292ecbc11"
+  },
+  "currentPoppingReference": {
+    "file": "SMPL/local_data/computational_dancer/POPPING_CURRENT.json",
+    "sha256": "b4050162ff486bc6275f8b0506bc2187803e21108e70fca3c7d2637db46dc16f"
+  },
+  "newStyleQualificationCreated": false
+}

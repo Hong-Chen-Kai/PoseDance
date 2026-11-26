@@ -1,0 +1,260 @@
+{
+  "scope": "Unmodified JS-only runtime closure. Animation pools and local qualification pack intentionally not included.",
+  "files": [
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/qualification-pins.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/qualification-pins.mjs",
+      "sha256": "12e25c3f609972257622306b15fc6f2ae1a425ef9ab9dd0acff124a335c0f094"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm1-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm1-time.mjs",
+      "sha256": "1761e66391aae0ccda08c1f1ef7bea125ab6ccda6e33af6a6501b0db2a8469cb"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/low-tempo-pins.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/low-tempo-pins.mjs",
+      "sha256": "c072ebac4ba389918e3924c1512accf5023c2e97e60c4ecd4a02a4c9a45681ba"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/phase-pins.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/phase-pins.mjs",
+      "sha256": "29b53c65d0f94801ba6cdbdec8815126d159f976bb8a34f0354c5d58bbb8064d"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm4-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm4-time.mjs",
+      "sha256": "9d4f727c6618255d3525a91c7b18453bedf13cd50e05f33f9c4458f79c9b123e"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/continuous-pins.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/continuous-pins.mjs",
+      "sha256": "f9e14355356b2ddda8079c073e2ef4b3c686b7bd8b7b0cbfc45f8749c9ad5c56"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/source-envelope.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/source-envelope.mjs",
+      "sha256": "6f01b66f6998bc5dbfbb75ea0aa366e51e4f5bf9250c7eae9ce0b06f47790b15"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/phase-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/phase-time.mjs",
+      "sha256": "2a26bf841ea96ce41b52ab568ad1242bff5b9c9a307abe8f3dea19d2369af015"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/tempo-map.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/tempo-map.mjs",
+      "sha256": "1268ed0405ccceadcb1082c535c0621e5f05d0769a7540f60d66dca929a5b4e6"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm5-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm5-time.mjs",
+      "sha256": "27abaac632956050b64c10479396db9873221fb140b4c63ca4afd683f9c3d7b7"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-candidate-pins.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-candidate-pins.mjs",
+      "sha256": "cabbaaaf8fd9e8cc2268795310e4b13d2a7426df5f406ab5370bf3a32e869fc6"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/human-pins.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/human-pins.mjs",
+      "sha256": "bd08b56aa703e7b65868befe0c895f3992a02f0c4c909ceaac9fe60bd3c1116f"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/test-tone.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/test-tone.mjs",
+      "sha256": "3d739cf659e84106f6e104e620c8f0c5e6c24afaeb3ce22c44ba300047d64011"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/preset-sha.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/preset-sha.mjs",
+      "sha256": "e52b5a8d7ded12375d1764c874763fe6fabca6300fa75d660facb95861ac7d7e"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-time.mjs",
+      "sha256": "c95f5e5167d6ae4296e8a20a45ab12c52e40fab30bf9091f8f31d167f05e4f6d"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/pins7.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/pins7.mjs",
+      "sha256": "f1d12a92a72b68c2cc2cd717bfda9b25086d605313059542a47354180a792207"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-human-pins.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-human-pins.mjs",
+      "sha256": "4f9f4f58285e1386f100c197ea877d346643e241a6eb891f701d151a658ffe17"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/qualified-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/qualified-time.mjs",
+      "sha256": "9e78a2b0ed0ae444ae6648cdb40eb19183ff242cc6b5f809e887dd3b705ef85c"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-diversity.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-diversity.mjs",
+      "sha256": "fb04860e3b22ccfc1c09f29916811bf115116eb64f0fa5e90ba30f97eb898a28"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/ending-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/ending-time.mjs",
+      "sha256": "0c38a9139993c93e8c569813a54133febc63563019a45090eb505bc6f157312c"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/music-phrase-v7.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/music-phrase-v7.mjs",
+      "sha256": "8122202985838c9d60d847fef182d83d8658a60abada94db8d62b38d9d40796c"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-music-phrase-scheduler.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/bpm6-music-phrase-scheduler.mjs",
+      "sha256": "ce45eaa69d3f89939e7a2eb5b332a226618dcafd5031edaaf35db7f51a67cc28"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/qualification.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/qualification.mjs",
+      "sha256": "b5d439ffff4ef1b8ded2780ea8b4ce9d5667f2be2558ab974540293aeb4b35a3"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/reader-base.js",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/reader-base.js",
+      "sha256": "ad36f6e389297b40e3a537a20e74b8b7dd662c56e56cfa3fa24a44eb63e2b6c5"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/playlist-contract.js",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/playlist-contract.js",
+      "sha256": "475fe035b3397ed5fe115b673d94dda1533695d28e23a566de4670b9a1bed319"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/stream-reader.js",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/stream-reader.js",
+      "sha256": "b5d27bbfa974ee2c43612af95d534b56836a3aff933011a0b09dd861068a4ceb"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-baseline-review.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-baseline-review.mjs",
+      "sha256": "dab708208e0e273893616b84fbbcbb47d9f05f265c92da658fe6585215ddd94d"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-runtime.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/rolling-runtime.mjs",
+      "sha256": "704f032df3b4048cc08813f9c0eff8f391320d0ca1824c8072c612ff47683317"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/accepted-math.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/accepted-math.mjs",
+      "sha256": "4246334c39f46030490ff5cd163d35a13f03437d4ece42aa3d858f725b0cab79"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/scheduler.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/scheduler.mjs",
+      "sha256": "15b003fe647c887be93e7ddcd82c6ec3341fcad3747cdcbf20ce2cbe0d7daf1e"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/viewer/pool-reader.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/viewer/pool-reader.mjs",
+      "sha256": "3ecdad142d26e1ac4d952c089ef13f9f5c927b63d6c154715614396e0aac1c3b"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/source-time.mjs",
+      "sha256": "b113af3e7e1e4d452b5275ba9e50a56430e3ecacb7a05098db02362dd77d116d"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-middle-high01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-middle-high01/music/source-time.mjs",
+      "sha256": "062452f87e34dcbb48fdf03c060ea7053c35d4d1bef44de023e8f1ef488022bd"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-middle-continuous01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-middle-continuous01/music/source-time.mjs",
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/rolling-diversity.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/rolling-diversity.mjs",
+      "sha256": "fb04860e3b22ccfc1c09f29916811bf115116eb64f0fa5e90ba30f97eb898a28"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/tempo-map.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/tempo-map.mjs",
+      "sha256": "1268ed0405ccceadcb1082c535c0621e5f05d0769a7540f60d66dca929a5b4e6"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/phrase-graph.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-music03-tempo01/music/phrase-graph.mjs",
+      "sha256": "8d5942523be6b20694926f8851e427655a10fbda65dde4f1c00ab6ffda88b75b"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-middle-ready01/music/ending.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-middle-ready01/music/ending.mjs",
+      "sha256": "d5ee7ffbb9c58676db2ef69c0d30606dc79b0bd1ebf1ff2eb5e863dff8aec735"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-street-bpm01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-street-bpm01/music/source-time.mjs",
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-locking-bpm01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-locking-bpm01/music/source-time.mjs",
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-la-bpm01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-la-bpm01/music/source-time.mjs",
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-popping-bpm01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-popping-bpm01/music/source-time.mjs",
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261126-popping-diversity03/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261126-popping-diversity03/music/source-time.mjs",
+      "sha256": "6a3a233911690e459fe37ef6572e5e6b269972f38e6476ae5613decce6c71ce7"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-krump-bpm01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-krump-bpm01/music/source-time.mjs",
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261126-breaking-bpm01/music/source-time.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261126-breaking-bpm01/music/source-time.mjs",
+      "sha256": "ead6af5efb3c74a79e924a24768b69fa5114e3b0e23dbd11a311565a7da029c1"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/chunk-cache.js",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/chunk-cache.js",
+      "sha256": "f2b46bb1957df3e848b3b9c98f92f7a74c4e340c2ff8df4bbd7bcd10fb08c997"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/runtime/physical-reuse-cache.js",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/runtime/physical-reuse-cache.js",
+      "sha256": "93fe233c9010b4c2ea5764cd548ef5318f1aed8bbf184be72769ccaac873b69e"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/viewer/graph-pair-cache.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/computational_dancer/run-20261125-bpm07-ending01/viewer/graph-pair-cache.mjs",
+      "sha256": "56dc61724a87da4acd6f97b8338c9d7aa2b8d957c6efd46eac54b643e0828b95"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/chunk-worker.js",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_m3b/run-20261116-branch01/engine/chunk-worker.js",
+      "sha256": "09f3270cfe143cc7ae87ec6a8a7e63557935abb47f570668f95e991d41e3d23b"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/runtime/worker-decoder-bounded.js",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/runtime/worker-decoder-bounded.js",
+      "sha256": "b99a6cce692e17afa35fa0fb47d7744a481da5b5462dab40316f233578fac5b7"
+    },
+    {
+      "originalRelativePath": "SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/accepted-tempo.mjs",
+      "snapshotFile": "runtime-sources/SMPL/local_data/autochoreo_runtime/run-20261117-continuous01/accepted-tempo.mjs",
+      "sha256": "9c90cf654f572e6873ff7be279f564cad6d1eb54e883c083598f910113d7e93d"
+    }
+  ]
+}

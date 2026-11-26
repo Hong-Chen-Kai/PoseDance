@@ -1,0 +1,2 @@
+﻿import{RollingGraphScheduler as Diversity,graphFromProfile}from'./rolling-diversity.mjs';import{RollingGraphScheduler as Baseline}from'./rolling-baseline-review.mjs';export{graphFromProfile};export class RollingGraphScheduler{constructor(g,o={}){if(!['baseline','diversity'].includes(o.policy??'diversity'))throw Error('POLICY');return new((o.policy??'diversity')==='baseline'?Baseline:Diversity)(g,o);}}
+export{canonical}from'./rolling-diversity.mjs';

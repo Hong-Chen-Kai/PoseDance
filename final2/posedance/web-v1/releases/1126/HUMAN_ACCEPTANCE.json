@@ -1,0 +1,32 @@
+{
+  "schema": "posedance-web-human-acceptance-v1",
+  "date": "2026-11-26",
+  "dateMarker": "1126",
+  "version": "PoseDance Web V1.0 /1126",
+  "status": "POSEDANCE_WEB_V1_1126_HUMAN_ACCEPTED",
+  "rawUserConfirmation": "目前PoseDance整合網頁及第一輪介面調整已人工確認，可以進行Git版本保存及上傳。",
+  "granularity": "One overall confirmation of current integrated web and UI adjustment; no fabricated independent feature ratings or physical-sync assessment.",
+  "currentUIHashes": {
+    "index.html": "886124a4d447537ebed352efb8fa6580444c0501e984f038e16188261db20b29",
+    "style.css": "14738623675fbed5ac22c8d0a31cbe5ef6f08724fbeb1228ce916dfd627016d5",
+    "floating-video.mjs": "2990da62a222fdd7725f94e430b59f61153673b74b49ae0d0b0b30a43d222529",
+    "app.mjs": "22597522880036dd3fe4238997a63b02afc37d6c51df26f093e80a5efbf60ae2"
+  },
+  "featuresRetained": [
+    "ten formally qualified dance styles and60..130 continuous BPM",
+    "Popping Graph4.0.0 five-phrase route excludingC2/L/T",
+    "full-window SMPL mesh and24joint display switch",
+    "YouTube IFrame clock and floating player",
+    "UI text reduction and independent window width/height resizing"
+  ],
+  "notClaimed": [
+    "Entire PoseDance development complete",
+    "All songs and BPM/settings human accepted",
+    "Physical audiovisual latency measured",
+    "CONTACT_VERIFIED",
+    "True motion beat-phase alignment"
+  ],
+  "contact": "CONTACT_UNVERIFIED",
+  "beatPhase": "BEAT_PHASE_ALIGNMENT_UNVERIFIED",
+  "historicalPendingAndTestRecordsUnmodified": true
+}

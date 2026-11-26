@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-26",
+  "dateMarker": "1126",
+  "version": "PoseDance Web V1.0 /1126",
+  "status": "HUMAN_ACCEPTED_LOCAL_RELEASE_SOURCE_ONLY_PUBLIC_SAVE",
+  "targetBranch": "1126-posedance-web-v1",
+  "baseRemoteMaster": "0d884afc00d4393f6cb21c2e10b2416fbf68fd79",
+  "originalLocalMasterUntouched": "8d66454579913e3e8ff2607fd181a6dc93f0d3be",
+  "runtimeSourceFiles": 51,
+  "binaryAssetsUploaded": false,
+  "publicPagesDeployment": false,
+  "currentPagesKept": "https://hong-chen-kai.github.io/PoseDance/ (older site, not WebV1)",
+  "limits": [
+    "CONTACT_UNVERIFIED",
+    "BEAT_PHASE_ALIGNMENT_UNVERIFIED",
+    "General song compatibility not universally human accepted",
+    "YouTube API timing is not physical AV latency",
+    "Ads/live conditions not reliably classified in all cases",
+    "Actual fullscreen grant was unavailable in headless Chrome; overall user confirmation does not invent a separate instrumented fullscreen result",
+    "Only one180second integration long run;300second scheduling not a new complete300second real run",
+    "House multi-source/ending only100..117BPM; other ranges retain qualified CutLoop and safeEOF",
+    "PoppingC2 rejected and excluded; S hub repetition remains",
+    "Breaking selected content does not qualify all floor/hand-supported techniques"
+  ],
+  "newForward": 0,
+  "newBinary": 0,
+  "newSeamFrames": 0,
+  "repositoryVisibilityChanged": false,
+  "LANEnabled": false,
+  "firewallChanged": false,
+  "historyRewritten": false
+}
